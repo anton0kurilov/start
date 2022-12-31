@@ -1,5 +1,12 @@
 {
   "devDependencies": {
     "parcel": "^2.8.2"
-  }
+  }, 
+"scripts": {
+    "start": "parcel public/index.html",
+    "dev": "parcel public/index.html",
+    "build": "rm -rf dist/* && parcel build public/index.html"
+},
+"source": "public/index.html",
+"browserslist": "> 0.5%, last 2 versions, not dead"
 }
