@@ -1,0 +1,13 @@
+.body {
+    margin: 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    &__column {
+        width: calc(100% - 10px * 2);
+        height: calc(100vh - 20px * 2 - 10px * 2);
+        background-color: var(--subColor);
+        border-radius: var(--borderRadius);
+        padding: 10px;
+    }
+}
