@@ -9,5 +9,14 @@
         background-color: var(--subColor);
         border-radius: var(--borderRadius);
         padding: var(--paddingSize);
+        &-header {
+            background-color: var(--bgColor);
+            padding: 10px calc(var(--paddingSize) * 2);
+            margin: 0 0 var(--paddingSize) 0;
+            border-radius: var(--borderRadius);
+            font-size: 1.2em;
+            text-align: center;
+            border: 1px solid #333;
+        }
     }
 }
