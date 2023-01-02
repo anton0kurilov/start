@@ -1,0 +1,19 @@
+.content {
+    &__item {
+        background-color: var(--bgColor);
+        padding: 10px calc(var(--paddingSize) * 2);
+        border-radius: var(--borderRadius);
+        transition: all 0.5s;
+        &-title {
+            margin: 0 0 5px 0;
+            font-size: 1em;
+        }
+        &-time {
+            opacity: 0.7;
+            font-size: 0.7em;
+        }
+        &:hover {
+            background-color: #101010;
+        }
+    }
+}
