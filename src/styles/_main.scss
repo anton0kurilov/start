@@ -1,22 +1,33 @@
 .body {
     margin: var(--marginSize);
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: var(--marginSize);
     &__column {
         width: calc(100% - var(--paddingSize) * 2);
+        min-width: 350px;
         height: calc(100vh - var(--marginSize) * 2 - var(--paddingSize) * 2);
         background-color: var(--subColor);
         border-radius: var(--borderRadius);
         padding: var(--paddingSize);
+        overflow-y: scroll;
         &-header {
             background-color: var(--bgColor);
-            padding: 10px calc(var(--paddingSize) * 2);
+            padding: 10px 20px;
             margin: 0 0 var(--paddingSize) 0;
             border-radius: var(--borderRadius);
             font-size: 1.2em;
             text-align: center;
             border: 1px solid #333;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+            &-icon {
+                width: 18px;
+                vertical-align: middle;
+                margin: -2px 0 0 0;
+                padding: 0 10px 0 0;
+            }
         }
     }
 }
