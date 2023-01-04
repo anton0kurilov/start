@@ -32,30 +32,37 @@ let data = {
 let parserObj = new parser()
 
 ;(async () => {
-    for (let i = 0; i < Object.keys(data).length; i++) {
-        let feed = await parserObj.parseURL(
-            'https://cors-anywhere.herokuapp.com/' + Object.values(data)[i].rss
-        )
-        document.querySelector(
-            Object.values(data)[i].element + ' .body__column-header'
-        ).innerHTML =
-            '<img src="' +
-            Object.values(data)[i].icon +
-            '" class="body__column-header-icon">' +
-            feed.title
-
-        feed.items.forEach((item) => {
-            let itemDate = moment(item.pubDate).fromNow()
+    try {
+        for (let i = 0; i < Object.keys(data).length; i++) {
+            let feed = await parserObj.parseURL(
+                'https://cors-anywhere.herokuapp.com/' +
+                    Object.values(data)[i].rss
+            )
             document.querySelector(
-                Object.values(data)[i].element + ' .content'
-            ).innerHTML +=
-                '<a href="' +
-                item.link +
-                '" target="_blank"><div class="content__item"><i class="content__item-time">' +
-                itemDate +
-                '</i><h2 class="content__item-title">' +
-                item.title +
-                '</h2></div></a>'
-        })
+                Object.values(data)[i].element + ' .body__column-header'
+            ).innerHTML =
+                '<img src="' +
+                Object.values(data)[i].icon +
+                '" class="body__column-header-icon">' +
+                feed.title
+
+            feed.items.forEach((item) => {
+                let itemDate = moment(item.pubDate).fromNow()
+                document.querySelector(
+                    Object.values(data)[i].element + ' .content'
+                ).innerHTML +=
+                    '<a href="' +
+                    item.link +
+                    '" target="_blank"><div class="content__item"><i class="content__item-time">' +
+                    itemDate +
+                    '</i><h2 class="content__item-title">' +
+                    item.title +
+                    '</h2></div></a>'
+            })
+        }
+    } catch (err) {
+        let errorBlock = document.querySelector('.error')
+        errorBlock.style.display = 'block'
+        errorBlock.innerHTML = err.name + ': ' + err.message
     }
 })()
