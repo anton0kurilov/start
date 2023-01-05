@@ -54,7 +54,9 @@ let parserObj = new parser()
                 ).innerHTML +=
                     '<a href="' +
                     item.link +
-                    '" target="_blank"><div class="content__item"><i class="content__item-time">' +
+                    '" target="_blank"><div class="content__item"><i class="content__item-time" title="' +
+                    item.pubDate +
+                    '">' +
                     itemDate +
                     '</i><h2 class="content__item-title">' +
                     item.title +
