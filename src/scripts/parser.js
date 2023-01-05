@@ -41,10 +41,11 @@ let parserObj = new parser()
             document.querySelector(
                 Object.values(data)[i].element + ' .body__column-header'
             ).innerHTML =
-                '<img src="' +
+                '<h3><img src="' +
                 Object.values(data)[i].icon +
                 '" class="body__column-header-icon">' +
-                feed.title
+                feed.title +
+                '</h3>'
 
             feed.items.forEach((item) => {
                 let itemDate = moment(item.pubDate).fromNow()
