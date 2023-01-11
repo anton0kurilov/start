@@ -38,20 +38,19 @@ let parserObj = new parser()
                 'https://cors-anywhere.herokuapp.com/' +
                     Object.values(data)[i].rss
             )
-            document.querySelector(
-                Object.values(data)[i].element + ' .body__column-header'
-            ).innerHTML =
-                '<h3><img src="' +
-                Object.values(data)[i].icon +
-                '" class="body__column-header-icon">' +
-                feed.title +
-                '</h3>'
-
+            let element = document.createElement('section')
+            element.id = 'col' + (i + 1)
+            element.className = 'body__column'
+            let elementHeader =
+                    '<h3 class="body__column-header"><img src="' +
+                    Object.values(data)[i].icon +
+                    '" class="body__column-header-icon">' +
+                    feed.title +
+                    '</h3>',
+                elementContent = ''
             feed.items.forEach((item) => {
                 let itemDate = moment(item.pubDate).fromNow()
-                document.querySelector(
-                    Object.values(data)[i].element + ' .content'
-                ).innerHTML +=
+                elementContent +=
                     '<a href="' +
                     item.link +
                     '" target="_blank"><div class="content__item"><i class="content__item-time" title="' +
@@ -62,6 +61,8 @@ let parserObj = new parser()
                     item.title +
                     '</h2></div></a>'
             })
+            element.innerHTML = elementHeader + elementContent
+            document.querySelector('.body').appendChild(element)
         }
     } catch (err) {
         let errorBlock = document.querySelector('.error')

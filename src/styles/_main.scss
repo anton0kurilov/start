@@ -12,23 +12,21 @@
         padding: var(--paddingSize);
         overflow-y: scroll;
         &-header {
+            background-color: var(--bgColor);
+            padding: 10px 20px;
+            margin: 0 0 var(--paddingSize) 0;
+            border-radius: var(--borderRadius);
+            text-align: center;
+            font-size: 1.2em;
+            border: 1px solid #333;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
             &-icon {
                 width: 18px;
                 vertical-align: middle;
                 margin: -2px 0 0 0;
                 padding: 0 10px 0 0;
-            }
-            h3 {
-                background-color: var(--bgColor);
-                padding: 10px 20px;
-                margin: 0 0 var(--paddingSize) 0;
-                border-radius: var(--borderRadius);
-                text-align: center;
-                font-size: 1.2em;
-                border: 1px solid #333;
-                text-overflow: ellipsis;
-                overflow: hidden;
-                white-space: nowrap;
             }
         }
     }
