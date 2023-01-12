@@ -65,8 +65,9 @@ let parserObj = new parser()
             document.querySelector('.body').appendChild(element)
         }
     } catch (err) {
-        let errorBlock = document.querySelector('.error')
-        errorBlock.style.display = 'block'
-        errorBlock.innerHTML = err.name + ': ' + err.message
+        let errorElement = document.createElement('div')
+        errorElement.className = 'error'
+        errorElement.innerHTML = err.name + ': ' + err.message
+        document.querySelector('.body').appendChild(errorElement)
     }
 })()
