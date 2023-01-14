@@ -14,13 +14,17 @@ let data = {
         rss: 'https://9to5google.com/feed/',
         icon: 'https://9to5google.com/favicon.ico',
     },
-    Vedomosti: {
-        rss: 'https://www.vedomosti.ru/rss/rubric/technology.xml',
-        icon: 'https://www.vedomosti.ru/favicon.ico',
-    },
     TechMeme: {
         rss: 'https://www.techmeme.com/feed.xml',
         icon: 'https://www.techmeme.com/favicon.ico',
+    },
+    TechCrunch: {
+        rss: 'https://techcrunch.com/feed/',
+        icon: 'https://techcrunch.com/favicon.ico',
+    },
+    HackerNews: {
+        rss: 'https://hnrss.org/frontpage',
+        icon: 'https://news.ycombinator.com/favicon.ico',
     },
 }
 
@@ -33,6 +37,8 @@ let parserObj = new parser()
                 'https://cors-anywhere.herokuapp.com/' +
                     Object.values(data)[i].rss
             )
+            document.querySelector('.body').style.gridTemplateColumns =
+                'repeat(' + Object.keys(data).length + ', 1fr)'
             let element = document.createElement('section')
             element.id = 'col' + (i + 1)
             element.className = 'body__column'

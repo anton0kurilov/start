@@ -1,8 +1,9 @@
 .body {
     margin: var(--marginSize);
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(auto, 1fr);
     gap: var(--marginSize);
+    overflow-x: scroll;
     &__column {
         width: calc(100% - var(--paddingSize) * 2);
         min-width: 350px;
