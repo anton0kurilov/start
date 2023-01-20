@@ -5,9 +5,9 @@
     gap: var(--marginSize);
     overflow-x: scroll;
     &__column {
-        width: calc(100% - var(--paddingSize) * 2);
-        min-width: 350px;
-        height: calc(100vh - var(--marginSize) * 2 - var(--paddingSize) * 2);
+        min-width: 380px;
+        box-sizing: border-box;
+        height: calc(100vh - var(--marginSize) * 2);
         background-color: var(--subColor);
         border-radius: var(--borderRadius);
         padding: var(--paddingSize);
