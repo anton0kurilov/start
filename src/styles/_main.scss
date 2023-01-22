@@ -10,17 +10,18 @@
         height: calc(100vh - var(--marginSize) * 2);
         background-color: var(--subColor);
         border-radius: var(--borderRadius);
-        padding: var(--paddingSize);
+        padding: 0 var(--paddingSize) var(--paddingSize) var(--paddingSize);
         overflow-y: scroll;
         opacity: 0;
         animation: fadeIn ease-in 1;
         animation-fill-mode: forwards;
         animation-duration: 0.3s;
         animation-delay: 0.2s;
+        position: relative;
         &-header {
             background-color: var(--bgColor);
             padding: 10px 20px;
-            margin: 0 0 var(--paddingSize) 0;
+            margin: 0;
             border-radius: var(--borderRadius);
             text-align: center;
             font-size: 1.2em;
@@ -28,6 +29,15 @@
             text-overflow: ellipsis;
             overflow: hidden;
             white-space: nowrap;
+            &-container {
+                background-color: var(--subColor);
+                padding: var(--paddingSize) 0;
+                position: sticky;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 997;
+            }
             &-icon {
                 width: 18px;
                 vertical-align: middle;

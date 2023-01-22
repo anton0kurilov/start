@@ -43,11 +43,11 @@ let parserObj = new parser()
             element.id = 'col' + (i + 1)
             element.className = 'body__column'
             let elementHeader =
-                    '<h3 class="body__column-header"><img src="' +
+                    '<div class="body__column-header-container"><h3 class="body__column-header"><img src="' +
                     Object.values(data)[i].icon +
                     '" class="body__column-header-icon">' +
                     feed.title +
-                    '</h3>',
+                    '</h3></div>',
                 elementContent = ''
             feed.items.forEach((item) => {
                 let itemDate = moment(item.pubDate).fromNow()
