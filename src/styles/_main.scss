@@ -72,3 +72,19 @@
         opacity: 1;
     }
 }
+
+@media screen and (max-width: 450px) {
+    :root {
+        --marginSize: 10px;
+    }
+    .body {
+        scroll-snap-type: x mandatory;
+        &__column {
+            width: calc(100vw - var(--marginSize) * 2);
+            min-width: auto;
+            scroll-snap-align: start;
+            min-block-size: calc(100vw - var(--marginSize) * 2);
+            scroll-snap-stop: always;
+        }
+    }
+}
