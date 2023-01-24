@@ -34,7 +34,7 @@ let parserObj = new parser()
     try {
         for (let i = 0; i < Object.keys(data).length; i++) {
             let feed = await parserObj.parseURL(
-                'https://cors-anywhere.herokuapp.com/' +
+                'https://cors.kurilov.workers.dev/?uri' +
                     Object.values(data)[i].rss
             )
             document.querySelector('.body').style.gridTemplateColumns =
