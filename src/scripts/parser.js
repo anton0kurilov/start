@@ -26,6 +26,10 @@ let data = {
         rss: 'https://hnrss.org/frontpage',
         icon: 'https://news.ycombinator.com/favicon.ico',
     },
+    Reddit: {
+        rss: 'https://www.reddit.com/r/android+apple.rss',
+        icon: 'https://reddit.com/favicon.ico',
+    },
 }
 
 let parserObj = new parser()
