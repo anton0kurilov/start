@@ -23,7 +23,7 @@ let data = {
         icon: 'https://techcrunch.com/favicon.ico',
     },
     HackerNews: {
-        rss: 'https://hnrss.org/frontpage',
+        rss: 'https://hnrss.org/newest?points=100',
         icon: 'https://news.ycombinator.com/favicon.ico',
     },
     Reddit: {
