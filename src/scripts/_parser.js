@@ -49,7 +49,9 @@ let parserObj = new parser()
             let elementHeader =
                     '<div class="body__column-header-container"><h3 class="body__column-header"><img src="' +
                     Object.values(data)[i].icon +
-                    '" class="body__column-header-icon">' +
+                    '" class="body__column-header-icon" alt="' +
+                    feed.title +
+                    '">' +
                     feed.title +
                     '</h3></div>',
                 elementContent = ''
