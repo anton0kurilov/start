@@ -37,15 +37,20 @@ let parserObj = new parser()
 ;(async () => {
     try {
         for (let i = 0; i < Object.keys(data).length; i++) {
+            // parse this RSS feed
             let feed = await parserObj.parseURL(
                 'https://cors.kurilov.workers.dev/?uri' +
                     Object.values(data)[i].rss
             )
+
+            // create a feed column and set number of them
             document.querySelector('.body').style.gridTemplateColumns =
                 'repeat(' + Object.keys(data).length + ', 1fr)'
             let element = document.createElement('section')
             element.id = 'col' + (i + 1)
             element.className = 'body__column'
+
+            // create a feed header with name and favicon
             let elementHeader =
                     '<div class="body__column-header-container"><h3 class="body__column-header"><img src="' +
                     Object.values(data)[i].icon +
@@ -55,6 +60,8 @@ let parserObj = new parser()
                     feed.title +
                     '</h3></div>',
                 elementContent = ''
+
+            // create feed blocks for every item in the RSS feed
             feed.items.forEach((item) => {
                 let itemDate = moment(item.pubDate).fromNow()
                 elementContent +=
@@ -69,9 +76,11 @@ let parserObj = new parser()
                     '</h2></div></a>'
             })
             element.innerHTML = elementHeader + elementContent
+            // push a feed item to the page
             document.querySelector('.body').appendChild(element)
         }
     } catch (err) {
+        // create an error badge and push it to the page
         let errorElement = document.createElement('div')
         errorElement.className = 'error'
         errorElement.innerHTML = err.name + ': ' + err.message
