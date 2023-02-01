@@ -1,3 +1,4 @@
+// Make columns header clickable for scrolling to the top of feeds
 window.setTimeout(() => {
     const columnHeaderElement = document.querySelectorAll(
         '.body__column-header-container'
