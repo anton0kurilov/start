@@ -1,38 +1,37 @@
 const moment = require('moment'),
-    parser = require('rss-parser')
-
-let data = {
-    TheVerge: {
-        rss: 'https://www.theverge.com/rss/index.xml',
-        icon: 'https://www.theverge.com/favicon.ico',
+    parser = require('rss-parser'),
+    data = {
+        TheVerge: {
+            rss: 'https://www.theverge.com/rss/index.xml',
+            icon: 'https://www.theverge.com/favicon.ico',
+        },
+        MacRumors: {
+            rss: 'https://feeds.macrumors.com/MacRumors-All',
+            icon: 'https://macrumors.com/favicon.ico',
+        },
+        NinetoFiveGoogle: {
+            rss: 'https://9to5google.com/feed/',
+            icon: 'https://9to5google.com/favicon.ico',
+        },
+        TechMeme: {
+            rss: 'https://www.techmeme.com/feed.xml',
+            icon: 'https://www.techmeme.com/favicon.ico',
+        },
+        TechCrunch: {
+            rss: 'https://techcrunch.com/feed/',
+            icon: 'https://techcrunch.com/favicon.ico',
+        },
+        HackerNews: {
+            rss: 'https://hnrss.org/newest?points=100',
+            icon: 'https://news.ycombinator.com/favicon.ico',
+        },
+        Reddit: {
+            rss: 'https://www.reddit.com/r/android+apple+artificial+technology.rss',
+            icon: 'https://reddit.com/favicon.ico',
+        },
     },
-    MacRumors: {
-        rss: 'https://feeds.macrumors.com/MacRumors-All',
-        icon: 'https://macrumors.com/favicon.ico',
-    },
-    NinetoFiveGoogle: {
-        rss: 'https://9to5google.com/feed/',
-        icon: 'https://9to5google.com/favicon.ico',
-    },
-    TechMeme: {
-        rss: 'https://www.techmeme.com/feed.xml',
-        icon: 'https://www.techmeme.com/favicon.ico',
-    },
-    TechCrunch: {
-        rss: 'https://techcrunch.com/feed/',
-        icon: 'https://techcrunch.com/favicon.ico',
-    },
-    HackerNews: {
-        rss: 'https://hnrss.org/newest?points=100',
-        icon: 'https://news.ycombinator.com/favicon.ico',
-    },
-    Reddit: {
-        rss: 'https://www.reddit.com/r/android+apple+artificial+technology.rss',
-        icon: 'https://reddit.com/favicon.ico',
-    },
-}
-
-let parserObj = new parser()
+    parserObj = new parser(),
+    bodyElement = document.querySelector('.body')
 
 ;(async () => {
     try {
@@ -44,7 +43,7 @@ let parserObj = new parser()
             )
 
             // create a feed column and set number of them
-            document.querySelector('.body').style.gridTemplateColumns =
+            bodyElement.style.gridTemplateColumns =
                 'repeat(' + Object.keys(data).length + ', 1fr)'
             let element = document.createElement('section')
             element.id = 'col' + (i + 1)
@@ -77,13 +76,13 @@ let parserObj = new parser()
             })
             element.innerHTML = elementHeader + elementContent
             // push a feed item to the page
-            document.querySelector('.body').appendChild(element)
+            bodyElement.appendChild(element)
         }
     } catch (err) {
         // create an error badge and push it to the page
         let errorElement = document.createElement('div')
         errorElement.className = 'error'
         errorElement.innerHTML = err.name + ': ' + err.message
-        document.querySelector('.body').appendChild(errorElement)
+        bodyElement.appendChild(errorElement)
     }
 })()
