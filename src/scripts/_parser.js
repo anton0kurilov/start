@@ -27,7 +27,7 @@ let data = {
         icon: 'https://news.ycombinator.com/favicon.ico',
     },
     Reddit: {
-        rss: 'https://www.reddit.com/r/android+apple+artificial.rss',
+        rss: 'https://www.reddit.com/r/android+apple+artificial+technology.rss',
         icon: 'https://reddit.com/favicon.ico',
     },
 }
