@@ -1,6 +1,10 @@
 {
   "devDependencies": {
+    "@parcel/packager-raw-url": "^2.8.2",
+    "@parcel/packager-xml": "^2.8.2",
     "@parcel/transformer-sass": "^2.8.2",
+    "@parcel/transformer-webmanifest": "^2.8.2",
+    "@parcel/transformer-xml": "^2.8.2",
     "buffer": "^5.7.1",
     "events": "^3.3.0",
     "https-browserify": "^1.0.0",

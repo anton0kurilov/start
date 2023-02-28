@@ -1,0 +1,17 @@
+{
+    "short_name": "Start.",
+    "name": "Start.",
+    "icons": [
+        {
+            "src": "./app.svg",
+            "type": "image/svg+xml",
+            "sizes": "any"
+        }
+    ],
+    "start_url": "https://kurilov.site",
+    "background_color": "#000",
+    "display": "standalone",
+    "lang": "en-US",
+    "orientation": "portrait-primary",
+    "theme_color": "#222"
+}
