@@ -14,7 +14,13 @@
     z-index: 998;
     transition: opacity 0.5s;
     &__header {
-        font-size: 10vw;
+        font-size: 11vw;
         margin: var(--marginSize) 0;
+    }
+    &__time {
+        margin: 0;
+        font-weight: 400;
+        font-size: 3vw;
+        opacity: 0.8;
     }
 }
