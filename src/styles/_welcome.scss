@@ -15,6 +15,14 @@
     transition: opacity 0.5s;
     &__header {
         font-size: 11vw;
+        background: linear-gradient(
+            45deg,
+            #f83a3a 10%,
+            #f13dd4 50%,
+            #7000ff 90%
+        );
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
         margin: var(--marginSize) 0;
     }
     &__time {
