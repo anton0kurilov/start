@@ -14,7 +14,7 @@
     z-index: 998;
     transition: opacity 0.5s;
     &__header {
-        font-size: 11vw;
+        font-size: clamp(2.7rem, 10vw, 200px);
         background: linear-gradient(
             45deg,
             #f83a3a 10%,
@@ -28,7 +28,7 @@
     &__time {
         margin: 0;
         font-weight: 400;
-        font-size: 3vw;
+        font-size: clamp(1.2rem, 4vw, 130px);
         opacity: 0.8;
     }
 }
