@@ -32,10 +32,22 @@ const moment = require('moment'),
 
             // create feed blocks for every item in the RSS feed
             feed.items.forEach((item) => {
-                let itemDate = moment(item.pubDate).fromNow()
-                elementContent += `<a href="${item.link}" target="_blank"><div class="content__item"><i class="content__item-time" title="${item.pubDate}">${itemDate}</i><h2 class="content__item-title">${item.title}</h2></div></a>`
+                let itemDate = moment(item.pubDate).fromNow(),
+                    isPubNew = ``
+
+                // check if this post is new (published less than half an hour ago)
+                if (
+                    new Date().getTime() - new Date(item.pubDate).getTime() <
+                    1800000
+                ) {
+                    isPubNew = `🔥 `
+                }
+
+                // concate a string with all posts of this feed
+                elementContent += `<a href="${item.link}" target="_blank"><div class="content__item"><i class="content__item-time" title="${item.pubDate}">${isPubNew}${itemDate}</i><h2 class="content__item-title">${item.title}</h2></div></a>`
             })
             element.innerHTML = elementHeader + elementContent
+
             // push a feed item to the page
             bodyElement.appendChild(element)
         }
