@@ -1,50 +1,22 @@
+import sources from '../../public/assets/data/sources.json'
+
 const moment = require('moment'),
     parser = require('rss-parser'),
-    data = {
-        TheVerge: {
-            rss: 'https://www.theverge.com/rss/index.xml',
-            icon: 'https://www.theverge.com/favicon.ico',
-        },
-        MacRumors: {
-            rss: 'https://feeds.macrumors.com/MacRumors-All',
-            icon: 'https://macrumors.com/favicon.ico',
-        },
-        NinetoFiveGoogle: {
-            rss: 'https://9to5google.com/feed/',
-            icon: 'https://9to5google.com/favicon.ico',
-        },
-        TechMeme: {
-            rss: 'https://www.techmeme.com/feed.xml',
-            icon: 'https://www.techmeme.com/favicon.ico',
-        },
-        TechCrunch: {
-            rss: 'https://techcrunch.com/feed/',
-            icon: 'https://techcrunch.com/favicon.ico',
-        },
-        HackerNews: {
-            rss: 'https://hnrss.org/newest?points=100',
-            icon: 'https://news.ycombinator.com/favicon.ico',
-        },
-        Reddit: {
-            rss: 'https://www.reddit.com/r/android+apple+artificial+technology.rss',
-            icon: 'https://reddit.com/favicon.ico',
-        },
-    },
     parserObj = new parser(),
     bodyElement = document.querySelector('.body')
 
 ;(async () => {
     try {
-        for (let i = 0; i < Object.keys(data).length; i++) {
+        for (let i = 0; i < Object.keys(sources).length; i++) {
             // parse this RSS feed
             let feed = await parserObj.parseURL(
                 'https://cors.kurilov.workers.dev/?uri' +
-                    Object.values(data)[i].rss
+                    Object.values(sources)[i].rss
             )
 
             // create a feed column and set number of them
             bodyElement.style.gridTemplateColumns =
-                'repeat(' + Object.keys(data).length + ', 1fr)'
+                'repeat(' + Object.keys(sources).length + ', 1fr)'
             let element = document.createElement('section')
             element.id = 'col' + (i + 1)
             element.className = 'body__column'
@@ -52,7 +24,7 @@ const moment = require('moment'),
             // create a feed header with name and favicon
             let elementHeader =
                     '<div class="body__column-header-container"><h3 class="body__column-header"><img src="' +
-                    Object.values(data)[i].icon +
+                    Object.values(sources)[i].icon +
                     '" class="body__column-header-icon" alt="' +
                     feed.title +
                     '">' +

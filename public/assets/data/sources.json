@@ -1,0 +1,30 @@
+{
+    "TheVerge": {
+        "rss": "https://www.theverge.com/rss/index.xml",
+        "icon": "https://www.theverge.com/favicon.ico"
+    },
+    "MacRumors": {
+        "rss": "https://feeds.macrumors.com/MacRumors-All",
+        "icon": "https://macrumors.com/favicon.ico"
+    },
+    "NinetoFiveGoogle": {
+        "rss": "https://9to5google.com/feed/",
+        "icon": "https://9to5google.com/favicon.ico"
+    },
+    "TechMeme": {
+        "rss": "https://www.techmeme.com/feed.xml",
+        "icon": "https://www.techmeme.com/favicon.ico"
+    },
+    "TechCrunch": {
+        "rss": "https://techcrunch.com/feed/",
+        "icon": "https://techcrunch.com/favicon.ico"
+    },
+    "HackerNews": {
+        "rss": "https://hnrss.org/newest?points=100",
+        "icon": "https://news.ycombinator.com/favicon.ico"
+    },
+    "Reddit": {
+        "rss": "https://www.reddit.com/r/android+apple+artificial+technology.rss",
+        "icon": "https://reddit.com/favicon.ico"
+    }
+}
