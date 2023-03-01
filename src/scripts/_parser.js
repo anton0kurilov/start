@@ -15,36 +15,25 @@ const moment = require('moment'),
             )
 
             // create a feed column and set number of them
-            bodyElement.style.gridTemplateColumns =
-                'repeat(' + Object.keys(sources).length + ', 1fr)'
+            bodyElement.style.gridTemplateColumns = `repeat(${
+                Object.keys(sources).length
+            }, 1fr)`
             let element = document.createElement('section')
-            element.id = 'col' + (i + 1)
+            element.id = `col${i + 1}`
             element.className = 'body__column'
 
             // create a feed header with name and favicon
-            let elementHeader =
-                    '<div class="body__column-header-container"><h3 class="body__column-header"><img src="' +
-                    Object.values(sources)[i].icon +
-                    '" class="body__column-header-icon" alt="' +
-                    feed.title +
-                    '">' +
-                    feed.title +
-                    '</h3></div>',
+            let elementHeader = `<div class="body__column-header-container"><h3 class="body__column-header"><img src="${
+                    Object.values(sources)[i].icon
+                }" class="body__column-header-icon" alt="${feed.title}">${
+                    feed.title
+                }</h3></div>`,
                 elementContent = ''
 
             // create feed blocks for every item in the RSS feed
             feed.items.forEach((item) => {
                 let itemDate = moment(item.pubDate).fromNow()
-                elementContent +=
-                    '<a href="' +
-                    item.link +
-                    '" target="_blank"><div class="content__item"><i class="content__item-time" title="' +
-                    item.pubDate +
-                    '">' +
-                    itemDate +
-                    '</i><h2 class="content__item-title">' +
-                    item.title +
-                    '</h2></div></a>'
+                elementContent += `<a href="${item.link}" target="_blank"><div class="content__item"><i class="content__item-time" title="${item.pubDate}">${itemDate}</i><h2 class="content__item-title">${item.title}</h2></div></a>`
             })
             element.innerHTML = elementHeader + elementContent
             // push a feed item to the page
@@ -54,7 +43,7 @@ const moment = require('moment'),
         // create an error badge and push it to the page
         let errorElement = document.createElement('div')
         errorElement.className = 'error'
-        errorElement.innerHTML = err.name + ': ' + err.message
+        errorElement.innerHTML = `${err.name}: ${err.message}`
         bodyElement.appendChild(errorElement)
     }
 })()
