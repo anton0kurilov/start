@@ -90,7 +90,7 @@
         &__column {
             width: calc(100vw - var(--marginSize) * 2);
             min-width: auto;
-            scroll-snap-align: start;
+            scroll-snap-align: center;
             min-block-size: calc(100vw - var(--marginSize) * 2);
             scroll-snap-stop: always;
         }
