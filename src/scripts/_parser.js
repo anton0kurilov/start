@@ -5,9 +5,10 @@ const moment = require('moment'),
     parserObj = new parser(),
     bodyElement = document.querySelector('.body')
 
+export let sourcesCount = Object.keys(sources).length
 ;(async () => {
     try {
-        for (let i = 0; i < Object.keys(sources).length; i++) {
+        for (let i = 0; i < sourcesCount; i++) {
             // parse this RSS feed
             let feed = await parserObj.parseURL(
                 'https://cors.kurilov.workers.dev/?uri' +
@@ -15,9 +16,7 @@ const moment = require('moment'),
             )
 
             // create a feed column and set number of them
-            bodyElement.style.gridTemplateColumns = `repeat(${
-                Object.keys(sources).length
-            }, 1fr)`
+            bodyElement.style.gridTemplateColumns = `repeat(${sourcesCount}, 1fr)`
             let element = document.createElement('section')
             element.id = `col${i + 1}`
             element.className = 'body__column'
