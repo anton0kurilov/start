@@ -52,9 +52,16 @@ export let sourcesCount = Object.keys(sources).length
         }
     } catch (err) {
         // create an error badge and push it to the page
-        let errorElement = document.createElement('div')
+        let errorElement = document.createElement('div'),
+            errorCloseElement =
+                '<div id="errClose" class="error-close">close</div>'
         errorElement.className = 'error'
-        errorElement.innerHTML = `${err.name}: ${err.message}`
+        errorElement.innerHTML = `<div class="error-text">${err.name}: ${err.message}</div> ${errorCloseElement}`
         bodyElement.appendChild(errorElement)
+        document
+            .querySelector('#errClose')
+            .addEventListener('click', function () {
+                errorElement.remove()
+            })
     }
 })()

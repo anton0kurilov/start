@@ -66,6 +66,22 @@
     top: 20px;
     right: 20px;
     z-index: 999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    &-close {
+        padding: 3px 10px;
+        margin: 0 0 0 10px;
+        text-align: center;
+        border-radius: 10px;
+        background-color: #f32c1e;
+        color: #d0d0d0;
+        cursor: pointer;
+        transition: all 0.5s;
+        &:hover {
+            color: #ddd;
+        }
+    }
 }
 
 @keyframes fadeIn {
