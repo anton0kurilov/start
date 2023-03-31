@@ -8,7 +8,7 @@
             "sizes": "any"
         }
     ],
-    "start_url": "https://kurilov.site",
+    "start_url": "https://start.kurilov.site",
     "background_color": "#000",
     "display": "standalone",
     "lang": "en-US",
