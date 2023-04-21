@@ -27,6 +27,6 @@
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "dependencies": {
     "moment": "^2.29.4",
-    "rss-parser": "^3.12.0"
+    "rss-parser": "^3.13.0"
   }
 }
