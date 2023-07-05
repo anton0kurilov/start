@@ -116,8 +116,8 @@
 .admin {
     position: fixed;
     z-index: 997;
-    bottom: 20px;
-    right: 20px;
+    bottom: var(--marginSize);
+    right: var(--marginSize);
     padding: 10px 20px;
     border-radius: var(--borderRadius);
     background-color: var(--subColor);
@@ -151,5 +151,12 @@
             min-block-size: calc(100vw - var(--marginSize) * 2);
             scroll-snap-stop: always;
         }
+    }
+    .admin {
+        width: calc(100% - var(--marginSize) * 2);
+        right: auto;
+        margin: 0 var(--marginSize);
+        box-sizing: border-box;
+        text-align: center;
     }
 }
