@@ -5,7 +5,7 @@
         {
             "src": "./app.svg",
             "type": "image/svg+xml",
-            "sizes": "any"
+            "sizes": "any maskable"
         }
     ],
     "start_url": "https://start.kurilov.site",
