@@ -7,5 +7,3 @@ const moment = require('moment'),
 adminElement.className = 'admin'
 adminElement.innerHTML = `Last updated at <b>${dateHours}:${dateMinutes}</b>`
 bodyElement.appendChild(adminElement)
-
-console.log(moment(dateObj).fromNow())
