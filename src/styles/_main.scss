@@ -1,3 +1,7 @@
+:root {
+    --admin-height: 40px;
+}
+
 .body {
     display: grid;
     grid-template-columns: repeat(auto, 1fr);
@@ -118,7 +122,9 @@
     z-index: 997;
     bottom: var(--marginSize);
     right: var(--marginSize);
-    padding: 10px 20px;
+    padding: 0 20px;
+    height: var(--admin-height);
+    line-height: var(--admin-height);
     border-radius: var(--borderRadius);
     background-color: var(--subColor);
     border: 1px solid #333;
@@ -141,11 +147,14 @@
 @media screen and (max-width: 450px) {
     :root {
         --marginSize: 10px;
+        --admin-height: 35px;
     }
     .body {
         scroll-snap-type: x mandatory;
         &__column {
             width: calc(100vw - var(--marginSize) * 2);
+            padding: 0 var(--paddingSize) calc(var(--paddingSize) + 35px)
+                var(--paddingSize);
             min-width: auto;
             scroll-snap-align: center;
             min-block-size: calc(100vw - var(--marginSize) * 2);
@@ -156,6 +165,7 @@
         width: calc(100% - var(--marginSize) * 2);
         right: auto;
         margin: 0 var(--marginSize);
+        font-size: 0.9em;
         box-sizing: border-box;
         text-align: center;
     }
