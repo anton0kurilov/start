@@ -123,10 +123,10 @@
     bottom: var(--marginSize);
     right: var(--marginSize);
     padding: 0 20px;
-    height: var(--admin-height);
-    line-height: var(--admin-height);
+    height: var(--adminHeight);
+    line-height: var(--adminHeight);
     border-radius: var(--borderRadius);
-    background-color: var(--subColor);
+    background-color: var(--bgColor);
     border: 1px solid #333;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
 }
@@ -147,7 +147,7 @@
 @media screen and (max-width: 450px) {
     :root {
         --marginSize: 10px;
-        --admin-height: 35px;
+        --adminHeight: 35px;
     }
     .body {
         scroll-snap-type: x mandatory;
