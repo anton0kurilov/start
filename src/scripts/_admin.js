@@ -1,5 +1,4 @@
-const bodyElement = document.querySelector('body')
-const moment = require('moment'),
+const bodyElement = document.querySelector('body'),
     adminElement = document.createElement('div'),
     dateObj = new Date(),
     dateMinutes = String(dateObj.getMinutes()).padStart(2, '0'),
