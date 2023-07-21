@@ -5,7 +5,7 @@ const moment = require('moment'),
     dateMinutes = String(dateObj.getMinutes()).padStart(2, '0'),
     dateHours = String(dateObj.getHours()).padStart(2, '0'),
     refreshButtonContent =
-        '<a id="refreshButton" title="Refresh this" class="admin__refresh">↻</a>'
+        '<a id="refreshButton" title="Refresh this app" class="admin__refresh">↻</a>'
 adminElement.className = 'admin'
 adminElement.innerHTML = `Last updated at <b>${dateHours}:${dateMinutes}</b> ${refreshButtonContent}`
 bodyElement.appendChild(adminElement)
