@@ -155,7 +155,6 @@
 @media screen and (max-width: 450px) {
     :root {
         --marginSize: 10px;
-        --adminHeight: 35px;
     }
     .body {
         scroll-snap-type: x mandatory;
@@ -170,11 +169,25 @@
         }
     }
     .admin {
-        width: calc(100% - var(--marginSize) * 2);
+        width: calc(100% - var(--marginSize) * 3 - var(--adminHeight));
         right: auto;
         margin: 0 var(--marginSize);
-        font-size: 0.9em;
         box-sizing: border-box;
         text-align: center;
+        &__refresh {
+            position: fixed;
+            right: var(--marginSize);
+            bottom: var(--marginSize);
+            width: var(--adminHeight);
+            height: var(--adminHeight);
+            background: var(--bgColor);
+            padding: 0;
+            font-size: 1.2em;
+            border-radius: 50%;
+            border: 1px solid #333;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12),
+                0 1px 2px rgba(0, 0, 0, 0.24);
+            -webkit-tap-highlight-color: transparent;
+        }
     }
 }
