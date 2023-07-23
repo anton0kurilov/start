@@ -161,8 +161,8 @@
         scroll-snap-type: x mandatory;
         &__column {
             width: calc(100vw - var(--marginSize) * 2);
-            padding: 0 var(--paddingSize) calc(var(--paddingSize) + 35px)
-                var(--paddingSize);
+            padding: 0 var(--paddingSize)
+                calc(var(--paddingSize) + var(--adminHeight)) var(--paddingSize);
             min-width: auto;
             scroll-snap-align: center;
             min-block-size: calc(100vw - var(--marginSize) * 2);
