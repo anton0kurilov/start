@@ -129,8 +129,12 @@
     background-color: var(--bgColor);
     border: 1px solid #333;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    text-align: center;
+    display: flex;
+    align-items: center;
     &__refresh {
         cursor: pointer;
+        font-size: 1.4em;
         padding: 0 0 0 10px;
         transition: all 0.5s;
         &:hover {
@@ -174,6 +178,7 @@
         margin: 0 var(--marginSize);
         box-sizing: border-box;
         text-align: center;
+        display: block;
         &__refresh {
             position: fixed;
             right: var(--marginSize);
@@ -182,7 +187,6 @@
             height: var(--adminHeight);
             background: var(--bgColor);
             padding: 0;
-            font-size: 1.2em;
             border-radius: 50%;
             border: 1px solid #333;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12),
