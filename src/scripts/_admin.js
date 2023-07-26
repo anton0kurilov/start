@@ -5,7 +5,7 @@ const bodyElement = document.querySelector('body'),
     dateHours = String(dateObj.getHours()).padStart(2, '0'),
     refreshButtonContent =
         '<div class="admin__refresh" id="refreshButton" title="Refresh this app">' +
-        '<span class="material-symbols-outlined">refresh</span>' +
+        '<span class="icon">refresh</span>' +
         '</div>',
     lastUpdatedContent = `<div class="admin__lastupdatedtext">Last updated at <b>${dateHours}:${dateMinutes}</b></div>`
 adminElement.className = 'admin'
