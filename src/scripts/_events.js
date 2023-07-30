@@ -12,7 +12,7 @@ const isElementLoaded = async (selector) => {
 
 isElementLoaded('#col' + sourcesCount).then((selector) => {
     const columnHeaderElement = document.querySelectorAll(
-        '.body__column-header-container'
+        '.app__column-header-container'
     )
     for (let i = 0; i < columnHeaderElement.length; i++) {
         columnHeaderElement[i].addEventListener('click', function () {

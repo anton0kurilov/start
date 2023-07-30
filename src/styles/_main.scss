@@ -2,7 +2,7 @@
     --adminHeight: 40px;
 }
 
-.body {
+.app {
     display: grid;
     grid-template-columns: repeat(auto, 1fr);
     gap: var(--marginSize);
@@ -160,7 +160,7 @@
     :root {
         --marginSize: 10px;
     }
-    .body {
+    .app {
         scroll-snap-type: x mandatory;
         &__column {
             width: calc(100vw - var(--marginSize) * 2);

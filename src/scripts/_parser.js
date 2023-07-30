@@ -3,7 +3,7 @@ import sources from '../../public/assets/data/sources.json'
 const moment = require('moment'),
     parser = require('rss-parser'),
     parserObj = new parser(),
-    bodyElement = document.querySelector('.body')
+    appElement = document.querySelector('.app')
 
 export let sourcesCount = Object.keys(sources).length
 ;(async () => {
@@ -16,15 +16,15 @@ export let sourcesCount = Object.keys(sources).length
             )
 
             // create a feed column and set number of them
-            bodyElement.style.gridTemplateColumns = `repeat(${sourcesCount}, 1fr)`
+            appElement.style.gridTemplateColumns = `repeat(${sourcesCount}, 1fr)`
             let element = document.createElement('section')
             element.id = `col${i + 1}`
-            element.className = 'body__column'
+            element.className = 'app__column'
 
             // create a feed header with name and favicon
-            let elementHeader = `<div class="body__column-header-container"><h3 class="body__column-header"><img src="${
+            let elementHeader = `<div class="app__column-header-container"><h3 class="app__column-header"><img src="${
                     Object.values(sources)[i].icon
-                }" class="body__column-header-icon" alt="${feed.title}">${
+                }" class="app__column-header-icon" alt="${feed.title}">${
                     feed.title
                 }</h3></div>`,
                 elementContent = ''
@@ -48,7 +48,7 @@ export let sourcesCount = Object.keys(sources).length
             element.innerHTML = elementHeader + elementContent
 
             // push a feed item to the page
-            bodyElement.appendChild(element)
+            appElement.appendChild(element)
         }
     } catch (err) {
         // create an error badge and push it to the page
@@ -57,7 +57,7 @@ export let sourcesCount = Object.keys(sources).length
                 '<div id="errClose" class="error-close">close</div>'
         errorElement.className = 'error'
         errorElement.innerHTML = `<div class="error-text">${err.name}: ${err.message}</div> ${errorCloseElement}`
-        bodyElement.appendChild(errorElement)
+        appElement.appendChild(errorElement)
         document
             .querySelector('#errClose')
             .addEventListener('click', function () {
