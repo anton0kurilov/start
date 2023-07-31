@@ -1,4 +1,4 @@
-const appElement = document.querySelector('.app'),
+const bodyElement = document.querySelector('body'),
     adminElement = document.createElement('div'),
     dateObj = new Date(),
     dateMinutes = String(dateObj.getMinutes()).padStart(2, '0'),
@@ -10,7 +10,7 @@ const appElement = document.querySelector('.app'),
     lastUpdatedContent = `<div class="admin__lastupdatedtext">Last updated at <b>${dateHours}:${dateMinutes}</b></div>`
 adminElement.className = 'admin'
 adminElement.innerHTML = lastUpdatedContent + refreshButtonContent
-appElement.appendChild(adminElement)
+bodyElement.appendChild(adminElement)
 
 // Update the page
 const refreshButtonElement = document.querySelector('#refreshButton')
