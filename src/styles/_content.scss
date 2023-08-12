@@ -10,6 +10,8 @@
             margin: 0 0 5px 0;
             font-size: 1em;
             font-weight: 500;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
         }
         &-time {
             color: #999;

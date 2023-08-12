@@ -39,6 +39,8 @@
             text-overflow: ellipsis;
             overflow: hidden;
             white-space: nowrap;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
             &-container {
                 background-color: var(--subColor);
                 padding: var(--paddingSize) 0;
