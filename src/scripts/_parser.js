@@ -54,7 +54,7 @@ export let sourcesCount = Object.keys(sources).length
         // create an error badge and push it to the page
         let errorElement = document.createElement('div'),
             errorCloseElement =
-                '<div id="errClose" class="error-close">close</div>'
+                '<div id="errClose" class="error-close"><span class="icon">close</span></div>'
         errorElement.className = 'error'
         errorElement.innerHTML = `<div class="error-text">${err.name}: ${err.message}</div> ${errorCloseElement}`
         appElement.appendChild(errorElement)
