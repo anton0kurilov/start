@@ -57,11 +57,30 @@ export let sourcesCount = Object.keys(sources).length
                 '<div id="errClose" class="error-close"><span class="icon">close</span></div>'
         errorElement.className = 'error'
         errorElement.innerHTML = `<div class="error-text">${err.name}: ${err.message}</div> ${errorCloseElement}`
+        metaColorChanger('error')
         appElement.appendChild(errorElement)
+        // close an error badge
         document
             .querySelector('#errClose')
             .addEventListener('click', function () {
                 errorElement.remove()
+                metaColorChanger()
             })
     }
 })()
+
+// Change meta-color for error badge
+function metaColorChanger(status) {
+    switch (status) {
+        case 'error':
+            document
+                .querySelector('meta[name="theme-color"]')
+                .setAttribute('content', '#f44336')
+            break
+        default:
+            document
+                .querySelector('meta[name="theme-color"]')
+                .setAttribute('content', '#000')
+            break
+    }
+}
