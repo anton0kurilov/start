@@ -138,6 +138,7 @@
         font-size: 1.4em;
         padding: 0 0 0 10px;
         transition: all 0.5s;
+        user-select: none;
         &:hover {
             opacity: 0.8;
         }
