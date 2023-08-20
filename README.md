@@ -23,7 +23,7 @@ Start. is a web-based application designed to provide a streamlined and organize
 To run Start. locally, follow these steps:
 
 1. Clone the repository: git clone https://github.com/anton0kurilov/start.git
-2. Install dependencies: npm install
-3. Configure your RSS feed sources in the config.json file.
+2. Install dependencies: ``npm install``
+3. Configure your RSS feed sources in the ``public/assets/data/sources.json`` file.
 4. Start the development server: npm start
 5. Access Start in your browser at http://localhost:1234
