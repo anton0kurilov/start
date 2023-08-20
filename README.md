@@ -1,6 +1,6 @@
 ## Start. — TweetDeck-like RSS News Reader
 
-Start. is a web-based application designed to provide a streamlined and organized way to read and manage multiple RSS news feeds. Inspired by the user-friendly interface of TweetDeck, Start. offers a similar experience for consuming news content from various sources in a single dashboard.
+Start. is a web-based application designed to provide a streamlined and organized way to read and manage multiple RSS news feeds. Inspired by the user-friendly interface of [TweetDeck](https://tweetdeck.twitter.com/), Start. offers a similar experience for consuming news content from various sources in a single dashboard.
 
 ![Start's screenshot](.github/screenshot.png)
 
@@ -9,7 +9,7 @@ Start. is a web-based application designed to provide a streamlined and organize
 
 **Responsive Design**. Enjoy a seamless reading experience across devices. Start.'s responsive design adapts to different screen sizes, from desktops to tablets and smartphones.
 
-**Fixed Source Set**. Start. currently supports the following fixed set of **tech**s news sources:
+**Fixed Source Set**. Start. currently supports the following fixed set of **tech** news sources:
 
 1. The Verge
 2. MacRumors
