@@ -2,7 +2,7 @@
 
 Start. is a web-based application designed to provide a streamlined and organized way to read and manage multiple RSS news feeds. Inspired by the user-friendly interface of [TweetDeck](https://tweetdeck.twitter.com/), Start. offers a similar experience for consuming news content from various sources in a single dashboard.
 
-![Start's screenshot](.github/screenshot.png)
+![Start.'s screenshot](.github/screenshot.png)
 
 ## Features
 **Multi-Column Layout**. Much like TweetDeck's column-based interface, Start. lets you arrange and customize your news feeds in multiple columns. 
@@ -19,11 +19,13 @@ Start. is a web-based application designed to provide a streamlined and organize
 6. Hacker News
 7. Reddit (r/android, r/apple, r/technology, r/artificial)
 
+Please note that while I have plans to introduce a feature that will allow you to edit and customize your news sources, this functionality is not expected to be available in the near future.
+
 ## Getting Started
 To run Start. locally, follow these steps:
 
-1. Clone the repository: git clone https://github.com/anton0kurilov/start.git
+1. Clone the repository: ``git clone https://github.com/anton0kurilov/start.git``
 2. Install dependencies: ``npm install``
 3. Configure your RSS feed sources in the ``public/assets/data/sources.json`` file.
-4. Start the development server: npm start
-5. Access Start in your browser at http://localhost:1234
+4. Start the development server: ``npm start``
+5. Access Start. in your browser at http://localhost:1234
