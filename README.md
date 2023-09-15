@@ -19,7 +19,8 @@ Start. is a web-based application designed to provide a streamlined and organize
 6. Hacker News
 7. Reddit (r/android, r/apple, r/technology, r/artificial)
 
-Please note that while I have plans to introduce a feature that will allow you to edit and customize your news sources, this functionality is not expected to be available in the near future.
+
+*❕ Please note that while I have plans to introduce a feature that will allow you to edit and customize your news sources, this functionality is not expected to be available in the near future.*
 
 ## Getting Started
 To run Start. locally, follow these steps:
