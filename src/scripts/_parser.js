@@ -1,4 +1,5 @@
 import sources from '../../public/assets/data/sources.json'
+import {hideWelcome, showWelcome} from './_welcome'
 
 const moment = require('moment'),
     parser = require('rss-parser'),
@@ -8,6 +9,7 @@ const moment = require('moment'),
 export let sourcesCount = Object.keys(sources).length
 ;(async () => {
     try {
+        showWelcome()
         for (let i = 0; i < sourcesCount; i++) {
             // parse this RSS feed
             let feed = await parserObj.parseURL(
@@ -67,6 +69,7 @@ export let sourcesCount = Object.keys(sources).length
                 metaColorChanger()
             })
     }
+    return hideWelcome()
 })()
 
 // Change meta-color for error badge
