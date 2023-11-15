@@ -105,16 +105,25 @@
     z-index: 998;
     transition: opacity 0.5s;
     &__header {
-        font-size: clamp(2.7rem, 10vw, 200px);
+        font-size: clamp(3rem, 12vw, 200px);
         background: linear-gradient(
             45deg,
             #f83a3a 10%,
-            #f13dd4 50%,
-            #7000ff 90%
+            #f13dd4 40%,
+            #7000ff 70%,
+            #f83a3a 90%,
+            #f13dd4 100%
         );
+        background-size: 200% auto;
+        animation: gradient 2s ease infinite;
         background-clip: text;
         -webkit-text-fill-color: transparent;
         margin: var(--marginSize) 0;
+    }
+    @keyframes gradient {
+        to {
+            background-position: 200% center;
+        }
     }
 }
 
