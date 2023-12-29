@@ -19,6 +19,10 @@
         "rss": "https://techcrunch.com/feed/",
         "icon": "https://techcrunch.com/favicon.ico"
     },
+    "Wccftech": {
+        "rss": "https://wccftech.com/feed/",
+        "icon": "https://wccftech.com/favicon.ico"
+    },
     "HackerNews": {
         "rss": "https://hnrss.org/newest?points=100",
         "icon": "https://news.ycombinator.com/favicon.ico"

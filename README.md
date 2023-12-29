@@ -16,8 +16,9 @@ Start. is a web-based application designed to provide a streamlined and organize
 3. 9to5Google
 4. Techmeme
 5. TechCrunch
-6. Hacker News
-7. Reddit (r/android, r/apple, r/technology, r/artificial)
+6. Wccftech
+7. Hacker News
+8. Reddit (r/android, r/apple, r/technology, r/artificial)
 
 
 *❕ Please note that while I have plans to introduce a feature that will allow you to edit and customize your news sources, this functionality is not expected to be available in the near future.*
