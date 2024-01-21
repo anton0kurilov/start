@@ -73,7 +73,8 @@
                 height: 30px;
                 vertical-align: middle;
                 transition: all 0.5s;
-                background-color: var(--bgColor);
+                background-color: rgba(0, 0, 0, 0.6);
+                border-radius: 50%;
                 font-size: 1.1em;
                 &:hover {
                     opacity: 0.8;
