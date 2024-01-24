@@ -28,7 +28,9 @@ export let sourcesCount = Object.keys(sources).length
                     Object.values(sources)[i].icon
                 }" class="app__column-header-icon" alt="${feed.title}">${
                     feed.title
-                }</h3></div>`,
+                }<a href="${
+                    feed.link
+                }" target="_blank" class="app__column-header-link"><span class="icon">north_east</span></a></h3></div>`,
                 elementContent = ''
 
             // create feed blocks for every item in the RSS feed
