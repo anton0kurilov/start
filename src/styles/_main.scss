@@ -152,6 +152,12 @@
             opacity: 0.8;
         }
     }
+    &__update {
+        &-time {
+            font-weight: 600;
+            cursor: help;
+        }
+    }
 }
 
 @keyframes fadeIn {
