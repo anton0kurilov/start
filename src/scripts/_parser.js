@@ -13,7 +13,7 @@ export let sourcesCount = Object.keys(sources).length
         for (let i = 0; i < sourcesCount; i++) {
             // parse this RSS feed
             let feed = await parserObj.parseURL(
-                'https://cors.kurilov.workers.dev/?uri' +
+                'https://cors.kurilov.workers.dev/?url=' +
                     Object.values(sources)[i].rss
             )
 
