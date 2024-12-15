@@ -28,7 +28,7 @@
         "icon": "https://news.ycombinator.com/favicon.ico"
     },
     "Reddit": {
-        "rss": "https://www.reddit.com/r/android+apple+artificial+technology/.rss",
+        "rss": "https://www.reddit.com/r/androidapple%2Bartificial%2Btechnology.rss",
         "icon": "https://reddit.com/favicon.ico"
     }
 }
