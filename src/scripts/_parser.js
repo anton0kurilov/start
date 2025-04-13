@@ -24,10 +24,8 @@ export let sourcesCount = Object.keys(sources).length
             element.className = 'app__column'
 
             // create a feed header with name and favicon
-            let elementHeader = `<div class="app__column-header-container"><h3 class="app__column-header"><img src="${
-                    Object.values(sources)[i].icon
-                }" class="app__column-header-icon" alt="${feed.title}">${
-                    feed.title
+            let elementHeader = `<div class="app__column-header-container"><h3 class="app__column-header">${
+                    Object.values(sources)[i].title
                 }<a href="${
                     feed.link
                 }" target="_blank" class="app__column-header-link"><span class="icon">north_east</span></a></h3></div>`,

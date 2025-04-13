@@ -1,6 +1,7 @@
 .content {
     &__item {
-        background-color: var(--bgColor);
+        background-color: var(--subColor);
+        border: 0.75px solid var(--borderColor);
         padding: 10px calc(var(--paddingSize) * 2);
         margin: var(--paddingSize) 0;
         border-radius: var(--borderRadius);
