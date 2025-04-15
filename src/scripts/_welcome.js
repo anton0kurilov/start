@@ -4,7 +4,7 @@ const welcomeBody = document.createElement('div')
 
 export function showWelcome() {
     welcomeBody.className = 'welcome'
-    welcomeBody.innerHTML = '<h1 class="welcome__header">Hello, Friend</h1>'
+    welcomeBody.innerHTML = '<div class="welcome__loader"></div>'
     document.querySelector('body').appendChild(welcomeBody)
 }
 

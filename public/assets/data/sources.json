@@ -1,34 +1,34 @@
 {
     "TheVerge": {
-        "rss": "https://www.theverge.com/rss/index.xml",
-        "icon": "https://www.theverge.com/favicon.ico"
+        "title": "The Verge",
+        "rss": "https://www.theverge.com/rss/index.xml"
     },
     "MacRumors": {
-        "rss": "https://feeds.macrumors.com/MacRumors-All",
-        "icon": "https://macrumors.com/favicon.ico"
+        "title": "MacRumors",
+        "rss": "https://feeds.macrumors.com/MacRumors-All"
     },
     "NinetoFiveGoogle": {
-        "rss": "https://9to5google.com/feed/",
-        "icon": "https://9to5google.com/favicon.ico"
+        "title": "9to5Google",
+        "rss": "https://9to5google.com/feed/"
     },
     "TechMeme": {
-        "rss": "https://www.techmeme.com/feed.xml",
-        "icon": "https://www.techmeme.com/favicon.ico"
+        "title": "TechMeme",
+        "rss": "https://www.techmeme.com/feed.xml"
     },
     "TechCrunch": {
-        "rss": "https://techcrunch.com/feed/",
-        "icon": "https://techcrunch.com/favicon.ico"
+        "title": "TechCrunch",
+        "rss": "https://techcrunch.com/feed/"
     },
     "Wccftech": {
-        "rss": "https://wccftech.com/feed/",
-        "icon": "https://wccftech.com/favicon.ico"
+        "title": "Wccftech",
+        "rss": "https://wccftech.com/feed/"
     },
     "HackerNews": {
-        "rss": "https://hnrss.org/newest?points=100",
-        "icon": "https://news.ycombinator.com/favicon.ico"
+        "title": "HackerNews",
+        "rss": "https://hnrss.org/newest?points=100"
     },
     "Reddit": {
-        "rss": "https://www.reddit.com/r/androidapple%2Bartificial%2Btechnology.rss",
-        "icon": "https://reddit.com/favicon.ico"
+        "title": "Reddit",
+        "rss": "https://www.reddit.com/r/androidapple%2Bartificial%2Btechnology.rss"
     }
 }

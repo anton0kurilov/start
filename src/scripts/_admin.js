@@ -3,7 +3,10 @@ const bodyElement = document.querySelector('body'),
     dateObj = new Date(),
     dateMinutes = String(dateObj.getMinutes()).padStart(2, '0'),
     dateHours = String(dateObj.getHours()).padStart(2, '0'),
-    dateFull = dateObj.getDate() + '.' + (dateObj.getMonth() + 1),
+    dateDay = String(dateObj.getDate()).padStart(2, '0'),
+    dateMonth = String(dateObj.getMonth() + 1).padStart(2, '0'),
+    dateYear = dateObj.getFullYear(),
+    dateFull = `${dateDay}.${dateMonth}.${dateYear}`,
     refreshButtonContent =
         '<div class="admin__refresh" id="refreshButton" title="Refresh this app">' +
         '<span class="icon">refresh</span>' +

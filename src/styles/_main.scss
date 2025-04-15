@@ -11,9 +11,8 @@
         min-width: 380px;
         box-sizing: border-box;
         height: calc(100vh - var(--marginSize) * 2);
-        background-color: var(--subColor);
         border-radius: var(--borderRadius);
-        padding: 0 var(--paddingSize) var(--paddingSize) var(--paddingSize);
+        padding: 0 0 var(--paddingSize) 0;
         margin: var(--marginSize) 0;
         overflow-y: scroll;
         opacity: 0;
@@ -29,13 +28,14 @@
             margin-right: var(--marginSize);
         }
         &-header {
-            background-color: var(--bgColor);
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
             padding: 10px 20px;
             margin: 0;
             border-radius: var(--borderRadius);
             text-align: center;
             font-size: 1.2em;
-            border: 1px solid #333;
+            border: 0.75px solid var(--borderColor);
             text-overflow: ellipsis;
             overflow: hidden;
             white-space: nowrap;
@@ -43,8 +43,7 @@
             -webkit-font-smoothing: antialiased;
             position: relative;
             &-container {
-                background-color: var(--subColor);
-                padding: var(--paddingSize) 0;
+                padding: 0;
                 position: sticky;
                 top: 0;
                 left: 0;
@@ -94,7 +93,7 @@
     top: var(--marginSize);
     right: var(--marginSize);
     padding: 0 20px;
-    border: 1px solid #333;
+    border: 0.75px solid var(--borderColor);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
     z-index: 999;
     display: flex;
@@ -120,7 +119,6 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-direction: column;
     position: fixed;
     top: 0;
     right: 0;
@@ -128,26 +126,23 @@
     bottom: 0;
     z-index: 998;
     transition: opacity 0.5s;
-    &__header {
-        font-size: clamp(3rem, 12vw, 200px);
-        background: linear-gradient(
-            45deg,
-            #f83a3a 10%,
-            #f13dd4 40%,
-            #7000ff 70%,
-            #f83a3a 90%,
-            #f13dd4 100%
-        );
-        background-size: 200% auto;
-        animation: gradient 2s ease infinite;
-        background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin: var(--marginSize) 0;
+
+    &__loader {
+        width: 48px;
+        height: 48px;
+        border: 5px solid var(--borderColor);
+        border-bottom-color: transparent;
+        border-radius: 50%;
+        animation: rotation 1s linear infinite;
     }
-    @keyframes gradient {
-        to {
-            background-position: 200% center;
-        }
+}
+
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
     }
 }
 
@@ -156,13 +151,13 @@
     z-index: 997;
     bottom: var(--marginSize);
     right: var(--marginSize);
-    padding: 0 20px;
+    padding: 0 var(--marginSize);
     height: var(--adminHeight);
     line-height: var(--adminHeight);
     border-radius: var(--borderRadius);
-    background-color: var(--bgColor);
-    border: 1px solid #333;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    border: 0.75px solid var(--borderColor);
     text-align: center;
     display: flex;
     align-items: center;
@@ -200,6 +195,7 @@
 @media screen and (max-width: 450px) {
     :root {
         --marginSize: 10px;
+        --paddingSize: 8px;
     }
     .app {
         scroll-snap-type: x mandatory;
@@ -219,28 +215,27 @@
         }
     }
     .admin {
-        width: calc(100% - var(--marginSize) * 3 - var(--adminHeight));
-        right: auto;
-        margin: 0 var(--marginSize);
+        width: calc(100% - var(--marginSize) * 2 - var(--paddingSize) * 2);
+        left: calc(var(--marginSize) + var(--paddingSize));
+        right: calc(var(--marginSize) + var(--paddingSize));
+        margin: 0;
         box-sizing: border-box;
-        text-align: center;
-        display: block;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 calc(var(--paddingSize) * 2);
         &__refresh {
-            position: fixed;
-            right: var(--marginSize);
-            bottom: var(--marginSize);
-            width: var(--adminHeight);
-            height: var(--adminHeight);
-            background: var(--bgColor);
+            flex-shrink: 0;
             padding: 0;
-            border-radius: 50%;
-            border: 1px solid #333;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12),
-                0 1px 2px rgba(0, 0, 0, 0.24);
-            -webkit-tap-highlight-color: transparent;
+            margin-left: var(--paddingSize);
+        }
+        .admin__update {
+            flex-grow: 1;
+            text-align: left;
         }
     }
     .error {
         width: calc(100% - var(--marginSize) * 2);
+        left: var(--marginSize);
     }
 }
