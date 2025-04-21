@@ -4,24 +4,52 @@ import {hideWelcome, showWelcome} from './_welcome'
 const moment = require('moment'),
     parser = require('rss-parser'),
     parserObj = new parser(),
-    appElement = document.querySelector('.app')
+    appElement = document.querySelector('.app'),
+    UPDATE_INTERVAL = 1000 * 60 * 5
 
 export let sourcesCount = Object.keys(sources).length
-;(async () => {
+let isInitialLoad = true
+
+// Update the last updated indicator in the admin bar
+function updateLastUpdatedIndicator() {
+    const updateTimeElement = document.querySelector('.admin__update-time')
+    if (!updateTimeElement) return
+
+    const dateObj = new Date(),
+        dateMinutes = String(dateObj.getMinutes()).padStart(2, '0'),
+        dateHours = String(dateObj.getHours()).padStart(2, '0')
+
+    updateTimeElement.textContent = `${dateHours}:${dateMinutes}`
+    updateTimeElement.setAttribute('title', dateObj.toLocaleString())
+}
+
+async function loadFeeds() {
     try {
-        showWelcome()
+        // Only show welcome and clear the app on initial load
+        if (isInitialLoad) {
+            showWelcome()
+            appElement.innerHTML = ''
+            // Set up the column structure only once
+            appElement.style.gridTemplateColumns = `repeat(${sourcesCount}, 1fr)`
+
+            // Create the column elements only once
+            for (let i = 0; i < sourcesCount; i++) {
+                let element = document.createElement('section')
+                element.id = `col${i + 1}`
+                element.className = 'app__column'
+                appElement.appendChild(element)
+            }
+        }
+
+        // Update content for each feed
         for (let i = 0; i < sourcesCount; i++) {
+            const columnElement = document.getElementById(`col${i + 1}`)
+
             // parse this RSS feed
             let feed = await parserObj.parseURL(
                 'https://cors.kurilov.workers.dev/?url=' +
                     Object.values(sources)[i].rss
             )
-
-            // create a feed column and set number of them
-            appElement.style.gridTemplateColumns = `repeat(${sourcesCount}, 1fr)`
-            let element = document.createElement('section')
-            element.id = `col${i + 1}`
-            element.className = 'app__column'
 
             // create a feed header with name and favicon
             let elementHeader = `<div class="app__column-header-container"><h3 class="app__column-header">${
@@ -47,12 +75,24 @@ export let sourcesCount = Object.keys(sources).length
                 // concate a string with all posts of this feed
                 elementContent += `<a href="${item.link}" target="_blank"><div class="content__item"><i class="content__item-time" title="${item.pubDate}">${newPubBadge}${itemDate}</i><h2 class="content__item-title">${item.title}</h2></div></a>`
             })
-            element.innerHTML = elementHeader + elementContent
 
-            // push a feed item to the page
-            appElement.appendChild(element)
+            // Update column content instead of rebuilding
+            columnElement.innerHTML = elementHeader + elementContent
         }
+
+        // Mark initial load as complete
+        if (isInitialLoad) {
+            isInitialLoad = false
+            hideWelcome()
+        }
+
+        // Update the last updated indicator
+        updateLastUpdatedIndicator()
     } catch (err) {
+        // Remove any existing error elements first
+        const existingError = document.querySelector('.error')
+        if (existingError) existingError.remove()
+
         // create an error badge and push it to the page
         let errorElement = document.createElement('div'),
             errorCloseElement =
@@ -69,8 +109,13 @@ export let sourcesCount = Object.keys(sources).length
                 metaColorChanger()
             })
     }
-    return hideWelcome()
-})()
+
+    // Only return hideWelcome on initial load
+    if (isInitialLoad) {
+        return hideWelcome()
+    }
+    return Promise.resolve()
+}
 
 // Change meta-color for error badge
 function metaColorChanger(status) {
@@ -87,3 +132,9 @@ function metaColorChanger(status) {
             break
     }
 }
+
+loadFeeds()
+setInterval(() => {
+    loadFeeds()
+    console.log('feed was updated:', new Date().toLocaleString())
+}, UPDATE_INTERVAL)
