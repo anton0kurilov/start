@@ -77,7 +77,8 @@
 }
 
 .error {
-    background-color: #f44336;
+    background-color: rgba(244, 67, 54, 0.6);
+    backdrop-filter: blur(10px);
     font-weight: 700;
     box-sizing: border-box;
     height: var(--adminHeight);
