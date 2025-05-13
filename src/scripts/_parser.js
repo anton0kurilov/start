@@ -109,9 +109,11 @@ async function loadFeeds() {
                 errorElement.remove()
                 metaColorChanger()
             })
-        setInterval(function () {
-            document.querySelector('.error').remove()
-        }, 15000)
+        if (existingError) {
+            setInterval(function () {
+                existingError.remove()
+            }, 15000)
+        }
     }
 
     // Only return hideWelcome on initial load
