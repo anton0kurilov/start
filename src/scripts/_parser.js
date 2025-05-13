@@ -112,6 +112,7 @@ async function loadFeeds() {
         if (existingError) {
             setInterval(function () {
                 existingError.remove()
+                metaColorChanger()
             }, 15000)
         }
     }
