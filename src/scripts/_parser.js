@@ -5,7 +5,7 @@ const moment = require('moment'),
     parser = require('rss-parser'),
     parserObj = new parser(),
     appElement = document.querySelector('.app'),
-    UPDATE_INTERVAL = 1000 * 60 * 5
+    UPDATE_INTERVAL = 1000 * 60 * 10
 
 export let sourcesCount = Object.keys(sources).length
 let isInitialLoad = true
@@ -67,7 +67,7 @@ async function loadFeeds() {
                 // check if this post is new (published less than half an hour ago)
                 if (
                     new Date().getTime() - new Date(item.pubDate).getTime() <
-                    1800000
+                    600000
                 ) {
                     newPubBadge = `🔥 `
                 }
