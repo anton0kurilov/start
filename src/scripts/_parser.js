@@ -109,12 +109,14 @@ async function loadFeeds() {
                 errorElement.remove()
                 metaColorChanger()
             })
-        if (existingError) {
-            setInterval(function () {
-                existingError.remove()
+
+        // Auto-remove the error after some time if not closed manually
+        setTimeout(function () {
+            if (errorElement.isConnected) {
+                errorElement.remove()
                 metaColorChanger()
-            }, 15000)
-        }
+            }
+        }, 15000)
     }
 
     // Only return hideWelcome on initial load
