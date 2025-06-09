@@ -10,6 +10,16 @@ const moment = require('moment'),
 export let sourcesCount = Object.keys(sources).length
 let isInitialLoad = true
 
+// Function to escape HTML special characters
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+}
+
 // Update the last updated indicator in the admin bar
 function updateLastUpdatedIndicator() {
     const updateTimeElement = document.querySelector('.admin__update-time')
@@ -73,7 +83,13 @@ async function loadFeeds() {
                 }
 
                 // concate a string with all posts of this feed
-                elementContent += `<a href="${item.link}" target="_blank"><div class="content__item"><i class="content__item-time" title="${item.pubDate}">${newPubBadge}${itemDate}</i><h2 class="content__item-title">${item.title}</h2></div></a>`
+                elementContent += `<a href="${
+                    item.link
+                }" target="_blank"><div class="content__item"><i class="content__item-time" title="${
+                    item.pubDate
+                }">${newPubBadge}${itemDate}</i><h2 class="content__item-title">${escapeHtml(
+                    item.title
+                )}</h2></div></a>`
             })
 
             // Update column content instead of rebuilding
