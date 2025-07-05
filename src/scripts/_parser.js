@@ -94,12 +94,12 @@ async function loadFeeds() {
 
             // Update column content instead of rebuilding
             columnElement.innerHTML = elementHeader + elementContent
-        }
 
-        // Mark initial load as complete
-        if (isInitialLoad) {
-            isInitialLoad = false
-            hideWelcome()
+            // Hide welcome screen after first feed is loaded
+            if (isInitialLoad && i === 0) {
+                isInitialLoad = false
+                hideWelcome()
+            }
         }
 
         // Update the last updated indicator
