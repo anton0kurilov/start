@@ -15,11 +15,6 @@
         padding: 0 0 var(--paddingSize) 0;
         margin: var(--marginSize) 0;
         overflow-y: scroll;
-        opacity: 0;
-        animation: fadeIn ease-in 1;
-        animation-fill-mode: forwards;
-        animation-duration: 0.3s;
-        animation-delay: 0.2s;
         position: relative;
         &:first-child {
             margin-left: var(--marginSize);
@@ -176,19 +171,6 @@
             font-weight: 600;
             cursor: help;
         }
-    }
-}
-
-@keyframes fadeIn {
-    0% {
-        mask: linear-gradient(90deg, #000 25%, #000000e6 50%, #00000000) 150% 0 /
-            400% no-repeat;
-        opacity: 0.2;
-    }
-    100% {
-        mask: linear-gradient(90deg, #000 25%, #000000e6 50%, #00000000) 0 /
-            400% no-repeat;
-        opacity: 1;
     }
 }
 
