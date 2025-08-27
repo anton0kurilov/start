@@ -141,7 +141,7 @@
 .admin {
     position: fixed;
     z-index: 997;
-    bottom: calc(var(--marginSize) + env(safe-area-inset-bottom));
+    bottom: max(env(safe-area-inset-bottom), var(--marginSize));
     right: var(--marginSize);
     padding: 0 var(--marginSize);
     height: var(--adminHeight);
