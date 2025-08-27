@@ -12,7 +12,7 @@
         box-sizing: border-box;
         height: calc(100vh - var(--marginSize) * 2);
         border-radius: var(--borderRadius);
-        padding: 0 0 var(--paddingSize) 0;
+        padding: 0 0 calc(var(--paddingSize) + env(safe-area-inset-bottom)) 0;
         margin: var(--marginSize) 0;
         overflow-y: scroll;
         position: relative;
@@ -141,7 +141,7 @@
 .admin {
     position: fixed;
     z-index: 997;
-    bottom: var(--marginSize);
+    bottom: calc(var(--marginSize) + env(safe-area-inset-bottom));
     right: var(--marginSize);
     padding: 0 var(--marginSize);
     height: var(--adminHeight);
@@ -184,7 +184,10 @@
         &__column {
             width: calc(100vw - var(--marginSize) * 2);
             padding: 0 var(--paddingSize)
-                calc(var(--paddingSize) + var(--adminHeight)) var(--paddingSize);
+                calc(
+                    var(--paddingSize) + var(--adminHeight) +
+                        env(safe-area-inset-bottom)
+                ) var(--paddingSize);
             min-width: auto;
             scroll-snap-align: center;
             min-block-size: calc(100vw - var(--marginSize) * 2);
