@@ -12,7 +12,9 @@ let isInitialLoad = true
 
 // Function to escape HTML special characters
 function escapeHtml(unsafe) {
-    return unsafe
+    const el = document.createElement('textarea')
+    el.innerHTML = String(unsafe ?? '')
+    return el.value
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -71,7 +73,9 @@ async function loadFeeds() {
 
             // create feed blocks for every item in the RSS feed
             feed.items.forEach((item) => {
-                let itemDate = moment(item.pubDate).fromNow(),
+                let itemDate = item.pubDate
+                        ? moment(item.pubDate).fromNow()
+                        : 'now',
                     newPubBadge = ``
 
                 // check if this post is new (published less than half an hour ago)
