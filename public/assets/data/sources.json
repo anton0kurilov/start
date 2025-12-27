@@ -15,9 +15,9 @@
         "title": "TechMeme",
         "rss": "https://www.techmeme.com/feed.xml"
     },
-    "TechCrunch": {
-        "title": "TechCrunch",
-        "rss": "https://techcrunch.com/feed/"
+    "WindowsLatest": {
+        "title": "WindowsLatest",
+        "rss": "https://www.windowslatest.com/feed/"
     },
     "Wccftech": {
         "title": "Wccftech",
