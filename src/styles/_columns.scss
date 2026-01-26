@@ -126,8 +126,14 @@
             height: 100%;
             overflow-y: auto;
             border-radius: 0;
+            border: 0;
+            border-right: 1px solid var(--colorBorder);
             scroll-snap-align: start;
             scroll-snap-stop: always;
+        }
+
+        &__item:last-child {
+            border-right: 0;
         }
 
         &__empty {
