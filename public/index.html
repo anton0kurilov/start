@@ -185,15 +185,33 @@
                                     class="form form--import"
                                     data-action="import-json"
                                 >
-                                    <label class="form__field">
-                                        <input
-                                            type="file"
-                                            name="importFile"
-                                            data-import-file
-                                            accept="application/json,.json"
-                                            required
-                                        />
-                                    </label>
+                                    <div class="form__field form__field--file">
+                                        <span>JSON-файл для импорта</span>
+                                        <div class="form__file">
+                                            <input
+                                                class="form__file-input"
+                                                type="file"
+                                                id="importFile"
+                                                name="importFile"
+                                                data-import-file
+                                                accept="application/json,.json,text/json,text/plain"
+                                                required
+                                            />
+                                            <button
+                                                class="btn btn--ghost form__file-button"
+                                                type="button"
+                                                data-action="trigger-import-file"
+                                            >
+                                                Выбрать файл
+                                            </button>
+                                        </div>
+                                        <span
+                                            class="form__file-name"
+                                            data-import-filename
+                                        >
+                                            Файл не выбран
+                                        </span>
+                                    </div>
                                     <button
                                         class="btn btn--primary"
                                         type="submit"

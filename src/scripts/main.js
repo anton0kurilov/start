@@ -49,6 +49,15 @@ function bindEvents() {
     if (elements.importForm) {
         elements.importForm.addEventListener('submit', handleImportJson)
     }
+    if (elements.importFileTrigger) {
+        elements.importFileTrigger.addEventListener(
+            'click',
+            handleTriggerImportFile,
+        )
+    }
+    if (elements.importFile) {
+        elements.importFile.addEventListener('change', handleImportFileChange)
+    }
     if (elements.toggleSettings.length) {
         elements.toggleSettings.forEach((toggle) => {
             toggle.addEventListener('click', handleToggleSettings)
@@ -139,6 +148,20 @@ function handleToggleSettings() {
     applySettingsOpen(!isOpen)
 }
 
+function handleTriggerImportFile() {
+    if (elements.importFile) {
+        elements.importFile.click()
+    }
+}
+
+function handleImportFileChange() {
+    if (!elements.importFileName) {
+        return
+    }
+    const file = elements.importFile?.files?.[0]
+    elements.importFileName.textContent = file ? file.name : 'Файл не выбран'
+}
+
 function handleExportJson() {
     const payload = exportState()
     const filename = buildExportFilename()
@@ -159,6 +182,9 @@ async function handleImportJson(event) {
     event.preventDefault()
     const file = elements.importFile?.files?.[0]
     if (!file) {
+        if (elements.importFile) {
+            elements.importFile.click()
+        }
         updateStatus('Выберите JSON-файл для импорта', 'error')
         return
     }
@@ -177,6 +203,7 @@ async function handleImportJson(event) {
             return
         }
         event.target.reset()
+        handleImportFileChange()
         render(getState())
         updateLastUpdated(getState().lastUpdated)
         refreshAllFeeds()

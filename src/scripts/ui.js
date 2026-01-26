@@ -19,6 +19,10 @@ export const elements = {
     exportJson: document.querySelector('[data-action="export-json"]'),
     importForm: document.querySelector('[data-action="import-json"]'),
     importFile: document.querySelector('[data-import-file]'),
+    importFileTrigger: document.querySelector(
+        '[data-action="trigger-import-file"]',
+    ),
+    importFileName: document.querySelector('[data-import-filename]'),
 }
 
 let lastUpdatedTimerId = null
