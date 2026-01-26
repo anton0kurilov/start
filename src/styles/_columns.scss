@@ -52,7 +52,6 @@
         display: grid;
         gap: var(--padding);
         min-height: 0;
-        padding-bottom: calc(var(--fabSafeArea) + var(--padding));
     }
 
     &__empty {
