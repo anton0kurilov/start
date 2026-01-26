@@ -109,14 +109,21 @@
 
 @media (max-width: 720px) {
     .columns {
-        display: contents;
-        height: auto;
-        overflow: visible;
+        display: grid;
+        width: 100%;
+        height: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
         padding: 0;
+        gap: 0;
+        grid-auto-flow: column;
+        grid-auto-columns: 100%;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
 
         &__item {
             flex: 0 0 100%;
-            height: 100vh;
+            height: 100%;
             overflow-y: auto;
             border-radius: 0;
             scroll-snap-align: start;
@@ -125,7 +132,7 @@
 
         &__empty {
             flex: 0 0 100%;
-            height: 100vh;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;

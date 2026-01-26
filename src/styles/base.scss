@@ -109,6 +109,9 @@ a {
 @media (max-width: 720px) {
     .app {
         padding: 0;
+        height: 100vh;
+        height: 100svh;
+        overflow: hidden;
     }
 
     body {
