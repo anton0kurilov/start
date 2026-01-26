@@ -16,6 +16,9 @@ export const elements = {
         document.querySelectorAll('[data-action="toggle-settings"]'),
     ),
     lastUpdated: document.querySelector('[data-last-updated]'),
+    exportJson: document.querySelector('[data-action="export-json"]'),
+    importForm: document.querySelector('[data-action="import-json"]'),
+    importFile: document.querySelector('[data-import-file]'),
 }
 
 let lastUpdatedTimerId = null

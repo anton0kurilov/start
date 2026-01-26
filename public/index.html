@@ -158,6 +158,54 @@
                             <h3 class="settings__title">Папки и потоки</h3>
                             <div class="settings__list" data-folders></div>
                         </div>
+                        <details class="settings__section settings__accordion">
+                            <summary class="settings__summary">
+                                Импорт и экспорт
+                                <span
+                                    class="settings__summary-icon"
+                                    aria-hidden="true"
+                                >
+                                    <svg viewBox="0 0 24 24">
+                                        <path
+                                            fill="currentColor"
+                                            d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6Z"
+                                        ></path>
+                                    </svg>
+                                </span>
+                            </summary>
+                            <div class="settings__accordion-body">
+                                <button
+                                    class="btn btn--primary"
+                                    type="button"
+                                    data-action="export-json"
+                                >
+                                    Экспортировать в JSON
+                                </button>
+                                <form
+                                    class="form form--import"
+                                    data-action="import-json"
+                                >
+                                    <label class="form__field">
+                                        <input
+                                            type="file"
+                                            name="importFile"
+                                            data-import-file
+                                            accept="application/json,.json"
+                                            required
+                                        />
+                                    </label>
+                                    <button
+                                        class="btn btn--primary"
+                                        type="submit"
+                                    >
+                                        Импортировать JSON
+                                    </button>
+                                </form>
+                                <div class="settings__note">
+                                    Импорт заменит текущие папки и потоки.
+                                </div>
+                            </div>
+                        </details>
                         <div class="settings__footer">
                             <button class="btn btn--ghost" data-action="reset">
                                 Сбросить настройки

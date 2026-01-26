@@ -52,6 +52,34 @@ export function resetState() {
     feedItems.clear()
 }
 
+export function exportState() {
+    return {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        folders: state.folders.map((folder) => ({
+            id: folder.id,
+            name: folder.name,
+            feeds: folder.feeds.map((feed) => ({
+                id: feed.id,
+                name: feed.name,
+                url: feed.url,
+            })),
+        })),
+        lastUpdated: state.lastUpdated,
+    }
+}
+
+export function importState(rawState) {
+    const normalized = normalizeImportedState(rawState)
+    if (!normalized) {
+        return {ok: false, error: 'invalid'}
+    }
+    state = normalized
+    saveState(state)
+    feedItems.clear()
+    return {ok: true, foldersCount: state.folders.length}
+}
+
 export function getFolderItems(folder) {
     const items = folder.feeds.flatMap((feed) => feedItems.get(feed.id) || [])
     return items
@@ -180,4 +208,74 @@ function dedupeItems(items) {
         seen.add(key)
         return true
     })
+}
+
+function normalizeImportedState(rawState) {
+    if (!rawState || typeof rawState !== 'object') {
+        return null
+    }
+    const payload =
+        rawState && typeof rawState.data === 'object' ? rawState.data : rawState
+    const folders = Array.isArray(payload.folders) ? payload.folders : []
+    const normalizedFolders = folders
+        .map((folder) => normalizeImportedFolder(folder))
+        .filter(Boolean)
+    const lastUpdated = normalizeImportedDate(payload.lastUpdated)
+    return {
+        folders: normalizedFolders,
+        lastUpdated,
+    }
+}
+
+function normalizeImportedFolder(folder) {
+    if (!folder || typeof folder !== 'object') {
+        return null
+    }
+    const name = normalizeImportedText(folder.name)
+    if (!name) {
+        return null
+    }
+    const feeds = Array.isArray(folder.feeds) ? folder.feeds : []
+    const normalizedFeeds = feeds
+        .map((feed) => normalizeImportedFeed(feed))
+        .filter(Boolean)
+    return {
+        id: normalizeImportedText(folder.id) || createId(),
+        name,
+        feeds: normalizedFeeds,
+    }
+}
+
+function normalizeImportedFeed(feed) {
+    if (!feed || typeof feed !== 'object') {
+        return null
+    }
+    const name = normalizeImportedText(feed.name)
+    const url = normalizeUrl(normalizeImportedText(feed.url))
+    if (!name || !url) {
+        return null
+    }
+    return {
+        id: normalizeImportedText(feed.id) || createId(),
+        name,
+        url,
+    }
+}
+
+function normalizeImportedText(value) {
+    if (typeof value !== 'string') {
+        return ''
+    }
+    return value.trim()
+}
+
+function normalizeImportedDate(value) {
+    if (!value) {
+        return null
+    }
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) {
+        return null
+    }
+    return date.toISOString()
 }

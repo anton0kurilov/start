@@ -1,7 +1,9 @@
 import {
     addFeed,
     createFolder,
+    exportState,
     getState,
+    importState,
     refreshAll,
     removeFeed,
     removeFolder,
@@ -40,6 +42,12 @@ function bindEvents() {
     }
     if (elements.reset) {
         elements.reset.addEventListener('click', handleReset)
+    }
+    if (elements.exportJson) {
+        elements.exportJson.addEventListener('click', handleExportJson)
+    }
+    if (elements.importForm) {
+        elements.importForm.addEventListener('submit', handleImportJson)
     }
     if (elements.toggleSettings.length) {
         elements.toggleSettings.forEach((toggle) => {
@@ -131,6 +139,52 @@ function handleToggleSettings() {
     applySettingsOpen(!isOpen)
 }
 
+function handleExportJson() {
+    const payload = exportState()
+    const filename = buildExportFilename()
+    const json = JSON.stringify(payload, null, 2)
+    const blob = new Blob([json], {type: 'application/json'})
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    updateStatus('Экспортировано в JSON')
+}
+
+async function handleImportJson(event) {
+    event.preventDefault()
+    const file = elements.importFile?.files?.[0]
+    if (!file) {
+        updateStatus('Выберите JSON-файл для импорта', 'error')
+        return
+    }
+    const confirmed = window.confirm(
+        'Импорт заменит текущие папки и потоки. Продолжить?',
+    )
+    if (!confirmed) {
+        return
+    }
+    try {
+        const text = await file.text()
+        const parsed = JSON.parse(text)
+        const result = importState(parsed)
+        if (!result.ok) {
+            updateStatus('Не удалось импортировать данные', 'error')
+            return
+        }
+        event.target.reset()
+        render(getState())
+        updateLastUpdated(getState().lastUpdated)
+        refreshAllFeeds()
+    } catch (error) {
+        updateStatus('Файл импорта содержит неверный JSON', 'error')
+    }
+}
+
 async function refreshAllFeeds() {
     const currentState = getState()
     const feeds = currentState.folders.flatMap((folder) => folder.feeds)
@@ -159,4 +213,14 @@ async function refreshAllFeeds() {
     if (elements.refresh) {
         elements.refresh.disabled = false
     }
+}
+
+function buildExportFilename() {
+    const now = new Date()
+    const pad = (value) => String(value).padStart(2, '0')
+    const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
+        now.getDate(),
+    )}`
+    const time = `${pad(now.getHours())}-${pad(now.getMinutes())}`
+    return `start-feeds-${date}-${time}.json`
 }
