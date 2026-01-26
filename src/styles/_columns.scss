@@ -3,7 +3,7 @@
     flex: 1;
     width: 100%;
     overflow-x: auto;
-    height: calc(100vh - var(--padding) * 2);
+    height: 100%;
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: var(--widthColumn);
@@ -14,7 +14,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        min-height: calc(100vh - var(--padding) * 2);
+        min-height: 100%;
         overflow: hidden;
     }
 

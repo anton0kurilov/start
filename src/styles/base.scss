@@ -14,7 +14,6 @@
     --margin: 20px;
     --padding: 12px;
     --widthColumn: 360px;
-    --fabSafeArea: 96px;
 }
 
 * {
@@ -52,6 +51,7 @@ a {
 .app {
     width: 100%;
     min-height: 100vh;
+    height: 100vh;
     padding: calc(var(--padding) * 1.4);
     position: relative;
 }
