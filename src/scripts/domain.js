@@ -100,20 +100,12 @@ async function loadFeed(feed) {
 }
 
 async function fetchFeedText(url) {
-    try {
-        const response = await fetchWithTimeout(url)
-        if (!response.ok) {
-            throw new Error('Direct fetch failed')
-        }
-        return await response.text()
-    } catch (error) {
-        const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`
-        const response = await fetchWithTimeout(proxyUrl)
-        if (!response.ok) {
-            throw new Error('Proxy fetch failed')
-        }
-        return await response.text()
+    const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`
+    const response = await fetchWithTimeout(proxyUrl)
+    if (!response.ok) {
+        throw new Error('Proxy fetch failed')
     }
+    return await response.text()
 }
 
 function fetchWithTimeout(url) {
