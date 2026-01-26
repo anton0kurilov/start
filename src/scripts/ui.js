@@ -18,6 +18,8 @@ export const elements = {
     lastUpdated: document.querySelector('[data-last-updated]'),
 }
 
+let lastUpdatedTimerId = null
+
 export function render(state) {
     renderFolderSelect(state)
     renderFoldersList(state)
@@ -242,19 +244,53 @@ export function updateLastUpdated(lastUpdated) {
     if (!elements.lastUpdated) {
         return
     }
+    if (lastUpdatedTimerId) {
+        clearInterval(lastUpdatedTimerId)
+        lastUpdatedTimerId = null
+    }
     if (!lastUpdated) {
         elements.lastUpdated.textContent = 'еще не обновлялось'
         elements.lastUpdated.removeAttribute('title')
+        delete elements.lastUpdated.dataset.lastUpdated
         return
     }
     const lastUpdatedDate = new Date(lastUpdated)
     if (Number.isNaN(lastUpdatedDate.getTime())) {
         elements.lastUpdated.textContent = 'неизвестно'
         elements.lastUpdated.removeAttribute('title')
+        delete elements.lastUpdated.dataset.lastUpdated
         return
     }
-    elements.lastUpdated.textContent = formatRelativeTime(lastUpdatedDate)
-    elements.lastUpdated.title = lastUpdatedDate.toLocaleString('ru-RU')
+    elements.lastUpdated.dataset.lastUpdated = lastUpdatedDate.toISOString()
+    applyLastUpdatedText(lastUpdatedDate)
+    lastUpdatedTimerId = setInterval(() => {
+        if (!elements.lastUpdated) {
+            clearInterval(lastUpdatedTimerId)
+            lastUpdatedTimerId = null
+            return
+        }
+        const storedValue = elements.lastUpdated.dataset.lastUpdated
+        if (!storedValue) {
+            clearInterval(lastUpdatedTimerId)
+            lastUpdatedTimerId = null
+            return
+        }
+        const storedDate = new Date(storedValue)
+        if (Number.isNaN(storedDate.getTime())) {
+            elements.lastUpdated.textContent = 'неизвестно'
+            elements.lastUpdated.removeAttribute('title')
+            delete elements.lastUpdated.dataset.lastUpdated
+            clearInterval(lastUpdatedTimerId)
+            lastUpdatedTimerId = null
+            return
+        }
+        applyLastUpdatedText(storedDate)
+    }, 60000)
+}
+
+function applyLastUpdatedText(date) {
+    elements.lastUpdated.textContent = formatRelativeTime(date)
+    elements.lastUpdated.title = date.toLocaleString('ru-RU')
 }
 
 export function applySettingsOpen(isOpen) {
