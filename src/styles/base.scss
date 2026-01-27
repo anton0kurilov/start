@@ -108,7 +108,7 @@ a {
 
 @media (max-width: 720px) {
     .app {
-        padding: 0;
+        padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
         height: 100vh;
         height: 100svh;
         overflow: hidden;

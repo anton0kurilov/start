@@ -127,7 +127,6 @@
             border-radius: 0;
             border: 0;
             border-right: 1px solid var(--colorBorder);
-            padding-top: calc(var(--padding) + env(safe-area-inset-top));
             scroll-snap-align: start;
             scroll-snap-stop: always;
         }
