@@ -26,6 +26,7 @@ export const elements = {
 }
 
 let lastUpdatedTimerId = null
+const RECENT_ITEM_WINDOW_MS = 30 * 60 * 1000
 
 export function render(state) {
     renderFolderSelect(state)
@@ -219,6 +220,10 @@ function renderColumns(state) {
                 if (item.date) {
                     time.title = item.date.toLocaleString('ru-RU')
                 }
+                time.classList.toggle(
+                    'feed__item-time--fresh',
+                    isRecentItem(item.date),
+                )
 
                 card.append(source, headline, time)
                 content.appendChild(card)
@@ -228,6 +233,14 @@ function renderColumns(state) {
         column.append(header, content)
         elements.columns.appendChild(column)
     })
+}
+
+function isRecentItem(date) {
+    if (!date || Number.isNaN(date.getTime())) {
+        return false
+    }
+    const diff = Date.now() - date.getTime()
+    return diff >= 0 && diff <= RECENT_ITEM_WINDOW_MS
 }
 
 export function updateStatus(text, tone = 'ready') {

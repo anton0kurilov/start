@@ -82,6 +82,10 @@
         font-size: 0.72rem;
     }
 
+    &-time--fresh {
+        color: var(--colorRecent);
+    }
+
     &-source {
         font-size: 0.7rem;
         text-transform: uppercase;
