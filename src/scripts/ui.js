@@ -12,6 +12,10 @@ export const elements = {
     reset: document.querySelector('[data-action="reset"]'),
     folderSelect: document.querySelector('select[name="folderId"]'),
     settings: document.querySelector('.settings'),
+    settingsTabs: Array.from(document.querySelectorAll('[data-settings-tab]')),
+    settingsPanels: Array.from(
+        document.querySelectorAll('[data-settings-panel]'),
+    ),
     toggleSettings: Array.from(
         document.querySelectorAll('[data-action="toggle-settings"]'),
     ),
@@ -27,6 +31,7 @@ export const elements = {
 
 let lastUpdatedTimerId = null
 const RECENT_ITEM_WINDOW_MS = 30 * 60 * 1000
+let activeSettingsTab = null
 
 export function render(state) {
     renderFolderSelect(state)
@@ -45,9 +50,11 @@ function setFeedFormDisabled(isDisabled) {
         field.disabled = isDisabled
     })
     elements.feedForm.setAttribute('aria-disabled', String(isDisabled))
-    const section = elements.feedForm.closest('.settings__section')
-    if (section) {
-        section.classList.toggle('settings__section--disabled', isDisabled)
+    const block =
+        elements.feedForm.closest('.settings__block') ||
+        elements.feedForm.closest('.settings__section')
+    if (block) {
+        block.classList.toggle('settings__block--disabled', isDisabled)
     }
 }
 
@@ -327,4 +334,30 @@ export function applySettingsOpen(isOpen) {
             }
         })
     }
+}
+
+export function applySettingsTab(tabId) {
+    if (!elements.settingsTabs.length || !elements.settingsPanels.length) {
+        return
+    }
+    const nextTabId =
+        tabId ||
+        activeSettingsTab ||
+        elements.settingsTabs[0]?.dataset.settingsTab
+    if (!nextTabId) {
+        return
+    }
+    activeSettingsTab = nextTabId
+    elements.settingsTabs.forEach((tab) => {
+        const isActive = tab.dataset.settingsTab === nextTabId
+        tab.classList.toggle('settings__tab--active', isActive)
+        tab.setAttribute('aria-selected', String(isActive))
+        tab.setAttribute('tabindex', isActive ? '0' : '-1')
+    })
+    elements.settingsPanels.forEach((panel) => {
+        const isActive = panel.dataset.settingsPanel === nextTabId
+        panel.classList.toggle('settings__panel-section--active', isActive)
+        panel.hidden = !isActive
+        panel.setAttribute('aria-hidden', String(!isActive))
+    })
 }

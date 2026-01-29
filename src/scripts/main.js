@@ -11,6 +11,7 @@ import {
 } from './domain.js'
 import {
     applySettingsOpen,
+    applySettingsTab,
     elements,
     render,
     updateLastUpdated,
@@ -22,6 +23,7 @@ init()
 function init() {
     bindEvents()
     applySettingsOpen(false)
+    applySettingsTab()
     render(getState())
     updateLastUpdated(getState().lastUpdated)
     refreshAllFeeds()
@@ -61,6 +63,11 @@ function bindEvents() {
     if (elements.toggleSettings.length) {
         elements.toggleSettings.forEach((toggle) => {
             toggle.addEventListener('click', handleToggleSettings)
+        })
+    }
+    if (elements.settingsTabs.length) {
+        elements.settingsTabs.forEach((tab) => {
+            tab.addEventListener('click', handleSettingsTabClick)
         })
     }
     document.addEventListener('keydown', (event) => {
@@ -146,6 +153,14 @@ function handleReset() {
 function handleToggleSettings() {
     const isOpen = elements.settings?.classList.contains('settings--open')
     applySettingsOpen(!isOpen)
+}
+
+function handleSettingsTabClick(event) {
+    const tab = event.currentTarget
+    if (!tab) {
+        return
+    }
+    applySettingsTab(tab.dataset.settingsTab)
 }
 
 function handleTriggerImportFile() {

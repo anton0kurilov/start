@@ -84,99 +84,169 @@
                     aria-modal="true"
                     aria-label="Настройки ленты"
                 >
-                    <div class="settings__header">
-                        <div>
-                            <div class="settings__brand">Настройки</div>
-                        </div>
-                        <button
-                            class="btn btn--ghost settings__close"
-                            type="button"
-                            data-action="toggle-settings"
-                            aria-label="Закрыть"
-                            title="Закрыть"
-                        >
-                            <svg
-                                class="settings__close-icon"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                                focusable="false"
+                    <div class="settings__sticky">
+                        <div class="settings__header">
+                            <div>
+                                <div class="settings__brand">Настройки</div>
+                            </div>
+                            <button
+                                class="btn btn--ghost settings__close"
+                                type="button"
+                                data-action="toggle-settings"
+                                aria-label="Закрыть"
+                                title="Закрыть"
                             >
-                                <path
-                                    d="M18.3 5.71a1 1 0 0 0-1.42 0L12 10.59 7.12 5.7a1 1 0 0 0-1.42 1.42L10.59 12l-4.9 4.88a1 1 0 1 0 1.42 1.42L12 13.41l4.88 4.89a1 1 0 0 0 1.42-1.42L13.41 12l4.89-4.88a1 1 0 0 0 0-1.41z"
-                                />
-                            </svg>
-                        </button>
+                                <svg
+                                    class="settings__close-icon"
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                    focusable="false"
+                                >
+                                    <path
+                                        d="M18.3 5.71a1 1 0 0 0-1.42 0L12 10.59 7.12 5.7a1 1 0 0 0-1.42 1.42L10.59 12l-4.9 4.88a1 1 0 1 0 1.42 1.42L12 13.41l4.88 4.89a1 1 0 0 0 1.42-1.42L13.41 12l4.89-4.88a1 1 0 0 0 0-1.41z"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
+                        <div
+                            class="settings__tabs"
+                            role="tablist"
+                            aria-label="Разделы настроек"
+                        >
+                            <button
+                                class="settings__tab settings__tab--active"
+                                type="button"
+                                role="tab"
+                                id="settings-tab-add"
+                                aria-selected="true"
+                                aria-controls="settings-panel-add"
+                                data-settings-tab="add"
+                            >
+                                Добавление
+                            </button>
+                            <button
+                                class="settings__tab"
+                                type="button"
+                                role="tab"
+                                id="settings-tab-manage"
+                                aria-selected="false"
+                                aria-controls="settings-panel-manage"
+                                data-settings-tab="manage"
+                            >
+                                Контент
+                            </button>
+                            <button
+                                class="settings__tab"
+                                type="button"
+                                role="tab"
+                                id="settings-tab-transfer"
+                                aria-selected="false"
+                                aria-controls="settings-panel-transfer"
+                                data-settings-tab="transfer"
+                            >
+                                Импорт и экспорт
+                            </button>
+                        </div>
                     </div>
                     <div class="settings__content">
-                        <div class="settings__section">
-                            <h3 class="settings__title">Новая папка</h3>
-                            <form
-                                class="form form--folder"
-                                data-action="create-folder"
-                            >
-                                <label class="form__field">
-                                    <input
-                                        type="text"
-                                        name="folderName"
-                                        placeholder="Название папки"
-                                        required
-                                    />
-                                </label>
-                                <button class="btn btn--primary" type="submit">
-                                    Создать папку
-                                </button>
-                            </form>
-                        </div>
-                        <div class="settings__section">
-                            <h3 class="settings__title">Новый поток</h3>
-                            <form
-                                class="form form--feed"
-                                data-action="add-feed"
-                            >
-                                <label class="form__field">
-                                    <input
-                                        type="text"
-                                        name="feedName"
-                                        placeholder="Название потока"
-                                        required
-                                    />
-                                </label>
-                                <label class="form__field">
-                                    <input
-                                        type="url"
-                                        name="feedUrl"
-                                        placeholder="URL-адрес потока"
-                                        required
-                                    />
-                                </label>
-                                <label class="form__field">
-                                    <select name="folderId" required></select>
-                                </label>
-                                <button class="btn btn--primary" type="submit">
-                                    Добавить поток
-                                </button>
-                            </form>
-                        </div>
-                        <div class="settings__section settings__section--list">
-                            <h3 class="settings__title">Папки и потоки</h3>
+                        <section
+                            class="settings__section settings__panel-section settings__panel-section--active"
+                            role="tabpanel"
+                            id="settings-panel-add"
+                            aria-labelledby="settings-tab-add"
+                            data-settings-panel="add"
+                        >
+                            <h3 class="settings__title">
+                                Создание папок и подписок
+                            </h3>
+                            <div class="settings__forms">
+                                <div class="settings__block">
+                                    <h4 class="settings__subtitle">
+                                        Новая папка
+                                    </h4>
+                                    <form
+                                        class="form form--folder"
+                                        data-action="create-folder"
+                                    >
+                                        <label class="form__field">
+                                            <input
+                                                type="text"
+                                                name="folderName"
+                                                placeholder="Название папки"
+                                                required
+                                            />
+                                        </label>
+                                        <button
+                                            class="btn btn--primary"
+                                            type="submit"
+                                        >
+                                            Создать папку
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="settings__block">
+                                    <h4 class="settings__subtitle">
+                                        Новая подписка
+                                    </h4>
+                                    <form
+                                        class="form form--feed"
+                                        data-action="add-feed"
+                                    >
+                                        <label class="form__field">
+                                            <input
+                                                type="text"
+                                                name="feedName"
+                                                placeholder="Название подписки"
+                                                required
+                                            />
+                                        </label>
+                                        <label class="form__field">
+                                            <input
+                                                type="url"
+                                                name="feedUrl"
+                                                placeholder="URL-адрес потока (RSS)"
+                                                required
+                                            />
+                                        </label>
+                                        <label class="form__field">
+                                            <select
+                                                name="folderId"
+                                                required
+                                            ></select>
+                                        </label>
+                                        <button
+                                            class="btn btn--primary"
+                                            type="submit"
+                                        >
+                                            Подписаться
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </section>
+                        <section
+                            class="settings__section settings__section--list settings__panel-section"
+                            role="tabpanel"
+                            id="settings-panel-manage"
+                            aria-labelledby="settings-tab-manage"
+                            data-settings-panel="manage"
+                            hidden
+                        >
+                            <h3 class="settings__title">
+                                Управление контентом
+                            </h3>
                             <div class="settings__list" data-folders></div>
-                        </div>
-                        <details class="settings__section settings__accordion">
-                            <summary class="settings__summary">
-                                Импорт и экспорт
-                                <span
-                                    class="settings__summary-icon"
-                                    aria-hidden="true"
-                                >
-                                    <svg viewBox="0 0 24 24">
-                                        <path
-                                            fill="currentColor"
-                                            d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6Z"
-                                        ></path>
-                                    </svg>
-                                </span>
-                            </summary>
-                            <div class="settings__accordion-body">
+                        </section>
+                        <section
+                            class="settings__section settings__panel-section"
+                            role="tabpanel"
+                            id="settings-panel-transfer"
+                            aria-labelledby="settings-tab-transfer"
+                            data-settings-panel="transfer"
+                            hidden
+                        >
+                            <h3 class="settings__title">Импорт и экспорт</h3>
+                            <div class="settings__stack">
                                 <button
                                     class="btn btn--primary"
                                     type="button"
@@ -226,12 +296,12 @@
                                     Импорт заменит текущие папки и потоки.
                                 </div>
                             </div>
-                        </details>
-                        <div class="settings__footer">
-                            <button class="btn btn--ghost" data-action="reset">
-                                Сбросить настройки
-                            </button>
-                        </div>
+                        </section>
+                    </div>
+                    <div class="settings__footer">
+                        <button class="btn btn--ghost" data-action="reset">
+                            Сбросить настройки
+                        </button>
                     </div>
                 </div>
             </div>
