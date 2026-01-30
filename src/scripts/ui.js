@@ -165,6 +165,8 @@ function renderColumns(state) {
     }
     elements.columns.innerHTML = ''
     elements.columns.classList.toggle('columns--empty', !state.folders.length)
+    const isRefreshing =
+        elements.status?.classList.contains('fab__status--loading') || false
 
     if (!state.folders.length) {
         const empty = document.createElement('div')
@@ -203,7 +205,9 @@ function renderColumns(state) {
         } else if (!items.length) {
             const empty = document.createElement('div')
             empty.className = 'columns__empty'
-            empty.textContent = 'Здесь пока нет новостей.'
+            empty.textContent = isRefreshing
+                ? 'Лента обновляется...'
+                : 'Здесь пока нет новостей.'
             content.appendChild(empty)
         } else {
             items.slice(0, MAX_ITEMS_PER_FOLDER).forEach((item) => {

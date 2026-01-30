@@ -24,8 +24,6 @@ function init() {
     bindEvents()
     applySettingsOpen(false)
     applySettingsTab()
-    render(getState())
-    updateLastUpdated(getState().lastUpdated)
     refreshAllFeeds()
 }
 
@@ -241,6 +239,7 @@ async function refreshAllFeeds() {
     if (elements.refresh) {
         elements.refresh.disabled = true
     }
+    render(currentState)
 
     const result = await refreshAll()
 
