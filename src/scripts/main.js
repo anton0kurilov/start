@@ -21,10 +21,33 @@ import {
 init()
 
 function init() {
+    setupSafeAreaRefresh()
     bindEvents()
     applySettingsOpen(false)
     applySettingsTab()
     refreshAllFeeds()
+}
+
+function setupSafeAreaRefresh() {
+    const root = document.documentElement
+    const applySafeAreaVars = () => {
+        root.style.setProperty('--safeAreaTop', 'env(safe-area-inset-top)')
+        root.style.setProperty('--safeAreaRight', 'env(safe-area-inset-right)')
+        root.style.setProperty(
+            '--safeAreaBottom',
+            'env(safe-area-inset-bottom)',
+        )
+        root.style.setProperty('--safeAreaLeft', 'env(safe-area-inset-left)')
+    }
+
+    const scheduleSafeAreaRefresh = () => {
+        requestAnimationFrame(applySafeAreaVars)
+    }
+
+    applySafeAreaVars()
+    window.addEventListener('pageshow', scheduleSafeAreaRefresh)
+    window.addEventListener('orientationchange', scheduleSafeAreaRefresh)
+    window.addEventListener('resize', scheduleSafeAreaRefresh)
 }
 
 function bindEvents() {

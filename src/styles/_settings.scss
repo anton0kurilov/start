@@ -1,7 +1,7 @@
 .fab {
     position: fixed;
-    right: calc(var(--padding) * 1.4);
-    bottom: calc(var(--padding) * 1.4 + env(safe-area-inset-bottom));
+    right: calc(var(--padding) * 1.4 + var(--safeAreaRight));
+    bottom: calc(var(--padding) * 1.4 + var(--safeAreaBottom));
     z-index: 30;
     width: 320px;
     max-width: calc(100% - var(--padding) * 2);

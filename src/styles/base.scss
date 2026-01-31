@@ -14,6 +14,10 @@
     --margin: 20px;
     --padding: 12px;
     --widthColumn: 360px;
+    --safeAreaTop: env(safe-area-inset-top);
+    --safeAreaRight: env(safe-area-inset-right);
+    --safeAreaBottom: env(safe-area-inset-bottom);
+    --safeAreaLeft: env(safe-area-inset-left);
 }
 
 * {
@@ -108,7 +112,10 @@ a {
 
 @media (max-width: 720px) {
     .app {
-        padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+        padding: calc(var(--padding) + var(--safeAreaTop))
+            calc(var(--padding) + var(--safeAreaRight))
+            calc(var(--padding) + var(--safeAreaBottom))
+            calc(var(--padding) + var(--safeAreaLeft));
         height: 100vh;
         height: 100svh;
         overflow: hidden;
