@@ -25,6 +25,11 @@
     box-sizing: border-box;
 }
 
+:focus-visible {
+    outline: 2px solid var(--colorAccent);
+    outline-offset: 2px;
+}
+
 body {
     padding: 0;
     margin: 0;

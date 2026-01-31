@@ -24,7 +24,7 @@
         overflow-y: scroll;
         border: 1px solid var(--colorBorder);
         border-radius: var(--borderRadius);
-        padding: var(--padding);
+        padding: var(--padding) 0;
         display: flex;
         flex-direction: column;
         gap: var(--padding);
@@ -34,6 +34,7 @@
     &__header {
         display: grid;
         gap: 6px;
+        margin: 0 var(--padding);
     }
 
     &__title {
@@ -65,6 +66,7 @@
 .feed__item {
     border: 1px solid var(--colorBorder);
     padding: var(--padding);
+    margin: 0 var(--padding);
     border-radius: var(--borderRadius);
     cursor: pointer;
     display: grid;
@@ -148,5 +150,9 @@
     .columns--empty {
         display: flex;
         min-height: 100vh;
+    }
+    .feed__item,
+    .columns__header {
+        margin: 0 3px;
     }
 }
