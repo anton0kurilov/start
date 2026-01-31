@@ -5,7 +5,8 @@
     z-index: 30;
     width: 320px;
     max-width: calc(100% - var(--padding) * 2);
-    background: var(--colorSurface);
+    background: rgba(1, 1, 1, 0.6);
+    backdrop-filter: blur(4px);
     border: 1px solid var(--colorBorder);
     border-radius: calc(var(--borderRadius) + 6px);
     padding: calc(var(--padding) * 0.85);
