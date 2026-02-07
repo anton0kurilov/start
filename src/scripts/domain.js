@@ -4,6 +4,11 @@ import {createId, normalizeUrl} from './utils.js'
 
 let state = loadState()
 const feedItems = new Map()
+const feedErrors = new Map()
+const FALLBACK_CORS_PROXY = 'https://api.allorigins.win/raw?url='
+const PROXY_HEALTHCHECK_URL = 'https://example.com/'
+const CORS_PROXY_BASES = [CORS_PROXY, FALLBACK_CORS_PROXY]
+let activeProxyBase = CORS_PROXY
 
 export function getState() {
     return state
@@ -32,6 +37,13 @@ export function addFeed({folderId, name, url}) {
 }
 
 export function removeFolder(folderId) {
+    const folder = state.folders.find((item) => item.id === folderId)
+    if (folder) {
+        folder.feeds.forEach((feed) => {
+            feedItems.delete(feed.id)
+            feedErrors.delete(feed.id)
+        })
+    }
     state.folders = state.folders.filter((folder) => folder.id !== folderId)
     saveState(state)
 }
@@ -43,6 +55,7 @@ export function removeFeed(folderId, feedId) {
     }
     folder.feeds = folder.feeds.filter((feed) => feed.id !== feedId)
     feedItems.delete(feedId)
+    feedErrors.delete(feedId)
     saveState(state)
 }
 
@@ -50,6 +63,7 @@ export function resetState() {
     clearState()
     state = loadState()
     feedItems.clear()
+    feedErrors.clear()
 }
 
 export function exportState() {
@@ -77,7 +91,12 @@ export function importState(rawState) {
     state = normalized
     saveState(state)
     feedItems.clear()
+    feedErrors.clear()
     return {ok: true, foldersCount: state.folders.length}
+}
+
+export function getFeedError(feedId) {
+    return feedErrors.get(feedId) || ''
 }
 
 export function getFolderItems(folder) {
@@ -94,7 +113,24 @@ export function getFolderItems(folder) {
 export async function refreshAll() {
     const feeds = state.folders.flatMap((folder) => folder.feeds)
     if (!feeds.length) {
-        return {hasFeeds: false, errorsCount: 0}
+        return {hasFeeds: false, errorsCount: 0, errors: []}
+    }
+
+    const proxyCheck = await ensureProxyAvailable()
+    if (!proxyCheck.ok) {
+        const errorMessage = formatFeedError(proxyCheck.error)
+        const errors = feeds.map((feed) => {
+            feedItems.set(feed.id, [])
+            feedErrors.set(feed.id, errorMessage)
+            return {
+                feedId: feed.id,
+                feedName: feed.name,
+                message: errorMessage,
+            }
+        })
+        state.lastUpdated = new Date().toISOString()
+        saveState(state)
+        return {hasFeeds: true, errorsCount: errors.length, errors}
     }
 
     const results = await Promise.all(
@@ -105,10 +141,17 @@ export async function refreshAll() {
     )
 
     const errorsCount = results.filter((result) => !result.ok).length
+    const errors = results
+        .filter((result) => !result.ok)
+        .map((result) => ({
+            feedId: result.feedId,
+            feedName: result.feedName,
+            message: result.error,
+        }))
     state.lastUpdated = new Date().toISOString()
     saveState(state)
 
-    return {hasFeeds: true, errorsCount}
+    return {hasFeeds: true, errorsCount, errors}
 }
 
 async function loadFeed(feed) {
@@ -120,20 +163,74 @@ async function loadFeed(feed) {
             source: feed.name || parsed.title || item.source,
         }))
         feedItems.set(feed.id, items)
+        feedErrors.delete(feed.id)
         return {ok: true, count: items.length}
     } catch (error) {
+        const errorMessage = formatFeedError(error)
         feedItems.set(feed.id, [])
-        return {ok: false, count: 0}
+        feedErrors.set(feed.id, errorMessage)
+        return {
+            ok: false,
+            count: 0,
+            feedId: feed.id,
+            feedName: feed.name,
+            error: errorMessage,
+        }
     }
 }
 
 async function fetchFeedText(url) {
-    const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`
-    const response = await fetchWithTimeout(proxyUrl)
-    if (!response.ok) {
-        throw new Error('Proxy fetch failed')
+    const proxyBases = getProxyBasesByPriority()
+    let lastError = null
+    for (const proxyBase of proxyBases) {
+        const proxyUrl = `${proxyBase}${encodeURIComponent(url)}`
+        try {
+            const response = await fetchWithTimeout(proxyUrl)
+            if (!response.ok) {
+                throw createHttpError(response.status)
+            }
+            activeProxyBase = proxyBase
+            return await response.text()
+        } catch (error) {
+            lastError = error
+        }
     }
-    return await response.text()
+    throw lastError || new Error('Proxy fetch failed')
+}
+
+async function ensureProxyAvailable() {
+    const proxyBases = getProxyBasesByPriority()
+    let lastError = null
+    for (const proxyBase of proxyBases) {
+        const testUrl = `${proxyBase}${encodeURIComponent(PROXY_HEALTHCHECK_URL)}`
+        try {
+            const response = await fetchWithTimeout(testUrl)
+            if (response.status >= 500) {
+                throw createHttpError(response.status)
+            }
+            activeProxyBase = proxyBase
+            return {ok: true}
+        } catch (error) {
+            lastError = error
+        }
+    }
+    const error = new Error('Proxy unavailable')
+    error.code = 'PROXY_UNAVAILABLE'
+    error.cause = lastError
+    return {ok: false, error}
+}
+
+function getProxyBasesByPriority() {
+    return [activeProxyBase, ...CORS_PROXY_BASES].filter(
+        (proxyBase, index, list) => list.indexOf(proxyBase) === index,
+    )
+}
+
+function createHttpError(status) {
+    const error = new Error('HTTP error')
+    error.code = 'HTTP_ERROR'
+    error.status = status
+    return error
 }
 
 function fetchWithTimeout(url) {
@@ -148,7 +245,9 @@ function parseFeed(xmlText) {
     const doc = new DOMParser().parseFromString(xmlText, 'text/xml')
     const errorNode = doc.querySelector('parsererror')
     if (errorNode) {
-        throw new Error('Invalid XML')
+        const error = new Error('Invalid XML')
+        error.code = 'INVALID_XML'
+        throw error
     }
     const feedTitle =
         doc
@@ -180,6 +279,25 @@ function parseFeed(xmlText) {
     })
 
     return {title: feedTitle, items}
+}
+
+function formatFeedError(error) {
+    if (error?.name === 'AbortError') {
+        return 'таймаут запроса'
+    }
+    if (error?.code === 'PROXY_UNAVAILABLE') {
+        return 'прокси недоступен (CORS)'
+    }
+    if (error?.code === 'INVALID_XML') {
+        return 'ошибка парсинга XML'
+    }
+    if (error?.code === 'HTTP_ERROR') {
+        return `ошибка загрузки (HTTP ${error.status || 'unknown'})`
+    }
+    if (error instanceof TypeError) {
+        return 'ошибка сети/CORS'
+    }
+    return 'не удалось обновить фид'
 }
 
 function getText(parent, selector) {

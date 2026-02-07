@@ -1,5 +1,5 @@
 import {MAX_ITEMS_PER_FOLDER} from './constants.js'
-import {getFolderItems} from './domain.js'
+import {getFeedError, getFolderItems} from './domain.js'
 import {formatRelativeTime, getHostname} from './utils.js'
 
 export const elements = {
@@ -143,7 +143,16 @@ function renderFoldersList(state) {
                 const feedUrl = document.createElement('div')
                 feedUrl.className = 'settings__feed-url'
                 feedUrl.textContent = getHostname(feed.url)
-                feedInfo.append(feedName, feedUrl)
+                const feedError = getFeedError(feed.id)
+                if (feedError) {
+                    const error = document.createElement('div')
+                    error.className = 'settings__feed-error'
+                    error.textContent = feedError
+                    feedInfo.append(feedName, feedUrl, error)
+                    feedRow.classList.add('settings__feed--error')
+                } else {
+                    feedInfo.append(feedName, feedUrl)
+                }
 
                 const feedRemove = document.createElement('button')
                 feedRemove.className = 'icon-btn icon-btn--danger'

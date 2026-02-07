@@ -267,7 +267,14 @@ async function refreshAllFeeds() {
     const result = await refreshAll()
 
     if (result.errorsCount) {
-        updateStatus(`Обновлено с ошибками: ${result.errorsCount}`, 'error')
+        const firstError = result.errors?.[0]
+        const firstErrorText = firstError
+            ? `. ${firstError.feedName || 'Фид'}: ${firstError.message}`
+            : ''
+        updateStatus(
+            `Обновлено с ошибками: ${result.errorsCount}${firstErrorText}`,
+            'error',
+        )
     } else {
         updateStatus('Ленты обновлены')
     }
