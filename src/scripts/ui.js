@@ -30,7 +30,9 @@ export const elements = {
 }
 
 let lastUpdatedTimerId = null
+let feedItemTimesTimerId = null
 const RECENT_ITEM_WINDOW_MS = 30 * 60 * 1000
+const RELATIVE_TIME_UPDATE_INTERVAL_MS = 60000
 let activeSettingsTab = null
 
 export function render(state) {
@@ -174,6 +176,7 @@ function renderColumns(state) {
         empty.textContent =
             'Создайте первую папку и подпишитесь на поток в настройках'
         elements.columns.appendChild(empty)
+        ensureFeedItemTimesUpdates()
         return
     }
 
@@ -227,14 +230,7 @@ function renderColumns(state) {
 
                 const time = document.createElement('div')
                 time.className = 'feed__item-time'
-                time.textContent = formatRelativeTime(item.date)
-                if (item.date) {
-                    time.title = item.date.toLocaleString('ru-RU')
-                }
-                time.classList.toggle(
-                    'feed__item-time--fresh',
-                    isRecentItem(item.date),
-                )
+                setFeedItemTime(time, item.date)
 
                 card.append(source, headline, time)
                 content.appendChild(card)
@@ -243,6 +239,95 @@ function renderColumns(state) {
 
         column.append(header, content)
         elements.columns.appendChild(column)
+    })
+
+    ensureFeedItemTimesUpdates()
+}
+
+function setFeedItemTime(element, date) {
+    if (!element) {
+        return
+    }
+    if (!date || Number.isNaN(date.getTime())) {
+        element.textContent = 'без даты'
+        element.removeAttribute('title')
+        delete element.dataset.publishedAt
+        element.classList.remove('feed__item-time--fresh')
+        return
+    }
+    element.dataset.publishedAt = date.toISOString()
+    applyFeedItemTimeText(element, date)
+}
+
+function applyFeedItemTimeText(element, date) {
+    element.textContent = formatRelativeTime(date)
+    element.title = date.toLocaleString('ru-RU')
+    element.classList.toggle('feed__item-time--fresh', isRecentItem(date))
+}
+
+function ensureFeedItemTimesUpdates() {
+    if (!elements.columns) {
+        if (feedItemTimesTimerId) {
+            clearInterval(feedItemTimesTimerId)
+            feedItemTimesTimerId = null
+        }
+        return
+    }
+
+    const timedElements = elements.columns.querySelectorAll(
+        '.feed__item-time[data-published-at]',
+    )
+    if (!timedElements.length) {
+        if (feedItemTimesTimerId) {
+            clearInterval(feedItemTimesTimerId)
+            feedItemTimesTimerId = null
+        }
+        return
+    }
+
+    if (feedItemTimesTimerId) {
+        return
+    }
+
+    feedItemTimesTimerId = setInterval(() => {
+        if (!elements.columns) {
+            clearInterval(feedItemTimesTimerId)
+            feedItemTimesTimerId = null
+            return
+        }
+        updateFeedItemsTimes()
+    }, RELATIVE_TIME_UPDATE_INTERVAL_MS)
+}
+
+function updateFeedItemsTimes() {
+    if (!elements.columns) {
+        return
+    }
+    const timedElements = elements.columns.querySelectorAll(
+        '.feed__item-time[data-published-at]',
+    )
+    if (!timedElements.length) {
+        if (feedItemTimesTimerId) {
+            clearInterval(feedItemTimesTimerId)
+            feedItemTimesTimerId = null
+        }
+        return
+    }
+
+    timedElements.forEach((element) => {
+        const rawDate = element.dataset.publishedAt
+        if (!rawDate) {
+            return
+        }
+        const date = new Date(rawDate)
+        if (Number.isNaN(date.getTime())) {
+            element.textContent = 'без даты'
+            element.removeAttribute('title')
+            delete element.dataset.publishedAt
+            element.classList.remove('feed__item-time--fresh')
+            return
+        }
+        applyFeedItemTimeText(element, date)
     })
 }
 
@@ -316,7 +401,7 @@ export function updateLastUpdated(lastUpdated) {
             return
         }
         applyLastUpdatedText(storedDate)
-    }, 60000)
+    }, RELATIVE_TIME_UPDATE_INTERVAL_MS)
 }
 
 function applyLastUpdatedText(date) {
