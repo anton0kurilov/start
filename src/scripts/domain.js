@@ -1,6 +1,6 @@
 import {CORS_PROXY, FETCH_TIMEOUT} from './constants.js'
 import {loadState, saveState, clearState} from './storage.js'
-import {createId, normalizeUrl} from './utils.js'
+import {createId, normalizeUrl, decodeHtmlEntities} from './utils.js'
 
 let state = loadState()
 const feedItems = new Map()
@@ -249,10 +249,9 @@ function parseFeed(xmlText) {
         error.code = 'INVALID_XML'
         throw error
     }
-    const feedTitle =
-        doc
-            .querySelector('channel > title, feed > title')
-            ?.textContent?.trim() || ''
+    const feedTitle = decodeHtmlEntities(
+        doc.querySelector('channel > title, feed > title')?.textContent || '',
+    ).trim()
     const entries = Array.from(
         doc.querySelectorAll('item').length
             ? doc.querySelectorAll('item')
@@ -302,7 +301,9 @@ function formatFeedError(error) {
 
 function getText(parent, selector) {
     const node = parent.querySelector(selector)
-    return node ? String(node.textContent || '').trim() : ''
+    return node
+        ? decodeHtmlEntities(String(node.textContent || '')).trim()
+        : ''
 }
 
 function getLink(entry) {

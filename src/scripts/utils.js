@@ -16,6 +16,25 @@ export function normalizeUrl(value) {
     return `https://${trimmed}`
 }
 
+export function decodeHtmlEntities(value) {
+    const input = String(value || '')
+    if (!input || !input.includes('&') || typeof document === 'undefined') {
+        return input
+    }
+
+    const decoder = document.createElement('textarea')
+    let decoded = input
+    for (let index = 0; index < 2; index += 1) {
+        decoder.innerHTML = decoded
+        const next = decoder.value
+        if (next === decoded) {
+            break
+        }
+        decoded = next
+    }
+    return decoded
+}
+
 export function getHostname(url) {
     try {
         return new URL(url).hostname.replace('www.', '')
