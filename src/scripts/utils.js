@@ -73,3 +73,19 @@ export function formatRelativeTime(date) {
     const years = Math.round(diff / 31557600000)
     return rtf.format(-years, 'year')
 }
+
+export function formatCountLabel(count, [one, few, many]) {
+    const absolute = Math.abs(Number(count)) % 100
+    const lastDigit = absolute % 10
+
+    if (absolute > 10 && absolute < 20) {
+        return `${count} ${many}`
+    }
+    if (lastDigit > 1 && lastDigit < 5) {
+        return `${count} ${few}`
+    }
+    if (lastDigit === 1) {
+        return `${count} ${one}`
+    }
+    return `${count} ${many}`
+}

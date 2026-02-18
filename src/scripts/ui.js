@@ -1,6 +1,6 @@
 import {MAX_ITEMS_PER_FOLDER} from './constants.js'
 import {getFeedError, getFolderItems} from './domain.js'
-import {formatRelativeTime, getHostname} from './utils.js'
+import {formatCountLabel, formatRelativeTime, getHostname} from './utils.js'
 
 export const elements = {
     folderForm: document.querySelector('[data-action="create-folder"]'),
@@ -33,6 +33,8 @@ let lastUpdatedTimerId = null
 let feedItemTimesTimerId = null
 const RECENT_ITEM_WINDOW_MS = 30 * 60 * 1000
 const RELATIVE_TIME_UPDATE_INTERVAL_MS = 60000
+const FEED_LABEL_FORMS = ['поток', 'потока', 'потоков']
+const ERROR_LABEL_FORMS = ['ошибка', 'ошибки', 'ошибок']
 let activeSettingsTab = null
 
 export function render(state) {
@@ -109,7 +111,7 @@ function renderFoldersList(state) {
         name.textContent = folder.name
         const meta = document.createElement('div')
         meta.className = 'settings__folder-meta'
-        meta.textContent = `${folder.feeds.length} потоков`
+        meta.textContent = formatCountLabel(folder.feeds.length, FEED_LABEL_FORMS)
         info.append(name, meta)
 
         const actions = document.createElement('div')
@@ -199,11 +201,15 @@ function renderColumns(state) {
             }))
             .filter((feedError) => feedError.message)
         const hasErrors = folderErrors.length > 0
+        const feedsLabel = formatCountLabel(
+            folder.feeds.length,
+            FEED_LABEL_FORMS,
+        )
         const meta = document.createElement('div')
         meta.className = 'columns__meta'
         meta.textContent = hasErrors
-            ? `${folder.feeds.length} потоков · ${folderErrors.length} ошибок`
-            : `${folder.feeds.length} потоков`
+            ? `${feedsLabel} · ${formatCountLabel(folderErrors.length, ERROR_LABEL_FORMS)}`
+            : feedsLabel
 
         header.append(title, meta)
 
