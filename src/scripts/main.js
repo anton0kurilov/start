@@ -4,10 +4,13 @@ import {
     exportState,
     getState,
     importState,
+    markItemsVisited,
     refreshAll,
     removeFeed,
     removeFolder,
     resetState,
+    setAutoMarkReadOnScroll,
+    shouldAutoMarkReadOnScroll,
 } from './domain.js'
 import {
     applySettingsOpen,
@@ -17,6 +20,8 @@ import {
     updateLastUpdated,
     updateStatus,
 } from './ui.js'
+
+const pendingScrollMarkFrames = new WeakMap()
 
 init()
 
@@ -65,6 +70,7 @@ function bindEvents() {
     }
     if (elements.columns) {
         elements.columns.addEventListener('click', handleColumnHeaderClick)
+        elements.columns.addEventListener('scroll', handleColumnScroll, true)
     }
     if (elements.reset) {
         elements.reset.addEventListener('click', handleReset)
@@ -93,6 +99,12 @@ function bindEvents() {
         elements.settingsTabs.forEach((tab) => {
             tab.addEventListener('click', handleSettingsTabClick)
         })
+    }
+    if (elements.autoMarkReadOnScroll) {
+        elements.autoMarkReadOnScroll.addEventListener(
+            'change',
+            handleAutoMarkReadOnScrollChange,
+        )
     }
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
@@ -188,6 +200,11 @@ function handleSettingsTabClick(event) {
 }
 
 function handleColumnHeaderClick(event) {
+    const feedItem = event.target.closest('.feed__item')
+    if (feedItem && elements.columns?.contains(feedItem)) {
+        markFeedItemsVisited([feedItem])
+        return
+    }
     const header = event.target.closest('.columns__header')
     if (!header || !elements.columns?.contains(header)) {
         return
@@ -216,6 +233,102 @@ function scrollElementToTop(element, reduceMotion) {
         return
     }
     element.scrollTop = 0
+}
+
+function handleAutoMarkReadOnScrollChange(event) {
+    const target = event.currentTarget
+    if (!target) {
+        return
+    }
+    setAutoMarkReadOnScroll(Boolean(target.checked))
+    if (shouldAutoMarkReadOnScroll()) {
+        markHiddenFeedItemsInAllColumns()
+    }
+}
+
+function handleColumnScroll(event) {
+    if (!shouldAutoMarkReadOnScroll()) {
+        return
+    }
+    const scroller = event.target
+    if (
+        !scroller ||
+        typeof scroller.closest !== 'function' ||
+        !scroller.classList
+    ) {
+        return
+    }
+    const isColumnContent = scroller.classList.contains('columns__content')
+    const isColumnItem = scroller.classList.contains('columns__item')
+    if (!isColumnContent && !isColumnItem) {
+        return
+    }
+    const content = isColumnContent
+        ? scroller
+        : scroller.querySelector('.columns__content')
+    if (!content) {
+        return
+    }
+    if (pendingScrollMarkFrames.has(scroller)) {
+        return
+    }
+    const frameId = requestAnimationFrame(() => {
+        pendingScrollMarkFrames.delete(scroller)
+        markHiddenFeedItemsInColumn(
+            content,
+            scroller.getBoundingClientRect().top,
+        )
+    })
+    pendingScrollMarkFrames.set(scroller, frameId)
+}
+
+function markHiddenFeedItemsInAllColumns() {
+    const columnContents = elements.columns?.querySelectorAll('.columns__content')
+    if (!columnContents?.length) {
+        return
+    }
+    columnContents.forEach((content) => {
+        markHiddenFeedItemsInColumn(content)
+    })
+}
+
+function markHiddenFeedItemsInColumn(content, visibleTop) {
+    if (!content) {
+        return
+    }
+    const columnTop =
+        typeof visibleTop === 'number'
+            ? visibleTop
+            : content.getBoundingClientRect().top
+    const feedItems = Array.from(content.querySelectorAll('.feed__item'))
+    const hiddenItems = feedItems.filter((item) => {
+        if (item.classList.contains('feed__item--visited')) {
+            return false
+        }
+        const itemBottom = item.getBoundingClientRect().bottom
+        return itemBottom <= columnTop
+    })
+    markFeedItemsVisited(hiddenItems)
+}
+
+function markFeedItemsVisited(feedItems) {
+    if (!feedItems?.length) {
+        return
+    }
+    const visitedItemKeys = []
+    feedItems.forEach((feedItem) => {
+        if (!feedItem || feedItem.classList.contains('feed__item--visited')) {
+            return
+        }
+        feedItem.classList.add('feed__item--visited')
+        const itemKey = String(feedItem.dataset.itemKey || '').trim()
+        if (itemKey) {
+            visitedItemKeys.push(itemKey)
+        }
+    })
+    if (visitedItemKeys.length) {
+        markItemsVisited(visitedItemKeys)
+    }
 }
 
 function handleTriggerImportFile() {
@@ -315,6 +428,9 @@ async function refreshAllFeeds() {
     const nextState = getState()
     updateLastUpdated(nextState.lastUpdated)
     render(nextState)
+    if (shouldAutoMarkReadOnScroll()) {
+        markHiddenFeedItemsInAllColumns()
+    }
     if (elements.refresh) {
         elements.refresh.disabled = false
     }

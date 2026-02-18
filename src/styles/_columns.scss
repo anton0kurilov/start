@@ -125,6 +125,10 @@
     &:visited .feed__item-title {
         color: var(--colorAccent);
     }
+
+    &--visited .feed__item-title {
+        color: var(--colorAccent);
+    }
 }
 
 @media (max-width: 1100px) {

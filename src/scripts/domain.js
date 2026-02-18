@@ -1,8 +1,14 @@
-import {CORS_PROXY, FETCH_TIMEOUT} from './constants.js'
+import {
+    CORS_PROXY,
+    DEFAULT_SETTINGS,
+    FETCH_TIMEOUT,
+    MAX_VISITED_ITEMS,
+} from './constants.js'
 import {loadState, saveState, clearState} from './storage.js'
 import {createId, normalizeUrl, decodeHtmlEntities} from './utils.js'
 
 let state = loadState()
+let visitedItemKeysSet = new Set(state.visitedItemKeys || [])
 const feedItems = new Map()
 const feedErrors = new Map()
 const FALLBACK_CORS_PROXY = 'https://api.allorigins.win/raw?url='
@@ -62,6 +68,7 @@ export function removeFeed(folderId, feedId) {
 export function resetState() {
     clearState()
     state = loadState()
+    visitedItemKeysSet = new Set(state.visitedItemKeys || [])
     feedItems.clear()
     feedErrors.clear()
 }
@@ -80,6 +87,10 @@ export function exportState() {
             })),
         })),
         lastUpdated: state.lastUpdated,
+        settings: {
+            ...DEFAULT_SETTINGS,
+            ...(state.settings || {}),
+        },
     }
 }
 
@@ -89,10 +100,61 @@ export function importState(rawState) {
         return {ok: false, error: 'invalid'}
     }
     state = normalized
+    visitedItemKeysSet = new Set(state.visitedItemKeys || [])
     saveState(state)
     feedItems.clear()
     feedErrors.clear()
     return {ok: true, foldersCount: state.folders.length}
+}
+
+export function shouldAutoMarkReadOnScroll() {
+    return Boolean(state.settings?.autoMarkReadOnScroll)
+}
+
+export function setAutoMarkReadOnScroll(isEnabled) {
+    const nextValue = Boolean(isEnabled)
+    const currentValue = Boolean(state.settings?.autoMarkReadOnScroll)
+    if (currentValue === nextValue) {
+        return
+    }
+    state.settings = {
+        ...DEFAULT_SETTINGS,
+        ...(state.settings || {}),
+        autoMarkReadOnScroll: nextValue,
+    }
+    saveState(state)
+}
+
+export function isItemVisited(itemKey) {
+    const normalizedItemKey = normalizeItemKey(itemKey)
+    if (!normalizedItemKey) {
+        return false
+    }
+    return visitedItemKeysSet.has(normalizedItemKey)
+}
+
+export function markItemsVisited(itemKeys) {
+    const keys = Array.isArray(itemKeys) ? itemKeys : [itemKeys]
+    let isChanged = false
+    keys.forEach((itemKey) => {
+        const normalizedItemKey = normalizeItemKey(itemKey)
+        if (!normalizedItemKey || visitedItemKeysSet.has(normalizedItemKey)) {
+            return
+        }
+        visitedItemKeysSet.add(normalizedItemKey)
+        isChanged = true
+    })
+    if (!isChanged) {
+        return
+    }
+    if (visitedItemKeysSet.size > MAX_VISITED_ITEMS) {
+        const trimmedKeys = Array.from(visitedItemKeysSet).slice(
+            -MAX_VISITED_ITEMS,
+        )
+        visitedItemKeysSet = new Set(trimmedKeys)
+    }
+    state.visitedItemKeys = Array.from(visitedItemKeysSet)
+    saveState(state)
 }
 
 export function getFeedError(feedId) {
@@ -340,9 +402,15 @@ function normalizeImportedState(rawState) {
         .map((folder) => normalizeImportedFolder(folder))
         .filter(Boolean)
     const lastUpdated = normalizeImportedDate(payload.lastUpdated)
+    const settings = normalizeImportedSettings(payload.settings)
+    const visitedItemKeys = normalizeImportedVisitedItemKeys(
+        payload.visitedItemKeys,
+    )
     return {
         folders: normalizedFolders,
         lastUpdated,
+        settings,
+        visitedItemKeys,
     }
 }
 
@@ -397,4 +465,36 @@ function normalizeImportedDate(value) {
         return null
     }
     return date.toISOString()
+}
+
+function normalizeImportedSettings(rawSettings) {
+    if (!rawSettings || typeof rawSettings !== 'object') {
+        return {
+            ...DEFAULT_SETTINGS,
+        }
+    }
+    return {
+        ...DEFAULT_SETTINGS,
+        autoMarkReadOnScroll: Boolean(rawSettings.autoMarkReadOnScroll),
+    }
+}
+
+function normalizeImportedVisitedItemKeys(rawItemKeys) {
+    if (!Array.isArray(rawItemKeys)) {
+        return []
+    }
+    const seen = new Set()
+    return rawItemKeys
+        .map((itemKey) => normalizeItemKey(itemKey))
+        .filter((itemKey) => {
+            if (!itemKey || seen.has(itemKey)) {
+                return false
+            }
+            seen.add(itemKey)
+            return true
+        })
+}
+
+function normalizeItemKey(itemKey) {
+    return String(itemKey || '').trim()
 }

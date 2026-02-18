@@ -1,5 +1,5 @@
 import {MAX_ITEMS_PER_FOLDER} from './constants.js'
-import {getFeedError, getFolderItems} from './domain.js'
+import {getFeedError, getFolderItems, isItemVisited} from './domain.js'
 import {formatCountLabel, formatRelativeTime, getHostname} from './utils.js'
 
 export const elements = {
@@ -27,6 +27,9 @@ export const elements = {
         '[data-action="trigger-import-file"]',
     ),
     importFileName: document.querySelector('[data-import-filename]'),
+    autoMarkReadOnScroll: document.querySelector(
+        '[name="autoMarkReadOnScroll"]',
+    ),
 }
 
 let lastUpdatedTimerId = null
@@ -38,9 +41,19 @@ const ERROR_LABEL_FORMS = ['ошибка', 'ошибки', 'ошибок']
 let activeSettingsTab = null
 
 export function render(state) {
+    renderSettings(state)
     renderFolderSelect(state)
     renderFoldersList(state)
     renderColumns(state)
+}
+
+function renderSettings(state) {
+    if (!elements.autoMarkReadOnScroll) {
+        return
+    }
+    elements.autoMarkReadOnScroll.checked = Boolean(
+        state.settings?.autoMarkReadOnScroll,
+    )
 }
 
 function setFeedFormDisabled(isDisabled) {
@@ -240,6 +253,14 @@ function renderColumns(state) {
                 card.href = item.link || '#'
                 card.target = '_blank'
                 card.rel = 'noopener noreferrer'
+                const itemKey = buildFeedItemKey(item)
+                if (itemKey) {
+                    card.dataset.itemKey = itemKey
+                    card.classList.toggle(
+                        'feed__item--visited',
+                        isItemVisited(itemKey),
+                    )
+                }
 
                 const source = document.createElement('div')
                 source.className = 'feed__item-source'
@@ -263,6 +284,18 @@ function renderColumns(state) {
     })
 
     ensureFeedItemTimesUpdates()
+}
+
+function buildFeedItemKey(item) {
+    const primaryKey = String(item.link || item.id || '').trim()
+    if (primaryKey) {
+        return primaryKey
+    }
+    const publishedAt =
+        item.date instanceof Date && !Number.isNaN(item.date.getTime())
+            ? item.date.toISOString()
+            : ''
+    return `${item.source || ''}|${item.title || ''}|${publishedAt}`.trim()
 }
 
 function createColumnErrors(errors) {
