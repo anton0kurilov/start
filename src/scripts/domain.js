@@ -15,10 +15,7 @@ let state = loadState()
 let visitedItemKeysSet = new Set(state.visitedItemKeys || [])
 const feedItems = new Map()
 const feedErrors = new Map()
-const FALLBACK_CORS_PROXY = 'https://api.allorigins.win/raw?url='
 const PROXY_HEALTHCHECK_URL = 'https://example.com/'
-const CORS_PROXY_BASES = [CORS_PROXY, FALLBACK_CORS_PROXY]
-let activeProxyBase = CORS_PROXY
 
 export function getState() {
     return state
@@ -245,50 +242,28 @@ async function loadFeed(feed) {
 }
 
 async function fetchFeedText(url) {
-    const proxyBases = getProxyBasesByPriority()
-    let lastError = null
-    for (const proxyBase of proxyBases) {
-        const proxyUrl = `${proxyBase}${encodeURIComponent(url)}`
-        try {
-            const response = await fetchWithTimeout(proxyUrl)
-            if (!response.ok) {
-                throw createHttpError(response.status)
-            }
-            activeProxyBase = proxyBase
-            return await response.text()
-        } catch (error) {
-            lastError = error
-        }
+    const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`
+    const response = await fetchWithTimeout(proxyUrl)
+    if (!response.ok) {
+        throw createHttpError(response.status)
     }
-    throw lastError || new Error('Proxy fetch failed')
+    return await response.text()
 }
 
 async function ensureProxyAvailable() {
-    const proxyBases = getProxyBasesByPriority()
-    let lastError = null
-    for (const proxyBase of proxyBases) {
-        const testUrl = `${proxyBase}${encodeURIComponent(PROXY_HEALTHCHECK_URL)}`
-        try {
-            const response = await fetchWithTimeout(testUrl)
-            if (response.status >= 500) {
-                throw createHttpError(response.status)
-            }
-            activeProxyBase = proxyBase
-            return {ok: true}
-        } catch (error) {
-            lastError = error
+    const testUrl = `${CORS_PROXY}${encodeURIComponent(PROXY_HEALTHCHECK_URL)}`
+    try {
+        const response = await fetchWithTimeout(testUrl)
+        if (response.status >= 500) {
+            throw createHttpError(response.status)
         }
+        return {ok: true}
+    } catch (error) {
+        const proxyError = new Error('Proxy unavailable')
+        proxyError.code = 'PROXY_UNAVAILABLE'
+        proxyError.cause = error
+        return {ok: false, error: proxyError}
     }
-    const error = new Error('Proxy unavailable')
-    error.code = 'PROXY_UNAVAILABLE'
-    error.cause = lastError
-    return {ok: false, error}
-}
-
-function getProxyBasesByPriority() {
-    return [activeProxyBase, ...CORS_PROXY_BASES].filter(
-        (proxyBase, index, list) => list.indexOf(proxyBase) === index,
-    )
 }
 
 function createHttpError(status) {
