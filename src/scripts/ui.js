@@ -200,9 +200,10 @@ function renderColumns(state) {
         title.textContent = folder.name
 
         const items = getFolderItems(folder)
+        const visibleItems = items.slice(0, MAX_ITEMS_PER_FOLDER)
         const meta = document.createElement('div')
         meta.className = 'columns__meta'
-        meta.textContent = `${folder.feeds.length} потоков · ${items.length} новостей`
+        meta.textContent = `${folder.feeds.length} потоков`
 
         header.append(title, meta)
 
@@ -222,7 +223,7 @@ function renderColumns(state) {
                 : 'Здесь пока нет новостей.'
             content.appendChild(empty)
         } else {
-            items.slice(0, MAX_ITEMS_PER_FOLDER).forEach((item) => {
+            visibleItems.forEach((item) => {
                 const card = document.createElement('a')
                 card.className = 'feed__item'
                 card.href = item.link || '#'
