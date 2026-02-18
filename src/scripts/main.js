@@ -63,6 +63,9 @@ function bindEvents() {
     if (elements.refresh) {
         elements.refresh.addEventListener('click', () => refreshAllFeeds())
     }
+    if (elements.columns) {
+        elements.columns.addEventListener('click', handleColumnHeaderClick)
+    }
     if (elements.reset) {
         elements.reset.addEventListener('click', handleReset)
     }
@@ -182,6 +185,37 @@ function handleSettingsTabClick(event) {
         return
     }
     applySettingsTab(tab.dataset.settingsTab)
+}
+
+function handleColumnHeaderClick(event) {
+    const header = event.target.closest('.columns__header')
+    if (!header || !elements.columns?.contains(header)) {
+        return
+    }
+    const column = header.closest('.columns__item')
+    if (!column) {
+        return
+    }
+    const reduceMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+    ).matches
+    const content = column.querySelector('.columns__content')
+    scrollElementToTop(content, reduceMotion)
+    scrollElementToTop(column, reduceMotion)
+}
+
+function scrollElementToTop(element, reduceMotion) {
+    if (!element) {
+        return
+    }
+    if (typeof element.scrollTo === 'function') {
+        element.scrollTo({
+            top: 0,
+            behavior: reduceMotion ? 'auto' : 'smooth',
+        })
+        return
+    }
+    element.scrollTop = 0
 }
 
 function handleTriggerImportFile() {
