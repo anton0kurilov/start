@@ -1,5 +1,5 @@
 import {MAX_ITEMS_PER_FOLDER} from './constants.js'
-import {getFeedError, getFolderItems, isItemVisited} from './domain.js'
+import {getFolderItems, isItemVisited} from './domain.js'
 import {formatCountLabel, formatRelativeTime, getHostname} from './utils.js'
 
 export const elements = {
@@ -8,6 +8,8 @@ export const elements = {
     foldersList: document.querySelector('[data-folders]'),
     columns: document.querySelector('[data-columns]'),
     status: document.querySelector('[data-status]'),
+    statusText: document.querySelector('[data-status-text]'),
+    statusClose: document.querySelector('[data-action="dismiss-status"]'),
     refresh: document.querySelector('[data-action="refresh"]'),
     reset: document.querySelector('[data-action="reset"]'),
     folderSelect: document.querySelector('select[name="folderId"]'),
@@ -37,7 +39,6 @@ let feedItemTimesTimerId = null
 const RECENT_ITEM_WINDOW_MS = 30 * 60 * 1000
 const RELATIVE_TIME_UPDATE_INTERVAL_MS = 60000
 const FEED_LABEL_FORMS = ['поток', 'потока', 'потоков']
-const ERROR_LABEL_FORMS = ['ошибка', 'ошибки', 'ошибок']
 let activeSettingsTab = null
 
 export function render(state) {
@@ -210,30 +211,15 @@ function renderColumns(state) {
 
         const items = getFolderItems(folder)
         const visibleItems = items.slice(0, MAX_ITEMS_PER_FOLDER)
-        const folderErrors = folder.feeds
-            .map((feed) => ({
-                feedName: feed.name || 'Фид',
-                message: getFeedError(feed.id),
-            }))
-            .filter((feedError) => feedError.message)
-        const hasErrors = folderErrors.length > 0
-        const feedsLabel = formatCountLabel(
-            folder.feeds.length,
-            FEED_LABEL_FORMS,
-        )
+        const feedsLabel = formatCountLabel(folder.feeds.length, FEED_LABEL_FORMS)
         const meta = document.createElement('div')
         meta.className = 'columns__meta'
-        meta.textContent = hasErrors
-            ? `${feedsLabel} · ${formatCountLabel(folderErrors.length, ERROR_LABEL_FORMS)}`
-            : feedsLabel
+        meta.textContent = feedsLabel
 
         header.append(title, meta)
 
         const content = document.createElement('div')
         content.className = 'columns__content'
-        if (hasErrors) {
-            content.appendChild(createColumnErrors(folderErrors))
-        }
 
         if (!folder.feeds.length) {
             const empty = document.createElement('div')
@@ -245,9 +231,7 @@ function renderColumns(state) {
             empty.className = 'columns__empty'
             empty.textContent = isRefreshing
                 ? 'Лента обновляется...'
-                : hasErrors
-                  ? 'Новости не загружены из-за ошибок обновления.'
-                  : 'Здесь пока нет новостей.'
+                : 'Здесь пока нет новостей.'
             content.appendChild(empty)
         } else {
             visibleItems.forEach((item) => {
@@ -312,20 +296,6 @@ function buildFeedItemKey(item) {
             ? item.date.toISOString()
             : ''
     return `${item.source || ''}|${item.title || ''}|${publishedAt}`.trim()
-}
-
-function createColumnErrors(errors) {
-    const wrapper = document.createElement('div')
-    wrapper.className = 'columns__errors'
-
-    errors.forEach((item) => {
-        const row = document.createElement('div')
-        row.className = 'columns__error'
-        row.textContent = `${item.feedName}: ${item.message}`
-        wrapper.appendChild(row)
-    })
-
-    return wrapper
 }
 
 function setFeedItemTime(element, date) {
@@ -424,19 +394,34 @@ function isRecentItem(date) {
 }
 
 export function updateStatus(text, tone = 'ready') {
-    if (!elements.status) {
+    if (!elements.status || !elements.statusText) {
         return
     }
-    elements.status.textContent = text
-    elements.status.classList.remove(
-        'fab__status--loading',
-        'fab__status--error',
-    )
+    elements.statusText.textContent = text
+    elements.status.classList.remove('fab__status--loading', 'fab__status--error')
+    const isError = tone === 'error'
+    if (elements.statusClose) {
+        elements.statusClose.disabled = !isError
+    }
     if (tone === 'loading') {
         elements.status.classList.add('fab__status--loading')
     }
-    if (tone === 'error') {
+    if (isError) {
         elements.status.classList.add('fab__status--error')
+        elements.status.hidden = false
+        return
+    }
+    elements.status.hidden = true
+}
+
+export function dismissStatus() {
+    if (!elements.status) {
+        return
+    }
+    elements.status.hidden = true
+    elements.status.classList.remove('fab__status--error', 'fab__status--loading')
+    if (elements.statusClose) {
+        elements.statusClose.disabled = true
     }
 }
 

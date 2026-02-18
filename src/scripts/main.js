@@ -15,6 +15,7 @@ import {
 import {
     applySettingsOpen,
     applySettingsTab,
+    dismissStatus,
     elements,
     render,
     updateLastUpdated,
@@ -106,6 +107,9 @@ function bindEvents() {
             'change',
             handleAutoMarkReadOnScrollChange,
         )
+    }
+    if (elements.statusClose) {
+        elements.statusClose.addEventListener('click', handleDismissStatus)
     }
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
@@ -249,6 +253,10 @@ function handleAutoMarkReadOnScrollChange(event) {
     if (shouldAutoMarkReadOnScroll()) {
         markHiddenFeedItemsInAllColumns()
     }
+}
+
+function handleDismissStatus() {
+    dismissStatus()
 }
 
 function handleColumnScroll(event) {
