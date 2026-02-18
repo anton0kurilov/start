@@ -298,11 +298,6 @@
         padding: 8px 10px;
         border-radius: 12px;
         border: 1px solid var(--colorBorder);
-
-        &--error {
-            border-color: rgba(249, 115, 115, 0.45);
-            background: rgba(249, 115, 115, 0.08);
-        }
     }
 
     &__feed-name {
@@ -313,11 +308,6 @@
     &__feed-url {
         font-size: 0.75rem;
         color: var(--colorMuted);
-    }
-
-    &__feed-error {
-        font-size: 0.72rem;
-        color: var(--colorDanger);
     }
 
     &__empty {

@@ -56,6 +56,28 @@
         min-height: 0;
     }
 
+    &__errors {
+        margin: 0 var(--padding);
+        border: 1px solid rgba(249, 115, 115, 0.45);
+        background: rgba(249, 115, 115, 0.08);
+        border-radius: var(--borderRadius);
+        padding: calc(var(--padding) * 0.85);
+        display: grid;
+        gap: 6px;
+    }
+
+    &__errors-title {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--colorDanger);
+    }
+
+    &__error {
+        font-size: 0.75rem;
+        color: var(--colorDanger);
+        line-height: 1.35;
+    }
+
     &__empty {
         font-size: 0.9rem;
         color: var(--colorMuted);
@@ -153,7 +175,8 @@
         min-height: 100vh;
     }
     .feed__item,
-    .columns__header {
+    .columns__header,
+    .columns__errors {
         margin: 0 3px;
     }
 }

@@ -143,16 +143,7 @@ function renderFoldersList(state) {
                 const feedUrl = document.createElement('div')
                 feedUrl.className = 'settings__feed-url'
                 feedUrl.textContent = getHostname(feed.url)
-                const feedError = getFeedError(feed.id)
-                if (feedError) {
-                    const error = document.createElement('div')
-                    error.className = 'settings__feed-error'
-                    error.textContent = feedError
-                    feedInfo.append(feedName, feedUrl, error)
-                    feedRow.classList.add('settings__feed--error')
-                } else {
-                    feedInfo.append(feedName, feedUrl)
-                }
+                feedInfo.append(feedName, feedUrl)
 
                 const feedRemove = document.createElement('button')
                 feedRemove.className = 'icon-btn icon-btn--danger'
@@ -201,14 +192,26 @@ function renderColumns(state) {
 
         const items = getFolderItems(folder)
         const visibleItems = items.slice(0, MAX_ITEMS_PER_FOLDER)
+        const folderErrors = folder.feeds
+            .map((feed) => ({
+                feedName: feed.name || 'Фид',
+                message: getFeedError(feed.id),
+            }))
+            .filter((feedError) => feedError.message)
+        const hasErrors = folderErrors.length > 0
         const meta = document.createElement('div')
         meta.className = 'columns__meta'
-        meta.textContent = `${folder.feeds.length} потоков`
+        meta.textContent = hasErrors
+            ? `${folder.feeds.length} потоков · ${folderErrors.length} ошибок`
+            : `${folder.feeds.length} потоков`
 
         header.append(title, meta)
 
         const content = document.createElement('div')
         content.className = 'columns__content'
+        if (hasErrors) {
+            content.appendChild(createColumnErrors(folderErrors))
+        }
 
         if (!folder.feeds.length) {
             const empty = document.createElement('div')
@@ -220,7 +223,9 @@ function renderColumns(state) {
             empty.className = 'columns__empty'
             empty.textContent = isRefreshing
                 ? 'Лента обновляется...'
-                : 'Здесь пока нет новостей.'
+                : hasErrors
+                  ? 'Новости не загружены из-за ошибок обновления.'
+                  : 'Здесь пока нет новостей.'
             content.appendChild(empty)
         } else {
             visibleItems.forEach((item) => {
@@ -252,6 +257,25 @@ function renderColumns(state) {
     })
 
     ensureFeedItemTimesUpdates()
+}
+
+function createColumnErrors(errors) {
+    const wrapper = document.createElement('div')
+    wrapper.className = 'columns__errors'
+
+    const title = document.createElement('div')
+    title.className = 'columns__errors-title'
+    title.textContent = 'Ошибки обновления лент'
+    wrapper.appendChild(title)
+
+    errors.forEach((item) => {
+        const row = document.createElement('div')
+        row.className = 'columns__error'
+        row.textContent = `${item.feedName}: ${item.message}`
+        wrapper.appendChild(row)
+    })
+
+    return wrapper
 }
 
 function setFeedItemTime(element, date) {
