@@ -3,7 +3,7 @@
     right: calc(var(--padding) * 1.4 + var(--safeAreaRight));
     bottom: calc(var(--padding) * 1.4 + var(--safeAreaBottom));
     z-index: 30;
-    width: 320px;
+    width: var(--widthColumn);
     max-width: calc(100% - var(--padding) * 2);
     background: rgba(1, 1, 1, 0.6);
     backdrop-filter: blur(4px);
