@@ -22,6 +22,7 @@ import {
 } from './ui.js'
 
 const pendingScrollMarkFrames = new WeakMap()
+let refreshAllFeedsPromise = null
 
 init()
 
@@ -159,6 +160,7 @@ function handleListActions(event) {
         removeFolder(folderId)
         render(getState())
         refreshAllFeeds()
+        return
     }
     if (action === 'remove-feed') {
         const feedRow = button.closest('[data-feed-id]')
@@ -202,6 +204,9 @@ function handleSettingsTabClick(event) {
 function handleColumnHeaderClick(event) {
     const feedItem = event.target.closest('.feed__item')
     if (feedItem && elements.columns?.contains(feedItem)) {
+        if (feedItem.dataset.noLink === 'true') {
+            event.preventDefault()
+        }
         markFeedItemsVisited([feedItem])
         return
     }
@@ -377,25 +382,44 @@ async function handleImportJson(event) {
     if (!confirmed) {
         return
     }
+
+    let parsed = null
     try {
-        const text = await file.text()
-        const parsed = JSON.parse(text)
-        const result = importState(parsed)
-        if (!result.ok) {
-            updateStatus('Не удалось импортировать данные', 'error')
-            return
-        }
-        event.target.reset()
-        handleImportFileChange()
-        render(getState())
-        updateLastUpdated(getState().lastUpdated)
-        refreshAllFeeds()
+        parsed = JSON.parse(await file.text())
     } catch (error) {
         updateStatus('Файл импорта содержит неверный JSON', 'error')
+        return
     }
+
+    const result = importState(parsed)
+    if (!result.ok) {
+        updateStatus('Не удалось импортировать данные', 'error')
+        return
+    }
+
+    const form = event.currentTarget
+    if (form && typeof form.reset === 'function') {
+        form.reset()
+    }
+    handleImportFileChange()
+    render(getState())
+    updateLastUpdated(getState().lastUpdated)
+    await refreshAllFeeds()
 }
 
 async function refreshAllFeeds() {
+    if (refreshAllFeedsPromise) {
+        return refreshAllFeedsPromise
+    }
+    refreshAllFeedsPromise = refreshAllFeedsInternal()
+    try {
+        return await refreshAllFeedsPromise
+    } finally {
+        refreshAllFeedsPromise = null
+    }
+}
+
+async function refreshAllFeedsInternal() {
     const currentState = getState()
     const feeds = currentState.folders.flatMap((folder) => folder.feeds)
     if (!feeds.length) {
@@ -411,28 +435,32 @@ async function refreshAllFeeds() {
     }
     render(currentState)
 
-    const result = await refreshAll()
-
-    if (result.errorsCount) {
-        const firstError = result.errors?.[0]
-        const firstErrorText = firstError
-            ? `. ${firstError.feedName || 'Фид'}: ${firstError.message}`
-            : ''
-        updateStatus(
-            `Обновлено с ошибками: ${result.errorsCount}${firstErrorText}`,
-            'error',
-        )
-    } else {
-        updateStatus('Ленты обновлены')
-    }
-    const nextState = getState()
-    updateLastUpdated(nextState.lastUpdated)
-    render(nextState)
-    if (shouldAutoMarkReadOnScroll()) {
-        markHiddenFeedItemsInAllColumns()
-    }
-    if (elements.refresh) {
-        elements.refresh.disabled = false
+    try {
+        const result = await refreshAll()
+        if (result.errorsCount) {
+            const firstError = result.errors?.[0]
+            const firstErrorText = firstError
+                ? `. ${firstError.feedName || 'Фид'}: ${firstError.message}`
+                : ''
+            updateStatus(
+                `Обновлено с ошибками: ${result.errorsCount}${firstErrorText}`,
+                'error',
+            )
+        } else {
+            updateStatus('Ленты обновлены')
+        }
+    } catch (error) {
+        updateStatus('Не удалось обновить ленты', 'error')
+    } finally {
+        const nextState = getState()
+        updateLastUpdated(nextState.lastUpdated)
+        render(nextState)
+        if (shouldAutoMarkReadOnScroll()) {
+            markHiddenFeedItemsInAllColumns()
+        }
+        if (elements.refresh) {
+            elements.refresh.disabled = false
+        }
     }
 }
 

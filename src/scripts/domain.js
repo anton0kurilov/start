@@ -2,10 +2,14 @@ import {
     CORS_PROXY,
     DEFAULT_SETTINGS,
     FETCH_TIMEOUT,
-    MAX_VISITED_ITEMS,
 } from './constants.js'
 import {loadState, saveState, clearState} from './storage.js'
 import {createId, normalizeUrl, decodeHtmlEntities} from './utils.js'
+import {
+    normalizeItemKey,
+    normalizeStatePayload,
+    normalizeVisitedItemKeys,
+} from './state-normalizers.js'
 
 let state = loadState()
 let visitedItemKeysSet = new Set(state.visitedItemKeys || [])
@@ -147,13 +151,11 @@ export function markItemsVisited(itemKeys) {
     if (!isChanged) {
         return
     }
-    if (visitedItemKeysSet.size > MAX_VISITED_ITEMS) {
-        const trimmedKeys = Array.from(visitedItemKeysSet).slice(
-            -MAX_VISITED_ITEMS,
-        )
-        visitedItemKeysSet = new Set(trimmedKeys)
-    }
-    state.visitedItemKeys = Array.from(visitedItemKeysSet)
+    const normalizedVisitedKeys = normalizeVisitedItemKeys(
+        Array.from(visitedItemKeysSet),
+    )
+    visitedItemKeysSet = new Set(normalizedVisitedKeys)
+    state.visitedItemKeys = normalizedVisitedKeys
     saveState(state)
 }
 
@@ -162,12 +164,13 @@ export function getFeedError(feedId) {
 }
 
 export function getFolderItems(folder) {
-    const items = folder.feeds.flatMap((feed) => feedItems.get(feed.id) || [])
+    const feeds = Array.isArray(folder?.feeds) ? folder.feeds : []
+    const items = feeds.flatMap((feed) => feedItems.get(feed.id) || [])
     return items
-        .filter((item) => item && item.title)
+        .filter((item) => item && String(item.title || '').trim())
         .sort((a, b) => {
-            const aTime = a.date ? a.date.getTime() : 0
-            const bTime = b.date ? b.date.getTime() : 0
+            const aTime = getItemTimestamp(a)
+            const bTime = getItemTimestamp(b)
             return bTime - aTime
         })
 }
@@ -327,7 +330,7 @@ function parseFeed(xmlText) {
             getText(entry, 'pubDate') ||
             getText(entry, 'updated') ||
             getText(entry, 'published')
-        const date = dateText ? new Date(dateText) : null
+        const date = parseFeedDate(dateText)
         const id =
             getText(entry, 'guid') || getText(entry, 'id') || link || title
         return {
@@ -382,7 +385,7 @@ function getLink(entry) {
 function dedupeItems(items) {
     const seen = new Set()
     return items.filter((item) => {
-        const key = item.id || item.link || item.title
+        const key = String(item.id || item.link || item.title || '').trim()
         if (!key || seen.has(key)) {
             return false
         }
@@ -397,66 +400,10 @@ function normalizeImportedState(rawState) {
     }
     const payload =
         rawState && typeof rawState.data === 'object' ? rawState.data : rawState
-    const folders = Array.isArray(payload.folders) ? payload.folders : []
-    const normalizedFolders = folders
-        .map((folder) => normalizeImportedFolder(folder))
-        .filter(Boolean)
-    const lastUpdated = normalizeImportedDate(payload.lastUpdated)
-    const settings = normalizeImportedSettings(payload.settings)
-    const visitedItemKeys = normalizeImportedVisitedItemKeys(
-        payload.visitedItemKeys,
-    )
-    return {
-        folders: normalizedFolders,
-        lastUpdated,
-        settings,
-        visitedItemKeys,
-    }
+    return normalizeStatePayload(payload)
 }
 
-function normalizeImportedFolder(folder) {
-    if (!folder || typeof folder !== 'object') {
-        return null
-    }
-    const name = normalizeImportedText(folder.name)
-    if (!name) {
-        return null
-    }
-    const feeds = Array.isArray(folder.feeds) ? folder.feeds : []
-    const normalizedFeeds = feeds
-        .map((feed) => normalizeImportedFeed(feed))
-        .filter(Boolean)
-    return {
-        id: normalizeImportedText(folder.id) || createId(),
-        name,
-        feeds: normalizedFeeds,
-    }
-}
-
-function normalizeImportedFeed(feed) {
-    if (!feed || typeof feed !== 'object') {
-        return null
-    }
-    const name = normalizeImportedText(feed.name)
-    const url = normalizeUrl(normalizeImportedText(feed.url))
-    if (!name || !url) {
-        return null
-    }
-    return {
-        id: normalizeImportedText(feed.id) || createId(),
-        name,
-        url,
-    }
-}
-
-function normalizeImportedText(value) {
-    if (typeof value !== 'string') {
-        return ''
-    }
-    return value.trim()
-}
-
-function normalizeImportedDate(value) {
+function parseFeedDate(value) {
     if (!value) {
         return null
     }
@@ -464,37 +411,17 @@ function normalizeImportedDate(value) {
     if (Number.isNaN(date.getTime())) {
         return null
     }
-    return date.toISOString()
+    return date
 }
 
-function normalizeImportedSettings(rawSettings) {
-    if (!rawSettings || typeof rawSettings !== 'object') {
-        return {
-            ...DEFAULT_SETTINGS,
-        }
+function getItemTimestamp(item) {
+    const date = item?.date
+    if (!(date instanceof Date)) {
+        return 0
     }
-    return {
-        ...DEFAULT_SETTINGS,
-        autoMarkReadOnScroll: Boolean(rawSettings.autoMarkReadOnScroll),
+    const time = date.getTime()
+    if (Number.isNaN(time)) {
+        return 0
     }
-}
-
-function normalizeImportedVisitedItemKeys(rawItemKeys) {
-    if (!Array.isArray(rawItemKeys)) {
-        return []
-    }
-    const seen = new Set()
-    return rawItemKeys
-        .map((itemKey) => normalizeItemKey(itemKey))
-        .filter((itemKey) => {
-            if (!itemKey || seen.has(itemKey)) {
-                return false
-            }
-            seen.add(itemKey)
-            return true
-        })
-}
-
-function normalizeItemKey(itemKey) {
-    return String(itemKey || '').trim()
+    return time
 }

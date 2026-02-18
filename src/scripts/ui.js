@@ -124,7 +124,10 @@ function renderFoldersList(state) {
         name.textContent = folder.name
         const meta = document.createElement('div')
         meta.className = 'settings__folder-meta'
-        meta.textContent = formatCountLabel(folder.feeds.length, FEED_LABEL_FORMS)
+        meta.textContent = formatCountLabel(
+            folder.feeds.length,
+            FEED_LABEL_FORMS,
+        )
         info.append(name, meta)
 
         const actions = document.createElement('div')
@@ -250,9 +253,7 @@ function renderColumns(state) {
             visibleItems.forEach((item) => {
                 const card = document.createElement('a')
                 card.className = 'feed__item'
-                card.href = item.link || '#'
-                card.target = '_blank'
-                card.rel = 'noopener noreferrer'
+                applyFeedItemLink(card, item.link)
                 const itemKey = buildFeedItemKey(item)
                 if (itemKey) {
                     card.dataset.itemKey = itemKey
@@ -286,6 +287,21 @@ function renderColumns(state) {
     ensureFeedItemTimesUpdates()
 }
 
+function applyFeedItemLink(card, rawLink) {
+    const link = String(rawLink || '').trim()
+    if (link) {
+        card.href = link
+        card.target = '_blank'
+        card.rel = 'noopener noreferrer'
+        card.removeAttribute('aria-disabled')
+        return
+    }
+    card.href = '#'
+    card.dataset.noLink = 'true'
+    card.setAttribute('aria-disabled', 'true')
+    card.tabIndex = -1
+}
+
 function buildFeedItemKey(item) {
     const primaryKey = String(item.link || item.id || '').trim()
     if (primaryKey) {
@@ -301,11 +317,6 @@ function buildFeedItemKey(item) {
 function createColumnErrors(errors) {
     const wrapper = document.createElement('div')
     wrapper.className = 'columns__errors'
-
-    const title = document.createElement('div')
-    title.className = 'columns__errors-title'
-    title.textContent = 'Ошибки обновления лент'
-    wrapper.appendChild(title)
 
     errors.forEach((item) => {
         const row = document.createElement('div')
