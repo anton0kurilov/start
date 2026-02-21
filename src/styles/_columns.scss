@@ -37,10 +37,57 @@
         cursor: pointer;
     }
 
+    &__header-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-width: 0;
+    }
+
     &__title {
         font-size: 1.05rem;
         letter-spacing: -0.02em;
         margin: 0;
+    }
+
+    &__mark-read {
+        flex-shrink: 0;
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        border: 1px solid var(--colorBorder);
+        background: transparent;
+        color: var(--colorMuted);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition:
+            color 0.2s ease,
+            border-color 0.2s ease,
+            background-color 0.2s ease;
+
+        &:hover {
+            color: var(--colorAccent);
+            border-color: var(--colorAccent);
+            background-color: var(--colorSurface);
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            border-color: var(--colorBorder);
+            color: var(--colorMuted);
+            background: transparent;
+        }
+    }
+
+    &__mark-read-icon {
+        width: 19px;
+        height: 19px;
+        display: block;
+        fill: currentColor;
     }
 
     &__meta {

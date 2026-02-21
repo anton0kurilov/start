@@ -205,18 +205,41 @@ function renderColumns(state) {
 
         const header = document.createElement('div')
         header.className = 'columns__header'
+        const headerTop = document.createElement('div')
+        headerTop.className = 'columns__header-top'
         const title = document.createElement('h2')
         title.className = 'columns__title'
         title.textContent = folder.name
+        const markReadButton = document.createElement('button')
+        markReadButton.className = 'columns__mark-read'
+        markReadButton.type = 'button'
+        markReadButton.dataset.action = 'mark-column-read'
+        markReadButton.title = 'Отметить как прочитанное'
+        markReadButton.setAttribute('aria-label', 'Отметить как прочитанное')
 
         const items = getFolderItems(folder)
         const visibleItems = items.slice(0, MAX_ITEMS_PER_FOLDER)
+        markReadButton.disabled = !visibleItems.length
         const feedsLabel = formatCountLabel(folder.feeds.length, FEED_LABEL_FORMS)
         const meta = document.createElement('div')
         meta.className = 'columns__meta'
         meta.textContent = feedsLabel
 
-        header.append(title, meta)
+        markReadButton.innerHTML = `
+            <svg
+                class="columns__mark-read-icon"
+                viewBox="0 -960 960 960"
+                aria-hidden="true"
+                focusable="false"
+            >
+                <path
+                    d="M268-240 42-466l57-56 170 170 56 56-57 56Zm226 0L268-466l56-57 170 170 368-368 56 57-424 424Zm0-226-57-56 198-198 57 56-198 198Z"
+                />
+            </svg>
+        `
+
+        headerTop.append(title, markReadButton)
+        header.append(headerTop, meta)
 
         const content = document.createElement('div')
         content.className = 'columns__content'

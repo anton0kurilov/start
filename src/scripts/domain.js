@@ -156,6 +156,28 @@ export function markItemsVisited(itemKeys) {
     saveState(state)
 }
 
+export function unmarkItemsVisited(itemKeys) {
+    const keys = Array.isArray(itemKeys) ? itemKeys : [itemKeys]
+    let isChanged = false
+    keys.forEach((itemKey) => {
+        const normalizedItemKey = normalizeItemKey(itemKey)
+        if (!normalizedItemKey || !visitedItemKeysSet.has(normalizedItemKey)) {
+            return
+        }
+        visitedItemKeysSet.delete(normalizedItemKey)
+        isChanged = true
+    })
+    if (!isChanged) {
+        return
+    }
+    const normalizedVisitedKeys = normalizeVisitedItemKeys(
+        Array.from(visitedItemKeysSet),
+    )
+    visitedItemKeysSet = new Set(normalizedVisitedKeys)
+    state.visitedItemKeys = normalizedVisitedKeys
+    saveState(state)
+}
+
 export function getFeedError(feedId) {
     return feedErrors.get(feedId) || ''
 }
