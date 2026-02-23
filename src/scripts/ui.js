@@ -334,9 +334,30 @@ function createFeedItemUtility(item) {
     const usefulness = getFeedItemUsefulness(item)
     utility.className = 'feed__item-utility'
     utility.classList.add(`feed__item-utility--${usefulness.tone || 'learning'}`)
-    utility.textContent = usefulness.label
+    if (usefulness.tone !== 'learning') {
+        utility.appendChild(createFeedItemUtilityIcon())
+    }
+    const text = document.createElement('span')
+    text.className = 'feed__item-utility-text'
+    text.textContent = usefulness.label
+    utility.appendChild(text)
     utility.title = usefulness.title
     return utility
+}
+
+function createFeedItemUtilityIcon() {
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    icon.classList.add('feed__item-utility-icon')
+    icon.setAttribute('viewBox', '0 -960 960 960')
+    icon.setAttribute('aria-hidden', 'true')
+    icon.setAttribute('focusable', 'false')
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    path.setAttribute(
+        'd',
+        'M720-120H280v-520l280-280 50 50q7 7 11.5 19t4.5 23v14l-44 174h258q32 0 56 24t24 56v80q0 7-2 15t-4 15L794-168q-9 20-30 34t-44 14Zm-360-80h360l120-280v-80H480l54-220-174 174v406Zm0-406v406-406Zm-80-34v80H160v360h120v80H80v-520h200Z',
+    )
+    icon.appendChild(path)
+    return icon
 }
 
 function setFeedItemTime(element, date) {

@@ -146,6 +146,7 @@
     &-utility {
         display: inline-flex;
         align-items: center;
+        gap: 4px;
         border-radius: 999px;
         border: 1px solid var(--colorBorder);
         padding: 2px 8px;
@@ -153,6 +154,14 @@
         letter-spacing: 0.02em;
         color: var(--colorMuted);
         white-space: nowrap;
+
+        &-icon {
+            width: 12px;
+            height: 12px;
+            fill: currentColor;
+            display: block;
+            flex-shrink: 0;
+        }
 
         &--high {
             color: #86efac;

@@ -300,7 +300,7 @@ export function getFeedItemUsefulness(item) {
         tone,
         score,
         percentage,
-        label: `полезн. ${percentage}%`,
+        label: `${percentage}%`,
         title: `Прототип оценки вероятности клика на основе ${totalClicks} кликов`,
     }
 }
