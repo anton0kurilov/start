@@ -2,10 +2,20 @@ import {
     CORS_PROXY,
     DEFAULT_SETTINGS,
     FETCH_TIMEOUT,
+    MAX_CLICK_MODEL_HOSTS,
+    MAX_CLICK_MODEL_SOURCES,
+    MAX_CLICK_MODEL_TOKENS,
 } from './constants.js'
 import {loadState, saveState, clearState} from './storage.js'
-import {createId, normalizeUrl, decodeHtmlEntities} from './utils.js'
 import {
+    createId,
+    decodeHtmlEntities,
+    getHostname,
+    normalizeUrl,
+} from './utils.js'
+import {
+    normalizeClickedItemKeys,
+    normalizeClickModel,
     normalizeItemKey,
     normalizeStatePayload,
     normalizeVisitedItemKeys,
@@ -13,9 +23,55 @@ import {
 
 let state = loadState()
 let visitedItemKeysSet = new Set(state.visitedItemKeys || [])
+let clickedItemKeysSet = new Set(state.clickedItemKeys || [])
 const feedItems = new Map()
 const feedErrors = new Map()
 const PROXY_HEALTHCHECK_URL = 'https://example.com/'
+const USEFULNESS_CONFIDENCE_CLICKS = 24
+const USEFULNESS_LEARNING_CLICKS = 3
+const USEFULNESS_HIGH_THRESHOLD = 0.66
+const USEFULNESS_MEDIUM_THRESHOLD = 0.42
+const CLICK_MODEL_SMOOTHING = 6
+const TITLE_TOKENS_LIMIT = 6
+const TITLE_TOKENS_FOR_SCORING = 3
+const TITLE_STOP_WORDS = new Set([
+    'a',
+    'an',
+    'and',
+    'as',
+    'at',
+    'be',
+    'for',
+    'from',
+    'in',
+    'is',
+    'it',
+    'of',
+    'on',
+    'or',
+    'that',
+    'the',
+    'to',
+    'with',
+    'без',
+    'в',
+    'во',
+    'для',
+    'и',
+    'из',
+    'к',
+    'как',
+    'на',
+    'о',
+    'об',
+    'по',
+    'под',
+    'при',
+    'с',
+    'со',
+    'что',
+    'это',
+])
 
 export function getState() {
     return state
@@ -70,6 +126,7 @@ export function resetState() {
     clearState()
     state = loadState()
     visitedItemKeysSet = new Set(state.visitedItemKeys || [])
+    clickedItemKeysSet = new Set(state.clickedItemKeys || [])
     feedItems.clear()
     feedErrors.clear()
 }
@@ -102,6 +159,7 @@ export function importState(rawState) {
     }
     state = normalized
     visitedItemKeysSet = new Set(state.visitedItemKeys || [])
+    clickedItemKeysSet = new Set(state.clickedItemKeys || [])
     saveState(state)
     feedItems.clear()
     feedErrors.clear()
@@ -176,6 +234,75 @@ export function unmarkItemsVisited(itemKeys) {
     visitedItemKeysSet = new Set(normalizedVisitedKeys)
     state.visitedItemKeys = normalizedVisitedKeys
     saveState(state)
+}
+
+export function registerFeedItemClick(itemMeta) {
+    const normalizedItemKey = normalizeItemKey(itemMeta?.itemKey)
+    if (!normalizedItemKey || clickedItemKeysSet.has(normalizedItemKey)) {
+        return false
+    }
+    clickedItemKeysSet.add(normalizedItemKey)
+    const normalizedClickedKeys = normalizeClickedItemKeys(
+        Array.from(clickedItemKeysSet),
+    )
+    clickedItemKeysSet = new Set(normalizedClickedKeys)
+    state.clickedItemKeys = normalizedClickedKeys
+    state.clickModel = applyClickToModel(state.clickModel, itemMeta)
+    saveState(state)
+    return true
+}
+
+export function getFeedItemUsefulness(item) {
+    const clickModel = normalizeClickModel(state.clickModel)
+    const totalClicks = clickModel.totalClicks
+
+    if (!totalClicks) {
+        return createLearningUsefulness(0)
+    }
+
+    const sourceKey = normalizeSourceKey(item?.source)
+    const hostKey = normalizeHostKey(item?.link)
+    const titleTokens = extractTitleTokens(item?.title)
+
+    const sourceSignal = getCounterSignal(
+        clickModel.sourceCounts,
+        sourceKey,
+        totalClicks,
+    )
+    const hostSignal = getCounterSignal(clickModel.hostCounts, hostKey, totalClicks)
+    const tokenSignal = getTokensSignal(
+        clickModel.tokenCounts,
+        titleTokens,
+        totalClicks,
+    )
+
+    const confidence = Math.min(1, totalClicks / USEFULNESS_CONFIDENCE_CLICKS)
+    const rawScore =
+        sourceSignal * 0.45 +
+        hostSignal * 0.3 +
+        tokenSignal * 0.4 +
+        confidence * 0.12
+    const score = clamp(rawScore, 0.06, 0.97)
+    const percentage = Math.round(score * 100)
+
+    if (totalClicks < USEFULNESS_LEARNING_CLICKS) {
+        return createLearningUsefulness(totalClicks, percentage)
+    }
+
+    let tone = 'low'
+    if (score >= USEFULNESS_HIGH_THRESHOLD) {
+        tone = 'high'
+    } else if (score >= USEFULNESS_MEDIUM_THRESHOLD) {
+        tone = 'medium'
+    }
+
+    return {
+        tone,
+        score,
+        percentage,
+        label: `полезн. ${percentage}%`,
+        title: `Прототип оценки вероятности клика на основе ${totalClicks} кликов`,
+    }
 }
 
 export function getFeedError(feedId) {
@@ -421,4 +548,130 @@ function getItemTimestamp(item) {
         return 0
     }
     return time
+}
+
+function applyClickToModel(rawClickModel, itemMeta) {
+    const clickModel = normalizeClickModel(rawClickModel)
+    const sourceCounts = {
+        ...clickModel.sourceCounts,
+    }
+    const hostCounts = {
+        ...clickModel.hostCounts,
+    }
+    const tokenCounts = {
+        ...clickModel.tokenCounts,
+    }
+
+    incrementCounter(sourceCounts, normalizeSourceKey(itemMeta?.source))
+    incrementCounter(hostCounts, normalizeHostKey(itemMeta?.link))
+    extractTitleTokens(itemMeta?.title).forEach((token) => {
+        incrementCounter(tokenCounts, token)
+    })
+
+    return {
+        totalClicks: clickModel.totalClicks + 1,
+        sourceCounts: trimCounterMap(sourceCounts, MAX_CLICK_MODEL_SOURCES),
+        hostCounts: trimCounterMap(hostCounts, MAX_CLICK_MODEL_HOSTS),
+        tokenCounts: trimCounterMap(tokenCounts, MAX_CLICK_MODEL_TOKENS),
+    }
+}
+
+function incrementCounter(counterMap, key) {
+    if (!counterMap || typeof counterMap !== 'object') {
+        return
+    }
+    const normalizedKey = String(key || '').trim()
+    if (!normalizedKey) {
+        return
+    }
+    counterMap[normalizedKey] = (counterMap[normalizedKey] || 0) + 1
+}
+
+function trimCounterMap(counterMap, limit) {
+    if (!counterMap || typeof counterMap !== 'object') {
+        return {}
+    }
+    if (!Number.isInteger(limit) || limit <= 0) {
+        return {}
+    }
+    const sortedEntries = Object.entries(counterMap)
+        .map(([key, value]) => [String(key || '').trim(), Number(value) || 0])
+        .filter(([key, value]) => key && Number.isFinite(value) && value > 0)
+        .sort((left, right) => right[1] - left[1])
+        .slice(0, limit)
+    return Object.fromEntries(sortedEntries)
+}
+
+function getCounterSignal(counterMap, key, totalClicks) {
+    if (!key || !totalClicks) {
+        return 0
+    }
+    const rawCount = Number(counterMap?.[key] || 0)
+    const count = Number.isFinite(rawCount) && rawCount > 0 ? rawCount : 0
+    return (count + 1) / (totalClicks + CLICK_MODEL_SMOOTHING)
+}
+
+function getTokensSignal(counterMap, tokens, totalClicks) {
+    if (!Array.isArray(tokens) || !tokens.length) {
+        return 0
+    }
+    const tokenSignals = tokens
+        .map((token) => getCounterSignal(counterMap, token, totalClicks))
+        .sort((left, right) => right - left)
+        .slice(0, TITLE_TOKENS_FOR_SCORING)
+    if (!tokenSignals.length) {
+        return 0
+    }
+    const total = tokenSignals.reduce((sum, value) => sum + value, 0)
+    return total / tokenSignals.length
+}
+
+function normalizeSourceKey(value) {
+    return String(value || '').trim().toLowerCase()
+}
+
+function normalizeHostKey(url) {
+    const host = getHostname(String(url || ''))
+    return String(host || '').trim().toLowerCase()
+}
+
+function extractTitleTokens(value) {
+    const text = String(value || '')
+        .toLowerCase()
+        .replace(/[^a-zа-яё0-9\s]/gi, ' ')
+    if (!text.trim()) {
+        return []
+    }
+    const seen = new Set()
+    const tokens = []
+    text.split(/\s+/).forEach((token) => {
+        const nextToken = token.trim()
+        if (
+            nextToken.length < 3 ||
+            TITLE_STOP_WORDS.has(nextToken) ||
+            seen.has(nextToken)
+        ) {
+            return
+        }
+        seen.add(nextToken)
+        tokens.push(nextToken)
+    })
+    return tokens.slice(0, TITLE_TOKENS_LIMIT)
+}
+
+function createLearningUsefulness(totalClicks, percentage = null) {
+    const detailsText = totalClicks
+        ? `Нужно больше кликов для точного прогноза (сейчас: ${totalClicks})`
+        : 'Нужны первые клики, чтобы обучить прогноз полезности'
+    return {
+        tone: 'learning',
+        score: null,
+        percentage,
+        label: percentage ? `обуч. ${percentage}%` : 'обучается',
+        title: detailsText,
+    }
+}
+
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max)
 }

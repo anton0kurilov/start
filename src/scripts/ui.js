@@ -1,5 +1,5 @@
 import {MAX_ITEMS_PER_FOLDER} from './constants.js'
-import {getFolderItems, isItemVisited} from './domain.js'
+import {getFeedItemUsefulness, getFolderItems, isItemVisited} from './domain.js'
 import {formatCountLabel, formatRelativeTime, getHostname} from './utils.js'
 
 export const elements = {
@@ -269,6 +269,9 @@ function renderColumns(state) {
                         isItemVisited(itemKey),
                     )
                 }
+                card.dataset.itemSource = String(item.source || '').trim()
+                card.dataset.itemTitle = String(item.title || '').trim()
+                card.dataset.itemLink = String(item.link || '').trim()
 
                 const source = document.createElement('div')
                 source.className = 'feed__item-source'
@@ -282,7 +285,12 @@ function renderColumns(state) {
                 time.className = 'feed__item-time'
                 setFeedItemTime(time, item.date)
 
-                card.append(source, headline, time)
+                const utility = createFeedItemUtility(item)
+                const meta = document.createElement('div')
+                meta.className = 'feed__item-meta'
+                meta.append(time, utility)
+
+                card.append(source, headline, meta)
                 content.appendChild(card)
             })
         }
@@ -319,6 +327,16 @@ function buildFeedItemKey(item) {
             ? item.date.toISOString()
             : ''
     return `${item.source || ''}|${item.title || ''}|${publishedAt}`.trim()
+}
+
+function createFeedItemUtility(item) {
+    const utility = document.createElement('span')
+    const usefulness = getFeedItemUsefulness(item)
+    utility.className = 'feed__item-utility'
+    utility.classList.add(`feed__item-utility--${usefulness.tone || 'learning'}`)
+    utility.textContent = usefulness.label
+    utility.title = usefulness.title
+    return utility
 }
 
 function setFeedItemTime(element, date) {

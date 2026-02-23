@@ -6,6 +6,7 @@ import {
     importState,
     markItemsVisited,
     refreshAll,
+    registerFeedItemClick,
     removeFeed,
     removeFolder,
     resetState,
@@ -213,6 +214,7 @@ function handleColumnHeaderClick(event) {
             event.preventDefault()
         }
         markFeedItemsVisited([feedItem])
+        registerClickedFeedItem(feedItem)
         return
     }
     const actionButton = event.target.closest('[data-action="mark-column-read"]')
@@ -242,6 +244,22 @@ function handleColumnHeaderClick(event) {
     const content = column.querySelector('.columns__content')
     scrollElementToTop(content, reduceMotion)
     scrollElementToTop(column, reduceMotion)
+}
+
+function registerClickedFeedItem(feedItem) {
+    if (!feedItem || feedItem.dataset.noLink === 'true') {
+        return
+    }
+    const clickPayload = {
+        itemKey: String(feedItem.dataset.itemKey || '').trim(),
+        source: String(feedItem.dataset.itemSource || '').trim(),
+        title: String(feedItem.dataset.itemTitle || '').trim(),
+        link: String(feedItem.dataset.itemLink || '').trim(),
+    }
+    if (!clickPayload.itemKey) {
+        return
+    }
+    registerFeedItemClick(clickPayload)
 }
 
 function markColumnFeedItemsVisited(column) {

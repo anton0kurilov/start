@@ -1,4 +1,11 @@
-import {DEFAULT_SETTINGS, MAX_VISITED_ITEMS} from './constants.js'
+import {
+    DEFAULT_SETTINGS,
+    MAX_CLICKED_ITEMS,
+    MAX_CLICK_MODEL_HOSTS,
+    MAX_CLICK_MODEL_SOURCES,
+    MAX_CLICK_MODEL_TOKENS,
+    MAX_VISITED_ITEMS,
+} from './constants.js'
 import {createId, normalizeUrl} from './utils.js'
 
 export function createDefaultState() {
@@ -9,6 +16,8 @@ export function createDefaultState() {
             ...DEFAULT_SETTINGS,
         },
         visitedItemKeys: [],
+        clickedItemKeys: [],
+        clickModel: createDefaultClickModel(),
     }
 }
 
@@ -22,6 +31,8 @@ export function normalizeStatePayload(rawState) {
         lastUpdated: normalizeIsoDate(rawState.lastUpdated),
         settings: normalizeSettings(rawState.settings),
         visitedItemKeys: normalizeVisitedItemKeys(rawState.visitedItemKeys),
+        clickedItemKeys: normalizeClickedItemKeys(rawState.clickedItemKeys),
+        clickModel: normalizeClickModel(rawState.clickModel),
     }
 }
 
@@ -72,6 +83,40 @@ export function normalizeVisitedItemKeys(rawKeys, maxItems = MAX_VISITED_ITEMS) 
     }
 
     return normalized.slice(-limit)
+}
+
+export function normalizeClickedItemKeys(rawKeys) {
+    return normalizeVisitedItemKeys(rawKeys, MAX_CLICKED_ITEMS)
+}
+
+export function createDefaultClickModel() {
+    return {
+        totalClicks: 0,
+        sourceCounts: {},
+        hostCounts: {},
+        tokenCounts: {},
+    }
+}
+
+export function normalizeClickModel(rawClickModel) {
+    if (!rawClickModel || typeof rawClickModel !== 'object') {
+        return createDefaultClickModel()
+    }
+    return {
+        totalClicks: normalizeTotalClicks(rawClickModel.totalClicks),
+        sourceCounts: normalizeCountMap(
+            rawClickModel.sourceCounts,
+            MAX_CLICK_MODEL_SOURCES,
+        ),
+        hostCounts: normalizeCountMap(
+            rawClickModel.hostCounts,
+            MAX_CLICK_MODEL_HOSTS,
+        ),
+        tokenCounts: normalizeCountMap(
+            rawClickModel.tokenCounts,
+            MAX_CLICK_MODEL_TOKENS,
+        ),
+    }
 }
 
 export function normalizeItemKey(itemKey) {
@@ -140,4 +185,47 @@ function normalizeText(value) {
         return ''
     }
     return value.trim()
+}
+
+function normalizeTotalClicks(value) {
+    const parsedValue = Number(value)
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+        return 0
+    }
+    return Math.round(parsedValue)
+}
+
+function normalizeCountMap(rawCounts, maxEntries) {
+    if (!rawCounts || typeof rawCounts !== 'object') {
+        return {}
+    }
+    const limit = Number.isInteger(maxEntries) && maxEntries > 0 ? maxEntries : 0
+    if (!limit) {
+        return {}
+    }
+    const aggregate = {}
+    Object.entries(rawCounts).forEach(([rawKey, rawValue]) => {
+        const key = normalizeCounterKey(rawKey)
+        const value = normalizeCounterValue(rawValue)
+        if (!key || !value) {
+            return
+        }
+        aggregate[key] = (aggregate[key] || 0) + value
+    })
+    const sortedEntries = Object.entries(aggregate).sort((left, right) => {
+        return right[1] - left[1]
+    })
+    return Object.fromEntries(sortedEntries.slice(0, limit))
+}
+
+function normalizeCounterKey(value) {
+    return String(value || '').trim().toLowerCase()
+}
+
+function normalizeCounterValue(value) {
+    const parsedValue = Number(value)
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+        return 0
+    }
+    return Math.round(parsedValue)
 }
