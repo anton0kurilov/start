@@ -1,5 +1,5 @@
 import {MAX_ITEMS_PER_FOLDER} from './constants.js'
-import {getFolderItems, isItemVisited} from './domain.js'
+import {getFeedItemUsefulness, getFolderItems, isItemVisited} from './domain.js'
 import {formatCountLabel, formatRelativeTime, getHostname} from './utils.js'
 
 export const elements = {
@@ -269,6 +269,9 @@ function renderColumns(state) {
                         isItemVisited(itemKey),
                     )
                 }
+                card.dataset.itemSource = String(item.source || '').trim()
+                card.dataset.itemTitle = String(item.title || '').trim()
+                card.dataset.itemLink = String(item.link || '').trim()
 
                 const source = document.createElement('div')
                 source.className = 'feed__item-source'
@@ -282,7 +285,12 @@ function renderColumns(state) {
                 time.className = 'feed__item-time'
                 setFeedItemTime(time, item.date)
 
-                card.append(source, headline, time)
+                const utility = createFeedItemUtility(item)
+                const meta = document.createElement('div')
+                meta.className = 'feed__item-meta'
+                meta.append(time, utility)
+
+                card.append(source, headline, meta)
                 content.appendChild(card)
             })
         }
@@ -319,6 +327,37 @@ function buildFeedItemKey(item) {
             ? item.date.toISOString()
             : ''
     return `${item.source || ''}|${item.title || ''}|${publishedAt}`.trim()
+}
+
+function createFeedItemUtility(item) {
+    const utility = document.createElement('span')
+    const usefulness = getFeedItemUsefulness(item)
+    utility.className = 'feed__item-utility'
+    utility.classList.add(`feed__item-utility--${usefulness.tone || 'learning'}`)
+    if (usefulness.tone !== 'learning') {
+        utility.appendChild(createFeedItemUtilityIcon())
+    }
+    const text = document.createElement('span')
+    text.className = 'feed__item-utility-text'
+    text.textContent = usefulness.label
+    utility.appendChild(text)
+    utility.title = usefulness.title
+    return utility
+}
+
+function createFeedItemUtilityIcon() {
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    icon.classList.add('feed__item-utility-icon')
+    icon.setAttribute('viewBox', '0 -960 960 960')
+    icon.setAttribute('aria-hidden', 'true')
+    icon.setAttribute('focusable', 'false')
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    path.setAttribute(
+        'd',
+        'M720-120H280v-520l280-280 50 50q7 7 11.5 19t4.5 23v14l-44 174h258q32 0 56 24t24 56v80q0 7-2 15t-4 15L794-168q-9 20-30 34t-44 14Zm-360-80h360l120-280v-80H480l54-220-174 174v406Zm0-406v406-406Zm-80-34v80H160v360h120v80H80v-520h200Z',
+    )
+    icon.appendChild(path)
+    return icon
 }
 
 function setFeedItemTime(element, date) {
