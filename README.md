@@ -32,6 +32,7 @@ npm run dev
 
 - `npm run dev` / `npm start` — запуск dev-сервера Parcel.
 - `npm run build` — production-сборка в `dist/`.
+- `npm run test:smoke` — быстрые smoke-тесты на `node:test`.
 
 ## Структура проекта
 
