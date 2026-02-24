@@ -29,6 +29,20 @@ let refreshAllFeedsPromise = null
 
 init()
 
+function syncAppView({state = null, withLastUpdated = false} = {}) {
+    const nextState = state || getState()
+    render(nextState)
+    if (withLastUpdated) {
+        updateLastUpdated(nextState.lastUpdated)
+    }
+    return nextState
+}
+
+function syncAppAndRefreshFeeds() {
+    syncAppView()
+    return refreshAllFeeds()
+}
+
 function init() {
     setupSafeAreaRefresh()
     bindEvents()
@@ -129,7 +143,7 @@ function handleCreateFolder(event) {
     }
     createFolder(name)
     event.target.reset()
-    render(getState())
+    syncAppView()
 }
 
 function handleAddFeed(event) {
@@ -147,8 +161,7 @@ function handleAddFeed(event) {
         url: rawUrl,
     })
     event.target.reset()
-    render(getState())
-    refreshAllFeeds()
+    syncAppAndRefreshFeeds()
 }
 
 function handleListActions(event) {
@@ -158,28 +171,34 @@ function handleListActions(event) {
     }
     const action = button.dataset.action
     if (action === 'remove-folder') {
-        const wrapper = button.closest('[data-folder-id]')
-        if (!wrapper) {
-            return
-        }
-        const folderId = wrapper.dataset.folderId
-        removeFolder(folderId)
-        render(getState())
-        refreshAllFeeds()
+        handleRemoveFolderAction(button)
         return
     }
     if (action === 'remove-feed') {
-        const feedRow = button.closest('[data-feed-id]')
-        const folderWrapper = button.closest('[data-folder-id]')
-        if (!feedRow || !folderWrapper) {
-            return
-        }
-        const feedId = feedRow.dataset.feedId
-        const folderId = folderWrapper.dataset.folderId
-        removeFeed(folderId, feedId)
-        render(getState())
-        refreshAllFeeds()
+        handleRemoveFeedAction(button)
     }
+}
+
+function handleRemoveFolderAction(button) {
+    const wrapper = button.closest('[data-folder-id]')
+    if (!wrapper) {
+        return
+    }
+    const folderId = wrapper.dataset.folderId
+    removeFolder(folderId)
+    syncAppAndRefreshFeeds()
+}
+
+function handleRemoveFeedAction(button) {
+    const feedRow = button.closest('[data-feed-id]')
+    const folderWrapper = button.closest('[data-folder-id]')
+    if (!feedRow || !folderWrapper) {
+        return
+    }
+    const feedId = feedRow.dataset.feedId
+    const folderId = folderWrapper.dataset.folderId
+    removeFeed(folderId, feedId)
+    syncAppAndRefreshFeeds()
 }
 
 function handleReset() {
@@ -190,8 +209,7 @@ function handleReset() {
         return
     }
     resetState()
-    render(getState())
-    refreshAllFeeds()
+    syncAppAndRefreshFeeds()
 }
 
 function handleToggleSettings() {
@@ -480,8 +498,7 @@ async function handleImportJson(event) {
         form.reset()
     }
     handleImportFileChange()
-    render(getState())
-    updateLastUpdated(getState().lastUpdated)
+    syncAppView({withLastUpdated: true})
     await refreshAllFeeds()
 }
 
@@ -502,8 +519,7 @@ async function refreshAllFeedsInternal() {
     const feeds = currentState.folders.flatMap((folder) => folder.feeds)
     if (!feeds.length) {
         updateStatus('Добавьте потоки для обновления')
-        render(currentState)
-        updateLastUpdated(currentState.lastUpdated)
+        syncAppView({state: currentState, withLastUpdated: true})
         return
     }
 
@@ -511,7 +527,7 @@ async function refreshAllFeedsInternal() {
     if (elements.refresh) {
         elements.refresh.disabled = true
     }
-    render(currentState)
+    syncAppView({state: currentState})
 
     try {
         const result = await refreshAll()
@@ -530,9 +546,7 @@ async function refreshAllFeedsInternal() {
     } catch (error) {
         updateStatus('Не удалось обновить ленты', 'error')
     } finally {
-        const nextState = getState()
-        updateLastUpdated(nextState.lastUpdated)
-        render(nextState)
+        syncAppView({withLastUpdated: true})
         if (shouldAutoMarkReadOnScroll()) {
             markHiddenFeedItemsInAllColumns()
         }

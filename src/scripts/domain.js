@@ -13,13 +13,7 @@ import {
     getHostname,
     normalizeUrl,
 } from './utils.js'
-import {
-    normalizeClickedItemKeys,
-    normalizeClickModel,
-    normalizeItemKey,
-    normalizeStatePayload,
-    normalizeVisitedItemKeys,
-} from './state-normalizers.js'
+import * as stateNormalizers from './state-normalizers.js'
 
 let state = loadState()
 let visitedItemKeysSet = new Set(state.visitedItemKeys || [])
@@ -185,7 +179,7 @@ export function setAutoMarkReadOnScroll(isEnabled) {
 }
 
 export function isItemVisited(itemKey) {
-    const normalizedItemKey = normalizeItemKey(itemKey)
+    const normalizedItemKey = stateNormalizers.normalizeItemKey(itemKey)
     if (!normalizedItemKey) {
         return false
     }
@@ -196,7 +190,7 @@ export function markItemsVisited(itemKeys) {
     const keys = Array.isArray(itemKeys) ? itemKeys : [itemKeys]
     let isChanged = false
     keys.forEach((itemKey) => {
-        const normalizedItemKey = normalizeItemKey(itemKey)
+        const normalizedItemKey = stateNormalizers.normalizeItemKey(itemKey)
         if (!normalizedItemKey || visitedItemKeysSet.has(normalizedItemKey)) {
             return
         }
@@ -206,7 +200,7 @@ export function markItemsVisited(itemKeys) {
     if (!isChanged) {
         return
     }
-    const normalizedVisitedKeys = normalizeVisitedItemKeys(
+    const normalizedVisitedKeys = stateNormalizers.normalizeVisitedItemKeys(
         Array.from(visitedItemKeysSet),
     )
     visitedItemKeysSet = new Set(normalizedVisitedKeys)
@@ -218,7 +212,7 @@ export function unmarkItemsVisited(itemKeys) {
     const keys = Array.isArray(itemKeys) ? itemKeys : [itemKeys]
     let isChanged = false
     keys.forEach((itemKey) => {
-        const normalizedItemKey = normalizeItemKey(itemKey)
+        const normalizedItemKey = stateNormalizers.normalizeItemKey(itemKey)
         if (!normalizedItemKey || !visitedItemKeysSet.has(normalizedItemKey)) {
             return
         }
@@ -228,7 +222,7 @@ export function unmarkItemsVisited(itemKeys) {
     if (!isChanged) {
         return
     }
-    const normalizedVisitedKeys = normalizeVisitedItemKeys(
+    const normalizedVisitedKeys = stateNormalizers.normalizeVisitedItemKeys(
         Array.from(visitedItemKeysSet),
     )
     visitedItemKeysSet = new Set(normalizedVisitedKeys)
@@ -237,12 +231,12 @@ export function unmarkItemsVisited(itemKeys) {
 }
 
 export function registerFeedItemClick(itemMeta) {
-    const normalizedItemKey = normalizeItemKey(itemMeta?.itemKey)
+    const normalizedItemKey = stateNormalizers.normalizeItemKey(itemMeta?.itemKey)
     if (!normalizedItemKey || clickedItemKeysSet.has(normalizedItemKey)) {
         return false
     }
     clickedItemKeysSet.add(normalizedItemKey)
-    const normalizedClickedKeys = normalizeClickedItemKeys(
+    const normalizedClickedKeys = stateNormalizers.normalizeClickedItemKeys(
         Array.from(clickedItemKeysSet),
     )
     clickedItemKeysSet = new Set(normalizedClickedKeys)
@@ -253,7 +247,7 @@ export function registerFeedItemClick(itemMeta) {
 }
 
 export function getFeedItemUsefulness(item) {
-    const clickModel = normalizeClickModel(state.clickModel)
+    const clickModel = stateNormalizers.normalizeClickModel(state.clickModel)
     const totalClicks = clickModel.totalClicks
 
     if (!totalClicks) {
@@ -524,7 +518,7 @@ function normalizeImportedState(rawState) {
     }
     const payload =
         rawState && typeof rawState.data === 'object' ? rawState.data : rawState
-    return normalizeStatePayload(payload)
+    return stateNormalizers.normalizeStatePayload(payload)
 }
 
 function parseFeedDate(value) {
@@ -551,7 +545,7 @@ function getItemTimestamp(item) {
 }
 
 function applyClickToModel(rawClickModel, itemMeta) {
-    const clickModel = normalizeClickModel(rawClickModel)
+    const clickModel = stateNormalizers.normalizeClickModel(rawClickModel)
     const sourceCounts = {
         ...clickModel.sourceCounts,
     }
