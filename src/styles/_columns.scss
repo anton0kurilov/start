@@ -262,6 +262,7 @@
     }
     .feed__item,
     .columns__header {
-        margin: 0 3px;
+        margin-inline: calc(var(--padding) + var(--safeAreaLeft))
+            calc(var(--padding) + var(--safeAreaRight));
     }
 }
