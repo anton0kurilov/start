@@ -4,6 +4,7 @@
     width: 100%;
     overflow-x: auto;
     height: 100%;
+    padding-inline: calc(var(--padding) * 1.4);
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: var(--widthColumn);
@@ -211,6 +212,7 @@
 @media (max-width: 1100px) {
     .columns {
         height: auto;
+        padding-inline: var(--padding);
         padding-bottom: 20px;
         grid-auto-columns: minmax(240px, 1fr);
     }
