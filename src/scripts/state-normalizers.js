@@ -2,6 +2,7 @@ import {
     DEFAULT_SETTINGS,
     MAX_CLICKED_ITEMS,
     MAX_CLICK_MODEL_HOSTS,
+    MAX_CLICK_MODEL_SOURCE_HOSTS,
     MAX_CLICK_MODEL_SOURCES,
     MAX_CLICK_MODEL_TOKENS,
     MAX_VISITED_ITEMS,
@@ -93,6 +94,7 @@ export function createDefaultClickModel() {
     return {
         totalClicks: 0,
         sourceCounts: {},
+        sourceHostCounts: {},
         hostCounts: {},
         tokenCounts: {},
     }
@@ -107,6 +109,10 @@ export function normalizeClickModel(rawClickModel) {
         sourceCounts: normalizeCountMap(
             rawClickModel.sourceCounts,
             MAX_CLICK_MODEL_SOURCES,
+        ),
+        sourceHostCounts: normalizeCountMap(
+            rawClickModel.sourceHostCounts,
+            MAX_CLICK_MODEL_SOURCE_HOSTS,
         ),
         hostCounts: normalizeCountMap(
             rawClickModel.hostCounts,

@@ -21,6 +21,7 @@ test('createDefaultState returns complete base shape', () => {
     assert.deepEqual(state.clickModel, {
         totalClicks: 0,
         sourceCounts: {},
+        sourceHostCounts: {},
         hostCounts: {},
         tokenCounts: {},
     })
@@ -53,6 +54,10 @@ test('normalizeClickModel aggregates noisy counters and trims maps', () => {
             '': 100,
             bad: -1,
         },
+        sourceHostCounts: {
+            'Tech||example.com': 1,
+            'tech||EXAMPLE.com': 2,
+        },
         hostCounts: {
             'example.com': 2.1,
             'EXAMPLE.COM': 0.8,
@@ -65,6 +70,7 @@ test('normalizeClickModel aggregates noisy counters and trims maps', () => {
 
     assert.equal(normalized.totalClicks, 4)
     assert.equal(normalized.sourceCounts.tech, 5)
+    assert.equal(normalized.sourceHostCounts['tech||example.com'], 3)
     assert.equal(normalized.hostCounts['example.com'], 3)
     assert.equal(normalized.tokenCounts.javascript, 5)
     assert.equal(normalized.tokenCounts.release, undefined)

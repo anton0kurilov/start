@@ -104,6 +104,10 @@ test('registerFeedItemClick stores a single click per item key', async () => {
     assert.deepEqual(domain.getState().clickedItemKeys, ['article-1'])
     assert.equal(domain.getState().clickModel.totalClicks, 1)
     assert.equal(domain.getState().clickModel.sourceCounts['tech daily'], 1)
+    assert.equal(
+        domain.getState().clickModel.sourceHostCounts['tech daily||example.com'],
+        1,
+    )
 })
 
 test('importState and exportState preserve folder and settings contract', async () => {

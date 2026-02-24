@@ -5,6 +5,7 @@ export const MAX_ITEMS_PER_FOLDER = 40
 export const MAX_VISITED_ITEMS = 4000
 export const MAX_CLICKED_ITEMS = 4000
 export const MAX_CLICK_MODEL_SOURCES = 160
+export const MAX_CLICK_MODEL_SOURCE_HOSTS = 220
 export const MAX_CLICK_MODEL_HOSTS = 200
 export const MAX_CLICK_MODEL_TOKENS = 600
 export const DEFAULT_SETTINGS = {

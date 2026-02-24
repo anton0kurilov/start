@@ -3,6 +3,7 @@ import {
     DEFAULT_SETTINGS,
     FETCH_TIMEOUT,
     MAX_CLICK_MODEL_HOSTS,
+    MAX_CLICK_MODEL_SOURCE_HOSTS,
     MAX_CLICK_MODEL_SOURCES,
     MAX_CLICK_MODEL_TOKENS,
 } from './constants.js'
@@ -28,6 +29,13 @@ const USEFULNESS_MEDIUM_THRESHOLD = 0.42
 const CLICK_MODEL_SMOOTHING = 6
 const TITLE_TOKENS_LIMIT = 6
 const TITLE_TOKENS_FOR_SCORING = 3
+const SOURCE_SIGNAL_WEIGHT = 0.33
+const HOST_SIGNAL_WEIGHT = 0.2
+const TOKEN_SIGNAL_WEIGHT = 0.29
+const SOURCE_HOST_SIGNAL_WEIGHT = 0.18
+const CONFIDENCE_SIGNAL_WEIGHT = 0.12
+const BEHAVIOR_SIGNAL_WEIGHT = 1 - CONFIDENCE_SIGNAL_WEIGHT
+const CLICK_MODEL_TRIM_TRIGGER_MULTIPLIER = 1.15
 const TITLE_STOP_WORDS = new Set([
     'a',
     'an',
@@ -259,6 +267,7 @@ export function getFeedItemUsefulness(item) {
     const sourceKey = normalizeSourceKey(item?.source)
     const hostKey = normalizeHostKey(item?.link)
     const titleTokens = extractTitleTokens(item?.title)
+    const sourceHostKey = buildSourceHostKey(sourceKey, hostKey)
 
     const sourceSignal = getCounterSignal(
         clickModel.sourceCounts,
@@ -275,13 +284,41 @@ export function getFeedItemUsefulness(item) {
         titleTokens,
         totalClicks,
     )
+    const sourceHostSignal = getCounterSignal(
+        clickModel.sourceHostCounts,
+        sourceHostKey,
+        totalClicks,
+    )
 
     const confidence = Math.min(1, totalClicks / USEFULNESS_CONFIDENCE_CLICKS)
+    const behaviorScore = getWeightedSignalAverage(
+        [
+            {
+                isAvailable: Boolean(sourceKey),
+                value: sourceSignal,
+                weight: SOURCE_SIGNAL_WEIGHT,
+            },
+            {
+                isAvailable: Boolean(hostKey),
+                value: hostSignal,
+                weight: HOST_SIGNAL_WEIGHT,
+            },
+            {
+                isAvailable: titleTokens.length > 0,
+                value: tokenSignal,
+                weight: TOKEN_SIGNAL_WEIGHT,
+            },
+            {
+                isAvailable: Boolean(sourceHostKey),
+                value: sourceHostSignal,
+                weight: SOURCE_HOST_SIGNAL_WEIGHT,
+            },
+        ],
+        getBaselineSignal(totalClicks),
+    )
     const rawScore =
-        sourceSignal * 0.45 +
-        hostSignal * 0.3 +
-        tokenSignal * 0.4 +
-        confidence * 0.12
+        behaviorScore * BEHAVIOR_SIGNAL_WEIGHT +
+        confidence * CONFIDENCE_SIGNAL_WEIGHT
     const score = clamp(rawScore, 0.06, 0.97)
     const percentage = Math.round(score * 100)
 
@@ -553,6 +590,9 @@ function applyClickToModel(rawClickModel, itemMeta) {
     const sourceCounts = {
         ...clickModel.sourceCounts,
     }
+    const sourceHostCounts = {
+        ...clickModel.sourceHostCounts,
+    }
     const hostCounts = {
         ...clickModel.hostCounts,
     }
@@ -560,8 +600,11 @@ function applyClickToModel(rawClickModel, itemMeta) {
         ...clickModel.tokenCounts,
     }
 
-    incrementCounter(sourceCounts, normalizeSourceKey(itemMeta?.source))
-    incrementCounter(hostCounts, normalizeHostKey(itemMeta?.link))
+    const sourceKey = normalizeSourceKey(itemMeta?.source)
+    const hostKey = normalizeHostKey(itemMeta?.link)
+    incrementCounter(sourceCounts, sourceKey)
+    incrementCounter(sourceHostCounts, buildSourceHostKey(sourceKey, hostKey))
+    incrementCounter(hostCounts, hostKey)
     extractTitleTokens(itemMeta?.title).forEach((token) => {
         incrementCounter(tokenCounts, token)
     })
@@ -569,6 +612,10 @@ function applyClickToModel(rawClickModel, itemMeta) {
     return {
         totalClicks: clickModel.totalClicks + 1,
         sourceCounts: trimCounterMap(sourceCounts, MAX_CLICK_MODEL_SOURCES),
+        sourceHostCounts: trimCounterMap(
+            sourceHostCounts,
+            MAX_CLICK_MODEL_SOURCE_HOSTS,
+        ),
         hostCounts: trimCounterMap(hostCounts, MAX_CLICK_MODEL_HOSTS),
         tokenCounts: trimCounterMap(tokenCounts, MAX_CLICK_MODEL_TOKENS),
     }
@@ -592,12 +639,20 @@ function trimCounterMap(counterMap, limit) {
     if (!Number.isInteger(limit) || limit <= 0) {
         return {}
     }
-    const sortedEntries = Object.entries(counterMap)
+    const normalizedEntries = Object.entries(counterMap)
         .map(([key, value]) => [String(key || '').trim(), Number(value) || 0])
         .filter(([key, value]) => key && Number.isFinite(value) && value > 0)
-        .sort((left, right) => right[1] - left[1])
-        .slice(0, limit)
-    return Object.fromEntries(sortedEntries)
+    if (normalizedEntries.length <= limit) {
+        return Object.fromEntries(normalizedEntries)
+    }
+    const trimThreshold = Math.ceil(
+        limit * CLICK_MODEL_TRIM_TRIGGER_MULTIPLIER,
+    )
+    if (normalizedEntries.length <= trimThreshold) {
+        return Object.fromEntries(normalizedEntries)
+    }
+    normalizedEntries.sort((left, right) => right[1] - left[1])
+    return Object.fromEntries(normalizedEntries.slice(0, limit))
 }
 
 function getCounterSignal(counterMap, key, totalClicks) {
@@ -622,6 +677,50 @@ function getTokensSignal(counterMap, tokens, totalClicks) {
     }
     const total = tokenSignals.reduce((sum, value) => sum + value, 0)
     return total / tokenSignals.length
+}
+
+function buildSourceHostKey(sourceKey, hostKey) {
+    const normalizedSource = String(sourceKey || '').trim()
+    const normalizedHost = String(hostKey || '').trim()
+    if (!normalizedSource || !normalizedHost) {
+        return ''
+    }
+    return `${normalizedSource}||${normalizedHost}`
+}
+
+function getBaselineSignal(totalClicks) {
+    if (!totalClicks) {
+        return 0
+    }
+    return 1 / (totalClicks + CLICK_MODEL_SMOOTHING)
+}
+
+function getWeightedSignalAverage(components, fallbackValue = 0) {
+    if (!Array.isArray(components) || !components.length) {
+        return fallbackValue
+    }
+    let weightedTotal = 0
+    let totalWeight = 0
+    components.forEach((component) => {
+        if (!component?.isAvailable) {
+            return
+        }
+        const weight = Number(component.weight)
+        const value = Number(component.value)
+        if (
+            !Number.isFinite(weight) ||
+            !Number.isFinite(value) ||
+            weight <= 0
+        ) {
+            return
+        }
+        weightedTotal += value * weight
+        totalWeight += weight
+    })
+    if (!totalWeight) {
+        return fallbackValue
+    }
+    return weightedTotal / totalWeight
 }
 
 function normalizeSourceKey(value) {
