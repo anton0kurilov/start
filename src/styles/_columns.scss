@@ -5,6 +5,7 @@
     overflow-x: auto;
     height: 100%;
     padding-inline: calc(var(--padding) * 1.4);
+    scroll-padding-inline: calc(var(--padding) * 1.4);
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: var(--widthColumn);
@@ -213,6 +214,7 @@
     .columns {
         height: auto;
         padding-inline: var(--padding);
+        scroll-padding-inline: var(--padding);
         padding-bottom: 20px;
         grid-auto-columns: minmax(240px, 1fr);
     }
@@ -226,6 +228,7 @@
         overflow-x: auto;
         overflow-y: hidden;
         padding: 0;
+        scroll-padding-inline: 0;
         gap: 0;
         grid-auto-flow: column;
         grid-auto-columns: 100%;
