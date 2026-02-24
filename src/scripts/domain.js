@@ -231,7 +231,9 @@ export function unmarkItemsVisited(itemKeys) {
 }
 
 export function registerFeedItemClick(itemMeta) {
-    const normalizedItemKey = stateNormalizers.normalizeItemKey(itemMeta?.itemKey)
+    const normalizedItemKey = stateNormalizers.normalizeItemKey(
+        itemMeta?.itemKey,
+    )
     if (!normalizedItemKey || clickedItemKeysSet.has(normalizedItemKey)) {
         return false
     }
@@ -263,7 +265,11 @@ export function getFeedItemUsefulness(item) {
         sourceKey,
         totalClicks,
     )
-    const hostSignal = getCounterSignal(clickModel.hostCounts, hostKey, totalClicks)
+    const hostSignal = getCounterSignal(
+        clickModel.hostCounts,
+        hostKey,
+        totalClicks,
+    )
     const tokenSignal = getTokensSignal(
         clickModel.tokenCounts,
         titleTokens,
@@ -295,7 +301,7 @@ export function getFeedItemUsefulness(item) {
         score,
         percentage,
         label: `${percentage}%`,
-        title: `Прототип оценки вероятности клика на основе ${totalClicks} кликов`,
+        title: `Вероятность клика на основе ${totalClicks} предыдущих взаимодействий`,
     }
 }
 
@@ -484,9 +490,7 @@ function formatFeedError(error) {
 
 function getText(parent, selector) {
     const node = parent.querySelector(selector)
-    return node
-        ? decodeHtmlEntities(String(node.textContent || '')).trim()
-        : ''
+    return node ? decodeHtmlEntities(String(node.textContent || '')).trim() : ''
 }
 
 function getLink(entry) {
@@ -621,12 +625,16 @@ function getTokensSignal(counterMap, tokens, totalClicks) {
 }
 
 function normalizeSourceKey(value) {
-    return String(value || '').trim().toLowerCase()
+    return String(value || '')
+        .trim()
+        .toLowerCase()
 }
 
 function normalizeHostKey(url) {
     const host = getHostname(String(url || ''))
-    return String(host || '').trim().toLowerCase()
+    return String(host || '')
+        .trim()
+        .toLowerCase()
 }
 
 function extractTitleTokens(value) {
