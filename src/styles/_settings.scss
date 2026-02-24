@@ -577,6 +577,7 @@ body.settings-is-open {
     .fab-wrap {
         left: var(--padding);
         right: var(--padding);
+        bottom: max(var(--padding), var(--safeAreaBottom));
         width: auto;
         max-width: none;
     }
