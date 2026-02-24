@@ -156,6 +156,32 @@ test('getFeedItemUsefulness prioritizes strong title tokens over source bias', a
     assert.ok(titleDrivenItem.score > sourceBiasedItem.score)
 })
 
+test('getFeedItemUsefulness keeps a reasonable baseline after enough clicks', async () => {
+    const {domain} = await loadFreshDomainModule({
+        folders: [],
+        lastUpdated: null,
+        settings: {autoMarkReadOnScroll: false},
+        visitedItemKeys: [],
+        clickedItemKeys: [],
+        clickModel: {
+            totalClicks: 35,
+            sourceCounts: {},
+            sourceHostCounts: {},
+            hostCounts: {},
+            tokenCounts: {},
+        },
+    })
+
+    const usefulness = domain.getFeedItemUsefulness({
+        source: 'new source',
+        link: 'https://unknown.example.com/news',
+        title: 'Completely unseen headline terms',
+    })
+
+    assert.equal(typeof usefulness.score, 'number')
+    assert.ok(usefulness.percentage >= 20)
+})
+
 test('importState and exportState preserve folder and settings contract', async () => {
     const {domain} = await loadFreshDomainModule()
 

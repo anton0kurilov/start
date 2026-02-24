@@ -33,9 +33,11 @@ const SOURCE_SIGNAL_WEIGHT = 0.14
 const HOST_SIGNAL_WEIGHT = 0.1
 const TOKEN_SIGNAL_WEIGHT = 0.7
 const SOURCE_HOST_SIGNAL_WEIGHT = 0.06
-const CONFIDENCE_SIGNAL_WEIGHT = 0.1
-const BEHAVIOR_SIGNAL_WEIGHT = 1 - CONFIDENCE_SIGNAL_WEIGHT
 const CLICK_MODEL_TRIM_TRIGGER_MULTIPLIER = 1.15
+const SCORE_MIN_PRIOR = 0.08
+const SCORE_CONFIDENCE_BONUS = 0.2
+const SCORE_EVIDENCE_GAIN = 0.62
+const SCORE_EVIDENCE_EXPONENT = 0.6
 const TITLE_STOP_WORDS = new Set([
     'a',
     'an',
@@ -316,9 +318,14 @@ export function getFeedItemUsefulness(item) {
         ],
         getBaselineSignal(totalClicks),
     )
-    const rawScore =
-        behaviorScore * BEHAVIOR_SIGNAL_WEIGHT +
-        confidence * CONFIDENCE_SIGNAL_WEIGHT
+    const baselineSignal = getBaselineSignal(totalClicks)
+    const normalizedEvidence = normalizeSignalDelta(behaviorScore, baselineSignal)
+    const amplifiedEvidence = Math.pow(
+        normalizedEvidence,
+        SCORE_EVIDENCE_EXPONENT,
+    )
+    const priorScore = SCORE_MIN_PRIOR + confidence * SCORE_CONFIDENCE_BONUS
+    const rawScore = priorScore + amplifiedEvidence * SCORE_EVIDENCE_GAIN
     const score = clamp(rawScore, 0.06, 0.97)
     const percentage = Math.round(score * 100)
 
@@ -693,6 +700,21 @@ function getBaselineSignal(totalClicks) {
         return 0
     }
     return 1 / (totalClicks + CLICK_MODEL_SMOOTHING)
+}
+
+function normalizeSignalDelta(signalValue, baselineValue) {
+    const signal = Number(signalValue)
+    const baseline = Number(baselineValue)
+    if (!Number.isFinite(signal) || !Number.isFinite(baseline)) {
+        return 0
+    }
+    const clampedBaseline = clamp(baseline, 0, 0.98)
+    const clampedSignal = clamp(signal, clampedBaseline, 1)
+    const range = 1 - clampedBaseline
+    if (!range) {
+        return 0
+    }
+    return (clampedSignal - clampedBaseline) / range
 }
 
 function getWeightedSignalAverage(components, fallbackValue = 0) {
