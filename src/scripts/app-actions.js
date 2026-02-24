@@ -8,6 +8,7 @@ export function createAppActions({
     refreshAll,
     shouldAutoMarkReadOnScroll,
     syncAppView,
+    setLastUpdatedInProgress,
     updateStatus,
 }) {
     let refreshAllFeedsPromise = null
@@ -40,6 +41,9 @@ export function createAppActions({
         }
 
         updateStatus('Обновляю ленты...', 'loading')
+        if (typeof setLastUpdatedInProgress === 'function') {
+            setLastUpdatedInProgress()
+        }
         if (elements.refresh) {
             elements.refresh.disabled = true
         }

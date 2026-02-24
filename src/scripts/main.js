@@ -20,6 +20,7 @@ import {
     dismissStatus,
     elements,
     render,
+    setLastUpdatedInProgress,
     updateLastUpdated,
     updateStatus,
 } from './ui.js'
@@ -57,6 +58,7 @@ const appActions = createAppActions({
         columnInteractions.markHiddenFeedItemsInAllColumns,
     onImportFileReset: handleImportFileChange,
     refreshAll,
+    setLastUpdatedInProgress,
     shouldAutoMarkReadOnScroll,
     syncAppView,
     updateStatus,

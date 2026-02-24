@@ -503,14 +503,30 @@ function clearStatusDismissTimer() {
     statusDismissTimerId = null
 }
 
+function clearLastUpdatedTimer() {
+    if (!lastUpdatedTimerId) {
+        return
+    }
+    clearInterval(lastUpdatedTimerId)
+    lastUpdatedTimerId = null
+}
+
+export function setLastUpdatedInProgress() {
+    if (!elements.lastUpdated) {
+        clearLastUpdatedTimer()
+        return
+    }
+    clearLastUpdatedTimer()
+    elements.lastUpdated.textContent = 'в процессе'
+    elements.lastUpdated.removeAttribute('title')
+    delete elements.lastUpdated.dataset.lastUpdated
+}
+
 export function updateLastUpdated(lastUpdated) {
     if (!elements.lastUpdated) {
         return
     }
-    if (lastUpdatedTimerId) {
-        clearInterval(lastUpdatedTimerId)
-        lastUpdatedTimerId = null
-    }
+    clearLastUpdatedTimer()
     if (!lastUpdated) {
         elements.lastUpdated.textContent = 'еще не обновлялось'
         elements.lastUpdated.removeAttribute('title')
@@ -528,14 +544,12 @@ export function updateLastUpdated(lastUpdated) {
     applyLastUpdatedText(lastUpdatedDate)
     lastUpdatedTimerId = setInterval(() => {
         if (!elements.lastUpdated) {
-            clearInterval(lastUpdatedTimerId)
-            lastUpdatedTimerId = null
+            clearLastUpdatedTimer()
             return
         }
         const storedValue = elements.lastUpdated.dataset.lastUpdated
         if (!storedValue) {
-            clearInterval(lastUpdatedTimerId)
-            lastUpdatedTimerId = null
+            clearLastUpdatedTimer()
             return
         }
         const storedDate = new Date(storedValue)
@@ -543,8 +557,7 @@ export function updateLastUpdated(lastUpdated) {
             elements.lastUpdated.textContent = 'неизвестно'
             elements.lastUpdated.removeAttribute('title')
             delete elements.lastUpdated.dataset.lastUpdated
-            clearInterval(lastUpdatedTimerId)
-            lastUpdatedTimerId = null
+            clearLastUpdatedTimer()
             return
         }
         applyLastUpdatedText(storedDate)
