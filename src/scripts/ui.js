@@ -36,8 +36,10 @@ export const elements = {
 
 let lastUpdatedTimerId = null
 let feedItemTimesTimerId = null
+let statusDismissTimerId = null
 const RECENT_ITEM_WINDOW_MS = 30 * 60 * 1000
 const RELATIVE_TIME_UPDATE_INTERVAL_MS = 60000
+const STATUS_AUTO_DISMISS_MS = 15000
 const FEED_LABEL_FORMS = ['поток', 'потока', 'потоков']
 let activeSettingsTab = null
 
@@ -457,8 +459,10 @@ function isRecentItem(date) {
 
 export function updateStatus(text, tone = 'ready') {
     if (!elements.status || !elements.statusText) {
+        clearStatusDismissTimer()
         return
     }
+    clearStatusDismissTimer()
     elements.statusText.textContent = text
     elements.status.classList.remove('fab__status--loading', 'fab__status--error')
     const isError = tone === 'error'
@@ -471,12 +475,16 @@ export function updateStatus(text, tone = 'ready') {
     if (isError) {
         elements.status.classList.add('fab__status--error')
         elements.status.hidden = false
+        statusDismissTimerId = setTimeout(() => {
+            dismissStatus()
+        }, STATUS_AUTO_DISMISS_MS)
         return
     }
     elements.status.hidden = true
 }
 
 export function dismissStatus() {
+    clearStatusDismissTimer()
     if (!elements.status) {
         return
     }
@@ -485,6 +493,14 @@ export function dismissStatus() {
     if (elements.statusClose) {
         elements.statusClose.disabled = true
     }
+}
+
+function clearStatusDismissTimer() {
+    if (!statusDismissTimerId) {
+        return
+    }
+    clearTimeout(statusDismissTimerId)
+    statusDismissTimerId = null
 }
 
 export function updateLastUpdated(lastUpdated) {
