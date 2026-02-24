@@ -110,6 +110,52 @@ test('registerFeedItemClick stores a single click per item key', async () => {
     )
 })
 
+test('getFeedItemUsefulness prioritizes strong title tokens over source bias', async () => {
+    const {domain} = await loadFreshDomainModule({
+        folders: [],
+        lastUpdated: null,
+        settings: {autoMarkReadOnScroll: false},
+        visitedItemKeys: [],
+        clickedItemKeys: [],
+        clickModel: {
+            totalClicks: 40,
+            sourceCounts: {
+                preferred: 25,
+                secondary: 20,
+            },
+            sourceHostCounts: {
+                'preferred||pref.example.com': 25,
+                'secondary||sec.example.com': 20,
+            },
+            hostCounts: {
+                'pref.example.com': 25,
+                'sec.example.com': 20,
+            },
+            tokenCounts: {
+                ai: 30,
+                inference: 26,
+                agents: 22,
+                benchmark: 18,
+            },
+        },
+    })
+
+    const sourceBiasedItem = domain.getFeedItemUsefulness({
+        source: 'preferred',
+        link: 'https://pref.example.com/post',
+        title: 'General platform update',
+    })
+    const titleDrivenItem = domain.getFeedItemUsefulness({
+        source: 'secondary',
+        link: 'https://sec.example.com/post',
+        title: 'AI inference agents benchmark',
+    })
+
+    assert.equal(typeof sourceBiasedItem.score, 'number')
+    assert.equal(typeof titleDrivenItem.score, 'number')
+    assert.ok(titleDrivenItem.score > sourceBiasedItem.score)
+})
+
 test('importState and exportState preserve folder and settings contract', async () => {
     const {domain} = await loadFreshDomainModule()
 

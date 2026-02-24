@@ -27,13 +27,13 @@ const USEFULNESS_LEARNING_CLICKS = 3
 const USEFULNESS_HIGH_THRESHOLD = 0.66
 const USEFULNESS_MEDIUM_THRESHOLD = 0.42
 const CLICK_MODEL_SMOOTHING = 6
-const TITLE_TOKENS_LIMIT = 6
-const TITLE_TOKENS_FOR_SCORING = 3
-const SOURCE_SIGNAL_WEIGHT = 0.33
-const HOST_SIGNAL_WEIGHT = 0.2
-const TOKEN_SIGNAL_WEIGHT = 0.29
-const SOURCE_HOST_SIGNAL_WEIGHT = 0.18
-const CONFIDENCE_SIGNAL_WEIGHT = 0.12
+const TITLE_TOKENS_LIMIT = 8
+const TITLE_TOKENS_FOR_SCORING = 4
+const SOURCE_SIGNAL_WEIGHT = 0.14
+const HOST_SIGNAL_WEIGHT = 0.1
+const TOKEN_SIGNAL_WEIGHT = 0.7
+const SOURCE_HOST_SIGNAL_WEIGHT = 0.06
+const CONFIDENCE_SIGNAL_WEIGHT = 0.1
 const BEHAVIOR_SIGNAL_WEIGHT = 1 - CONFIDENCE_SIGNAL_WEIGHT
 const CLICK_MODEL_TRIM_TRIGGER_MULTIPLIER = 1.15
 const TITLE_STOP_WORDS = new Set([
@@ -702,18 +702,14 @@ function getWeightedSignalAverage(components, fallbackValue = 0) {
     let weightedTotal = 0
     let totalWeight = 0
     components.forEach((component) => {
-        if (!component?.isAvailable) {
-            return
-        }
         const weight = Number(component.weight)
-        const value = Number(component.value)
-        if (
-            !Number.isFinite(weight) ||
-            !Number.isFinite(value) ||
-            weight <= 0
-        ) {
+        if (!Number.isFinite(weight) || weight <= 0) {
             return
         }
+        const rawValue = component?.isAvailable
+            ? Number(component.value)
+            : fallbackValue
+        const value = Number.isFinite(rawValue) ? rawValue : fallbackValue
         weightedTotal += value * weight
         totalWeight += weight
     })
