@@ -28,13 +28,14 @@
         border-radius: var(--borderRadius);
         display: flex;
         flex-direction: column;
-        gap: var(--padding);
+        gap: calc(var(--padding) * 0.8);
         scroll-snap-align: start;
     }
 
     &__header {
         display: grid;
-        margin: var(--padding) var(--padding) 0;
+        margin: calc(var(--padding) * 0.7) var(--padding)
+            calc(var(--padding) * 0.15);
         cursor: pointer;
     }
 
@@ -42,21 +43,22 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 10px;
+        gap: 8px;
         min-width: 0;
     }
 
     &__title {
-        font-size: 1.05rem;
+        font-size: 1rem;
+        line-height: 1.2;
         letter-spacing: -0.02em;
         margin: 0;
     }
 
     &__mark-read {
         flex-shrink: 0;
-        width: 34px;
-        height: 34px;
-        border-radius: 10px;
+        width: 32px;
+        height: 32px;
+        border-radius: 9px;
         border: 1px solid var(--colorBorder);
         background: transparent;
         color: var(--colorMuted);
@@ -85,14 +87,15 @@
     }
 
     &__mark-read-icon {
-        width: 19px;
-        height: 19px;
+        width: 17px;
+        height: 17px;
         display: block;
         fill: currentColor;
     }
 
     &__meta {
-        font-size: 0.75rem;
+        font-size: 0.72rem;
+        line-height: 1.2;
         color: var(--colorMuted);
     }
 
