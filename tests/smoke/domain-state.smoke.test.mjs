@@ -182,6 +182,35 @@ test('getFeedItemUsefulness keeps a reasonable baseline after enough clicks', as
     assert.ok(usefulness.percentage >= 20)
 })
 
+test('getFeedItemUsefulness lifts mid-frequency keyword matches at larger history', async () => {
+    const {domain} = await loadFreshDomainModule({
+        folders: [],
+        lastUpdated: null,
+        settings: {autoMarkReadOnScroll: false},
+        visitedItemKeys: [],
+        clickedItemKeys: [],
+        clickModel: {
+            totalClicks: 66,
+            sourceCounts: {},
+            sourceHostCounts: {},
+            hostCounts: {},
+            tokenCounts: {
+                ai: 4,
+                model: 3,
+            },
+        },
+    })
+
+    const usefulness = domain.getFeedItemUsefulness({
+        source: 'new source',
+        link: 'https://unknown.example.com/news',
+        title: 'AI model update',
+    })
+
+    assert.equal(typeof usefulness.score, 'number')
+    assert.ok(usefulness.percentage >= 45)
+})
+
 test('importState and exportState preserve folder and settings contract', async () => {
     const {domain} = await loadFreshDomainModule()
 

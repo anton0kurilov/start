@@ -24,20 +24,21 @@ const feedErrors = new Map()
 const PROXY_HEALTHCHECK_URL = 'https://example.com/'
 const USEFULNESS_CONFIDENCE_CLICKS = 24
 const USEFULNESS_LEARNING_CLICKS = 3
-const USEFULNESS_HIGH_THRESHOLD = 0.66
-const USEFULNESS_MEDIUM_THRESHOLD = 0.42
+const USEFULNESS_HIGH_THRESHOLD = 0.58
+const USEFULNESS_MEDIUM_THRESHOLD = 0.36
 const CLICK_MODEL_SMOOTHING = 6
 const TITLE_TOKENS_LIMIT = 8
-const TITLE_TOKENS_FOR_SCORING = 4
+const TITLE_TOKENS_FOR_SCORING = 3
 const SOURCE_SIGNAL_WEIGHT = 0.14
 const HOST_SIGNAL_WEIGHT = 0.1
 const TOKEN_SIGNAL_WEIGHT = 0.7
 const SOURCE_HOST_SIGNAL_WEIGHT = 0.06
 const CLICK_MODEL_TRIM_TRIGGER_MULTIPLIER = 1.15
-const SCORE_MIN_PRIOR = 0.08
+const SCORE_MIN_PRIOR = 0.09
 const SCORE_CONFIDENCE_BONUS = 0.2
-const SCORE_EVIDENCE_GAIN = 0.62
-const SCORE_EVIDENCE_EXPONENT = 0.6
+const SCORE_EVIDENCE_GAIN = 0.72
+const SCORE_EVIDENCE_EXPONENT = 0.38
+const TOKEN_SIGNAL_FALLOFF = 0.55
 const TITLE_STOP_WORDS = new Set([
     'a',
     'an',
@@ -682,8 +683,18 @@ function getTokensSignal(counterMap, tokens, totalClicks) {
     if (!tokenSignals.length) {
         return 0
     }
-    const total = tokenSignals.reduce((sum, value) => sum + value, 0)
-    return total / tokenSignals.length
+    let weightedTotal = 0
+    let totalWeight = 0
+    let weight = 1
+    tokenSignals.forEach((signal) => {
+        weightedTotal += signal * weight
+        totalWeight += weight
+        weight *= TOKEN_SIGNAL_FALLOFF
+    })
+    if (!totalWeight) {
+        return 0
+    }
+    return weightedTotal / totalWeight
 }
 
 function buildSourceHostKey(sourceKey, hostKey) {
