@@ -213,7 +213,7 @@ function renderColumns(state) {
         title.className = 'columns__title'
         title.textContent = folder.name
         const markReadButton = document.createElement('button')
-        markReadButton.className = 'columns__mark-read'
+        markReadButton.className = 'btn btn--ghost columns__mark-read'
         markReadButton.type = 'button'
         markReadButton.dataset.action = 'mark-column-read'
         markReadButton.title = 'Отметить как прочитанное'
