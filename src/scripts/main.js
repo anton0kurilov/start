@@ -11,6 +11,7 @@ import {
     removeFolder,
     resetState,
     setAutoMarkReadOnScroll,
+    setUseClickModelV2,
     shouldAutoMarkReadOnScroll,
     unmarkItemsVisited,
 } from './domain.js'
@@ -167,6 +168,12 @@ function bindEvents() {
             handleAutoMarkReadOnScrollChange,
         )
     }
+    if (elements.useClickModelV2) {
+        elements.useClickModelV2.addEventListener(
+            'change',
+            handleUseClickModelV2Change,
+        )
+    }
     if (elements.statusClose) {
         elements.statusClose.addEventListener('click', handleDismissStatus)
     }
@@ -277,6 +284,15 @@ function handleAutoMarkReadOnScrollChange(event) {
     if (shouldAutoMarkReadOnScroll()) {
         columnInteractions.markHiddenFeedItemsInAllColumns()
     }
+}
+
+function handleUseClickModelV2Change(event) {
+    const target = event.currentTarget
+    if (!target) {
+        return
+    }
+    setUseClickModelV2(Boolean(target.checked))
+    syncAppView()
 }
 
 function handleDismissStatus() {

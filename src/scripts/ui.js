@@ -1,5 +1,10 @@
 import {MAX_ITEMS_PER_FOLDER} from './constants.js'
-import {getFeedItemUsefulness, getFolderItems, isItemVisited} from './domain.js'
+import {
+    getFeedItemUsefulness,
+    getFolderItems,
+    isItemVisited,
+    registerFeedItemImpressions,
+} from './domain.js'
 import {formatCountLabel, formatRelativeTime, getHostname} from './utils.js'
 
 export const elements = {
@@ -32,6 +37,7 @@ export const elements = {
     autoMarkReadOnScroll: document.querySelector(
         '[name="autoMarkReadOnScroll"]',
     ),
+    useClickModelV2: document.querySelector('[name="useClickModelV2"]'),
 }
 
 let lastUpdatedTimerId = null
@@ -41,7 +47,11 @@ const RECENT_ITEM_WINDOW_MS = 30 * 60 * 1000
 const RELATIVE_TIME_UPDATE_INTERVAL_MS = 60000
 const STATUS_AUTO_DISMISS_MS = 15000
 const FEED_LABEL_FORMS = ['поток', 'потока', 'потоков']
+const FEED_ITEM_IMPRESSION_DWELL_MS = 1200
+const FEED_ITEM_IMPRESSION_MIN_RATIO = 0.6
 let activeSettingsTab = null
+let feedItemImpressionObserver = null
+const feedItemImpressionTimers = new Map()
 
 export function render(state) {
     renderSettings(state)
@@ -51,12 +61,14 @@ export function render(state) {
 }
 
 function renderSettings(state) {
-    if (!elements.autoMarkReadOnScroll) {
-        return
+    if (elements.autoMarkReadOnScroll) {
+        elements.autoMarkReadOnScroll.checked = Boolean(
+            state.settings?.autoMarkReadOnScroll,
+        )
     }
-    elements.autoMarkReadOnScroll.checked = Boolean(
-        state.settings?.autoMarkReadOnScroll,
-    )
+    if (elements.useClickModelV2) {
+        elements.useClickModelV2.checked = Boolean(state.settings?.useClickModelV2)
+    }
 }
 
 function setFeedFormDisabled(isDisabled) {
@@ -186,6 +198,7 @@ function renderColumns(state) {
     if (!elements.columns) {
         return
     }
+    teardownFeedItemImpressionTracking()
     elements.columns.innerHTML = ''
     elements.columns.classList.toggle('columns--empty', !state.folders.length)
     const isRefreshing =
@@ -301,7 +314,135 @@ function renderColumns(state) {
         elements.columns.appendChild(column)
     })
 
+    observeFeedItemsForImpressions()
     ensureFeedItemTimesUpdates()
+}
+
+function observeFeedItemsForImpressions() {
+    if (!elements.columns || typeof IntersectionObserver !== 'function') {
+        return
+    }
+    const feedItems = Array.from(elements.columns.querySelectorAll('.feed__item'))
+    if (!feedItems.length) {
+        return
+    }
+    feedItemImpressionObserver = new IntersectionObserver(
+        handleFeedItemImpressionEntries,
+        {
+            threshold: [0, FEED_ITEM_IMPRESSION_MIN_RATIO, 1],
+        },
+    )
+    feedItems.forEach((feedItem) => {
+        if (!isFeedItemEligibleForImpression(feedItem)) {
+            return
+        }
+        feedItemImpressionObserver.observe(feedItem)
+    })
+}
+
+function handleFeedItemImpressionEntries(entries) {
+    entries.forEach((entry) => {
+        const feedItem = entry?.target
+        const itemKey = String(feedItem?.dataset?.itemKey || '').trim()
+        if (!itemKey) {
+            return
+        }
+        const isVisible =
+            entry.isIntersecting &&
+            entry.intersectionRatio >= FEED_ITEM_IMPRESSION_MIN_RATIO
+        if (!isVisible) {
+            clearFeedItemImpressionTimer(itemKey)
+            return
+        }
+        scheduleFeedItemImpression(feedItem, itemKey)
+    })
+}
+
+function scheduleFeedItemImpression(feedItem, itemKey) {
+    if (!isFeedItemEligibleForImpression(feedItem)) {
+        return
+    }
+    if (feedItemImpressionTimers.has(itemKey)) {
+        return
+    }
+    const timerId = setTimeout(() => {
+        feedItemImpressionTimers.delete(itemKey)
+        if (!isFeedItemEligibleForImpression(feedItem)) {
+            return
+        }
+        if (!isFeedItemVisibleInViewport(feedItem)) {
+            return
+        }
+        const payload = resolveFeedItemImpressionPayload(feedItem)
+        if (!payload) {
+            return
+        }
+        registerFeedItemImpressions(payload)
+        feedItemImpressionObserver?.unobserve(feedItem)
+    }, FEED_ITEM_IMPRESSION_DWELL_MS)
+    feedItemImpressionTimers.set(itemKey, timerId)
+}
+
+function clearFeedItemImpressionTimer(itemKey) {
+    const timerId = feedItemImpressionTimers.get(itemKey)
+    if (!timerId) {
+        return
+    }
+    clearTimeout(timerId)
+    feedItemImpressionTimers.delete(itemKey)
+}
+
+function teardownFeedItemImpressionTracking() {
+    if (feedItemImpressionObserver) {
+        feedItemImpressionObserver.disconnect()
+        feedItemImpressionObserver = null
+    }
+    feedItemImpressionTimers.forEach((timerId) => {
+        clearTimeout(timerId)
+    })
+    feedItemImpressionTimers.clear()
+}
+
+function resolveFeedItemImpressionPayload(feedItem) {
+    if (!isFeedItemEligibleForImpression(feedItem)) {
+        return null
+    }
+    return {
+        itemKey: String(feedItem.dataset.itemKey || '').trim(),
+        source: String(feedItem.dataset.itemSource || '').trim(),
+        title: String(feedItem.dataset.itemTitle || '').trim(),
+        link: String(feedItem.dataset.itemLink || '').trim(),
+    }
+}
+
+function isFeedItemEligibleForImpression(feedItem) {
+    if (!feedItem || feedItem.dataset.noLink === 'true') {
+        return false
+    }
+    if (!feedItem.isConnected) {
+        return false
+    }
+    return Boolean(String(feedItem.dataset.itemKey || '').trim())
+}
+
+function isFeedItemVisibleInViewport(feedItem) {
+    if (!feedItem || typeof feedItem.getBoundingClientRect !== 'function') {
+        return false
+    }
+    const rect = feedItem.getBoundingClientRect()
+    if (!rect.width || !rect.height) {
+        return false
+    }
+    const viewportWidth =
+        window.innerWidth || document.documentElement.clientWidth || 0
+    const viewportHeight =
+        window.innerHeight || document.documentElement.clientHeight || 0
+    return (
+        rect.bottom > 0 &&
+        rect.right > 0 &&
+        rect.top < viewportHeight &&
+        rect.left < viewportWidth
+    )
 }
 
 function applyFeedItemLink(card, rawLink) {

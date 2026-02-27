@@ -3,7 +3,10 @@ import assert from 'node:assert/strict'
 import path from 'node:path'
 import {pathToFileURL} from 'node:url'
 
-import {STORAGE_KEY} from '../../src/scripts/constants.js'
+import {
+    CLICK_MODEL_V2_SCHEMA_VERSION,
+    STORAGE_KEY,
+} from '../../src/scripts/constants.js'
 
 const DOMAIN_MODULE_URL = pathToFileURL(
     path.resolve(process.cwd(), 'src/scripts/domain.js'),
@@ -110,6 +113,79 @@ test('registerFeedItemClick stores a single click per item key', async () => {
     )
 })
 
+test('registerFeedItemImpressions stores pending entries and click trains V2 positive sample', async () => {
+    const {domain} = await loadFreshDomainModule()
+
+    const impressionsCount = domain.registerFeedItemImpressions([
+        {
+            itemKey: 'article-2',
+            source: 'Tech Daily',
+            title: 'AI model release',
+            link: 'https://example.com/ai-release',
+        },
+    ])
+
+    assert.equal(impressionsCount, 1)
+    assert.ok(domain.getState().clickModelV2.pendingImpressions['article-2'])
+
+    const clickResult = domain.registerFeedItemClick({
+        itemKey: 'article-2',
+        source: 'Tech Daily',
+        title: 'AI model release',
+        link: 'https://example.com/ai-release',
+    })
+
+    assert.equal(clickResult, true)
+    assert.equal(domain.getState().clickModelV2.totalEvents, 1)
+    assert.equal(domain.getState().clickModelV2.positiveEvents, 1)
+    assert.equal(
+        domain.getState().clickModelV2.pendingImpressions['article-2'],
+        undefined,
+    )
+})
+
+test('registerFeedItemImpressions settles expired impressions into negative samples', async () => {
+    const oldTimestamp = Date.now() - 19 * 60 * 60 * 1000
+    const {domain} = await loadFreshDomainModule({
+        folders: [],
+        lastUpdated: null,
+        settings: {autoMarkReadOnScroll: false},
+        visitedItemKeys: [],
+        clickedItemKeys: [],
+        clickModel: {
+            totalClicks: 0,
+            sourceCounts: {},
+            sourceHostCounts: {},
+            hostCounts: {},
+            tokenCounts: {},
+        },
+        clickModelV2: {
+            schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
+            totalEvents: 0,
+            positiveEvents: 0,
+            negativeEvents: 0,
+            bias: 0,
+            weights: {},
+            gradSquares: {},
+            pendingImpressions: {
+                stale: {
+                    createdAt: oldTimestamp,
+                    features: [[2, 1]],
+                },
+            },
+        },
+    })
+
+    domain.registerFeedItemImpressions([])
+
+    assert.equal(domain.getState().clickModelV2.totalEvents, 1)
+    assert.equal(domain.getState().clickModelV2.negativeEvents, 1)
+    assert.equal(
+        domain.getState().clickModelV2.pendingImpressions.stale,
+        undefined,
+    )
+})
+
 test('getFeedItemUsefulness prioritizes strong title tokens over source bias', async () => {
     const {domain} = await loadFreshDomainModule({
         folders: [],
@@ -180,6 +256,86 @@ test('getFeedItemUsefulness keeps a reasonable baseline after enough clicks', as
 
     assert.equal(typeof usefulness.score, 'number')
     assert.ok(usefulness.percentage >= 20)
+})
+
+test('getFeedItemUsefulness uses V2 score when neural model toggle is enabled', async () => {
+    const {domain} = await loadFreshDomainModule({
+        folders: [],
+        lastUpdated: null,
+        settings: {
+            autoMarkReadOnScroll: false,
+            useClickModelV2: true,
+        },
+        visitedItemKeys: [],
+        clickedItemKeys: [],
+        clickModel: {
+            totalClicks: 35,
+            sourceCounts: {},
+            sourceHostCounts: {},
+            hostCounts: {},
+            tokenCounts: {},
+        },
+        clickModelV2: {
+            schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
+            totalEvents: 160,
+            positiveEvents: 124,
+            negativeEvents: 36,
+            bias: 1.5,
+            weights: {},
+            gradSquares: {},
+            pendingImpressions: {},
+        },
+    })
+
+    const usefulness = domain.getFeedItemUsefulness({
+        source: 'any',
+        link: 'https://example.com/post',
+        title: 'Any title',
+    })
+
+    assert.equal(typeof usefulness.score, 'number')
+    assert.ok(usefulness.percentage >= 55)
+    assert.ok(usefulness.title.includes('(V2)'))
+})
+
+test('getFeedItemUsefulness keeps V2 in learning mode before enough events', async () => {
+    const {domain} = await loadFreshDomainModule({
+        folders: [],
+        lastUpdated: null,
+        settings: {
+            autoMarkReadOnScroll: false,
+            useClickModelV2: true,
+        },
+        visitedItemKeys: [],
+        clickedItemKeys: [],
+        clickModel: {
+            totalClicks: 35,
+            sourceCounts: {},
+            sourceHostCounts: {},
+            hostCounts: {},
+            tokenCounts: {},
+        },
+        clickModelV2: {
+            schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
+            totalEvents: 24,
+            positiveEvents: 20,
+            negativeEvents: 4,
+            bias: 0.8,
+            weights: {},
+            gradSquares: {},
+            pendingImpressions: {},
+        },
+    })
+
+    const usefulness = domain.getFeedItemUsefulness({
+        source: 'any',
+        link: 'https://example.com/post',
+        title: 'Any title',
+    })
+
+    assert.equal(usefulness.tone, 'learning')
+    assert.equal(usefulness.score, null)
+    assert.equal(usefulness.percentage, null)
 })
 
 test('getFeedItemUsefulness lifts mid-frequency keyword matches at larger history', async () => {
