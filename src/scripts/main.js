@@ -170,11 +170,58 @@ function bindEvents() {
     if (elements.statusClose) {
         elements.statusClose.addEventListener('click', handleDismissStatus)
     }
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-            applySettingsOpen(false)
-        }
-    })
+    document.addEventListener('keydown', handleGlobalKeydown)
+}
+
+function handleGlobalKeydown(event) {
+    if (event.defaultPrevented) {
+        return
+    }
+    if (event.key === 'Escape') {
+        applySettingsOpen(false)
+        return
+    }
+    if (isEditableTarget(event.target)) {
+        return
+    }
+    if (!isRefreshHotkey(event)) {
+        return
+    }
+    event.preventDefault()
+    refreshAllFeeds()
+}
+
+function isRefreshHotkey(event) {
+    if (event.repeat) {
+        return false
+    }
+    if (
+        event.key === 'F5' &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.shiftKey
+    ) {
+        return true
+    }
+    return (
+        event.code === 'KeyR' &&
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey
+    )
+}
+
+function isEditableTarget(target) {
+    if (!(target instanceof Element)) {
+        return false
+    }
+    if (target.closest('input, textarea, select')) {
+        return true
+    }
+    return Boolean(
+        target.closest('[contenteditable]:not([contenteditable="false"])'),
+    )
 }
 
 function handleCreateFolder(event) {
