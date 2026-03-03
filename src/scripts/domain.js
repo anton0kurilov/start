@@ -1,4 +1,5 @@
 import {
+    CLICK_MODEL_V2_DIMENSION,
     CORS_PROXY,
     DEFAULT_SETTINGS,
     FETCH_TIMEOUT,
@@ -6,6 +7,8 @@ import {
     MAX_CLICK_MODEL_SOURCE_HOSTS,
     MAX_CLICK_MODEL_SOURCES,
     MAX_CLICK_MODEL_TOKENS,
+    MAX_CLICK_MODEL_V2_FEATURES_PER_ITEM,
+    MAX_CLICK_MODEL_V2_PENDING_IMPRESSIONS,
 } from './constants.js'
 import {loadState, saveState, clearState} from './storage.js'
 import {
@@ -39,6 +42,21 @@ const SCORE_CONFIDENCE_BONUS = 0.2
 const SCORE_EVIDENCE_GAIN = 0.72
 const SCORE_EVIDENCE_EXPONENT = 0.38
 const TOKEN_SIGNAL_FALLOFF = 0.55
+const CLICK_MODEL_V2_NEGATIVE_DELAY_MS = 18 * 60 * 60 * 1000
+const CLICK_MODEL_V2_CONFIDENCE_EVENTS = 110
+const CLICK_MODEL_V2_LEARNING_EVENTS = 12
+const CLICK_MODEL_V2_BASE_LEARNING_RATE = 0.08
+const CLICK_MODEL_V2_REGULARIZATION = 0.002
+const CLICK_MODEL_V2_GRADIENT_CLIP = 0.8
+const CLICK_MODEL_V2_MAX_ABS_WEIGHT = 6
+const CLICK_MODEL_V2_MIN_GRAD_SQUARE = 1e-6
+const CLICK_MODEL_V2_PRIOR_ALPHA = 2
+const CLICK_MODEL_V2_PRIOR_BETA = 8
+const CLICK_MODEL_V2_MIN_EVENTS_FOR_PERCENT = 120
+const CLICK_MODEL_V2_MODEL_BLEND_MIN_EVENTS = 32
+const CLICK_MODEL_V2_MODEL_BLEND_MAX_EVENTS = 180
+const CLICK_MODEL_V2_MODEL_BLEND_MIN = 0.2
+const CLICK_MODEL_V2_MODEL_BLEND_MAX = 0.82
 const TITLE_STOP_WORDS = new Set([
     'a',
     'an',
@@ -189,6 +207,24 @@ export function setAutoMarkReadOnScroll(isEnabled) {
     saveState(state)
 }
 
+export function shouldUseClickModelV2() {
+    return Boolean(state.settings?.useClickModelV2)
+}
+
+export function setUseClickModelV2(isEnabled) {
+    const nextValue = Boolean(isEnabled)
+    const currentValue = Boolean(state.settings?.useClickModelV2)
+    if (currentValue === nextValue) {
+        return
+    }
+    state.settings = {
+        ...DEFAULT_SETTINGS,
+        ...(state.settings || {}),
+        useClickModelV2: nextValue,
+    }
+    saveState(state)
+}
+
 export function isItemVisited(itemKey) {
     const normalizedItemKey = stateNormalizers.normalizeItemKey(itemKey)
     if (!normalizedItemKey) {
@@ -241,6 +277,47 @@ export function unmarkItemsVisited(itemKeys) {
     saveState(state)
 }
 
+export function registerFeedItemImpressions(itemsMeta) {
+    const items = Array.isArray(itemsMeta) ? itemsMeta : [itemsMeta]
+    let clickModelV2 = stateNormalizers.normalizeClickModelV2(state.clickModelV2)
+    const now = Date.now()
+    let isChanged = settleExpiredPendingImpressions(clickModelV2, now)
+    let addedCount = 0
+
+    items.forEach((itemMeta) => {
+        const normalizedItemKey = stateNormalizers.normalizeItemKey(
+            itemMeta?.itemKey,
+        )
+        if (!normalizedItemKey) {
+            return
+        }
+        if (
+            clickedItemKeysSet.has(normalizedItemKey) ||
+            clickModelV2.pendingImpressions[normalizedItemKey]
+        ) {
+            return
+        }
+        clickModelV2.pendingImpressions[normalizedItemKey] = {
+            createdAt: now,
+            features: buildClickModelV2FeatureVector(itemMeta),
+        }
+        addedCount += 1
+        isChanged = true
+    })
+
+    if (trimPendingImpressions(clickModelV2)) {
+        isChanged = true
+    }
+
+    if (!isChanged) {
+        return addedCount
+    }
+
+    state.clickModelV2 = clickModelV2
+    saveState(state)
+    return addedCount
+}
+
 export function registerFeedItemClick(itemMeta) {
     const normalizedItemKey = stateNormalizers.normalizeItemKey(
         itemMeta?.itemKey,
@@ -255,11 +332,23 @@ export function registerFeedItemClick(itemMeta) {
     clickedItemKeysSet = new Set(normalizedClickedKeys)
     state.clickedItemKeys = normalizedClickedKeys
     state.clickModel = applyClickToModel(state.clickModel, itemMeta)
+    state.clickModelV2 = applyClickToModelV2(
+        state.clickModelV2,
+        normalizedItemKey,
+        itemMeta,
+    )
     saveState(state)
     return true
 }
 
 export function getFeedItemUsefulness(item) {
+    if (shouldUseClickModelV2()) {
+        return getFeedItemUsefulnessV2(item)
+    }
+    return getFeedItemUsefulnessV1(item)
+}
+
+function getFeedItemUsefulnessV1(item) {
     const clickModel = stateNormalizers.normalizeClickModel(state.clickModel)
     const totalClicks = clickModel.totalClicks
 
@@ -347,6 +436,60 @@ export function getFeedItemUsefulness(item) {
         percentage,
         label: `${percentage}%`,
         title: `Вероятность клика на основе ${totalClicks} предыдущих взаимодействий`,
+    }
+}
+
+function getFeedItemUsefulnessV2(item) {
+    const clickModelV2 = stateNormalizers.normalizeClickModelV2(state.clickModelV2)
+    const totalEvents = clickModelV2.totalEvents
+    if (!totalEvents) {
+        return createLearningUsefulness(0, null, 'events')
+    }
+
+    const featureVector = buildClickModelV2FeatureVector(item)
+    const modelScore = predictClickModelV2(clickModelV2, featureVector)
+    const priorScore =
+        (clickModelV2.positiveEvents + CLICK_MODEL_V2_PRIOR_ALPHA) /
+        (clickModelV2.positiveEvents +
+            clickModelV2.negativeEvents +
+            CLICK_MODEL_V2_PRIOR_ALPHA +
+            CLICK_MODEL_V2_PRIOR_BETA)
+    const confidence = Math.min(1, totalEvents / CLICK_MODEL_V2_CONFIDENCE_EVENTS)
+    const blendProgress = normalizeRange(
+        totalEvents,
+        CLICK_MODEL_V2_MODEL_BLEND_MIN_EVENTS,
+        CLICK_MODEL_V2_MODEL_BLEND_MAX_EVENTS,
+    )
+    const modelBlend =
+        CLICK_MODEL_V2_MODEL_BLEND_MIN +
+        blendProgress *
+            (CLICK_MODEL_V2_MODEL_BLEND_MAX - CLICK_MODEL_V2_MODEL_BLEND_MIN)
+    const effectiveModelBlend = modelBlend * confidence
+    const effectiveScore =
+        priorScore * (1 - effectiveModelBlend) + modelScore * effectiveModelBlend
+    const score = clamp(effectiveScore, 0.06, 0.97)
+    const percentage = Math.round(score * 100)
+
+    if (
+        totalEvents < CLICK_MODEL_V2_LEARNING_EVENTS ||
+        totalEvents < CLICK_MODEL_V2_MIN_EVENTS_FOR_PERCENT
+    ) {
+        return createLearningUsefulness(totalEvents, null, 'events')
+    }
+
+    let tone = 'low'
+    if (score >= USEFULNESS_HIGH_THRESHOLD) {
+        tone = 'high'
+    } else if (score >= USEFULNESS_MEDIUM_THRESHOLD) {
+        tone = 'medium'
+    }
+
+    return {
+        tone,
+        score,
+        percentage,
+        label: `${percentage}%`,
+        title: `Вероятность клика (V2) на основе ${totalEvents} размеченных показов`,
     }
 }
 
@@ -629,6 +772,207 @@ function applyClickToModel(rawClickModel, itemMeta) {
     }
 }
 
+function applyClickToModelV2(rawClickModelV2, itemKey, itemMeta) {
+    const clickModelV2 = stateNormalizers.normalizeClickModelV2(rawClickModelV2)
+    const now = Date.now()
+    settleExpiredPendingImpressions(clickModelV2, now)
+    const pendingImpression = clickModelV2.pendingImpressions[itemKey]
+    let featureVector = []
+    if (pendingImpression) {
+        featureVector = normalizeClickModelV2FeatureVector(pendingImpression.features)
+        delete clickModelV2.pendingImpressions[itemKey]
+    } else {
+        featureVector = buildClickModelV2FeatureVector(itemMeta)
+    }
+    trainClickModelV2Sample(clickModelV2, featureVector, 1)
+    trimPendingImpressions(clickModelV2)
+    return clickModelV2
+}
+
+function settleExpiredPendingImpressions(clickModelV2, now = Date.now()) {
+    const pendingImpressions = clickModelV2?.pendingImpressions
+    if (!pendingImpressions || typeof pendingImpressions !== 'object') {
+        return false
+    }
+    let isChanged = false
+    Object.entries(pendingImpressions).forEach(([itemKey, impression]) => {
+        const createdAt = Number(impression?.createdAt)
+        if (
+            !Number.isFinite(createdAt) ||
+            createdAt <= 0 ||
+            now - createdAt < CLICK_MODEL_V2_NEGATIVE_DELAY_MS
+        ) {
+            return
+        }
+        trainClickModelV2Sample(
+            clickModelV2,
+            normalizeClickModelV2FeatureVector(impression?.features),
+            0,
+        )
+        delete pendingImpressions[itemKey]
+        isChanged = true
+    })
+    return isChanged
+}
+
+function trimPendingImpressions(clickModelV2) {
+    const pendingImpressions = clickModelV2?.pendingImpressions
+    if (!pendingImpressions || typeof pendingImpressions !== 'object') {
+        return false
+    }
+    const pendingEntries = Object.entries(pendingImpressions)
+    if (pendingEntries.length <= MAX_CLICK_MODEL_V2_PENDING_IMPRESSIONS) {
+        return false
+    }
+    pendingEntries.sort((left, right) => {
+        return Number(left[1]?.createdAt || 0) - Number(right[1]?.createdAt || 0)
+    })
+    let isChanged = false
+    while (pendingEntries.length > MAX_CLICK_MODEL_V2_PENDING_IMPRESSIONS) {
+        const [itemKey, impression] = pendingEntries.shift()
+        trainClickModelV2Sample(
+            clickModelV2,
+            normalizeClickModelV2FeatureVector(impression?.features),
+            0,
+        )
+        delete pendingImpressions[itemKey]
+        isChanged = true
+    }
+    return isChanged
+}
+
+function predictClickModelV2(clickModelV2, featureVector) {
+    const normalizedFeatures = normalizeClickModelV2FeatureVector(featureVector)
+    let linearScore = Number(clickModelV2?.bias || 0)
+    normalizedFeatures.forEach(([index, value]) => {
+        const weight = Number(clickModelV2?.weights?.[index] || 0)
+        if (!weight) {
+            return
+        }
+        linearScore += weight * value
+    })
+    const clampedScore = clamp(linearScore, -8, 8)
+    return 1 / (1 + Math.exp(-clampedScore))
+}
+
+function trainClickModelV2Sample(clickModelV2, featureVector, label) {
+    const normalizedFeatures = normalizeClickModelV2FeatureVector(featureVector)
+    const normalizedLabel = Number(label) >= 0.5 ? 1 : 0
+    const prediction = predictClickModelV2(clickModelV2, normalizedFeatures)
+    let error = prediction - normalizedLabel
+    error = clamp(error, -CLICK_MODEL_V2_GRADIENT_CLIP, CLICK_MODEL_V2_GRADIENT_CLIP)
+
+    const bias = Number(clickModelV2.bias || 0)
+    const biasGradient = error + CLICK_MODEL_V2_REGULARIZATION * bias
+    clickModelV2.bias = clamp(
+        bias - CLICK_MODEL_V2_BASE_LEARNING_RATE * biasGradient,
+        -CLICK_MODEL_V2_MAX_ABS_WEIGHT,
+        CLICK_MODEL_V2_MAX_ABS_WEIGHT,
+    )
+
+    normalizedFeatures.forEach(([index, value]) => {
+        const featureKey = String(index)
+        const currentWeight = Number(clickModelV2.weights?.[featureKey] || 0)
+        const gradient =
+            error * value + CLICK_MODEL_V2_REGULARIZATION * currentWeight
+        const previousGradSquare = Number(
+            clickModelV2.gradSquares?.[featureKey] || 0,
+        )
+        const nextGradSquare = Math.max(
+            CLICK_MODEL_V2_MIN_GRAD_SQUARE,
+            previousGradSquare + gradient * gradient,
+        )
+        clickModelV2.gradSquares[featureKey] = nextGradSquare
+        const effectiveRate =
+            CLICK_MODEL_V2_BASE_LEARNING_RATE / Math.sqrt(nextGradSquare)
+        const nextWeight = clamp(
+            currentWeight - effectiveRate * gradient,
+            -CLICK_MODEL_V2_MAX_ABS_WEIGHT,
+            CLICK_MODEL_V2_MAX_ABS_WEIGHT,
+        )
+        if (Math.abs(nextWeight) < 0.00005) {
+            delete clickModelV2.weights[featureKey]
+            return
+        }
+        clickModelV2.weights[featureKey] = nextWeight
+    })
+
+    if (normalizedLabel) {
+        clickModelV2.positiveEvents += 1
+    } else {
+        clickModelV2.negativeEvents += 1
+    }
+    clickModelV2.totalEvents += 1
+}
+
+function buildClickModelV2FeatureVector(itemMeta) {
+    const sourceKey = normalizeSourceKey(itemMeta?.source)
+    const hostKey = normalizeHostKey(itemMeta?.link)
+    const sourceHostKey = buildSourceHostKey(sourceKey, hostKey)
+    const titleTokens = extractTitleTokens(itemMeta?.title)
+    const features = []
+    pushHashedClickModelV2Feature(features, `source:${sourceKey}`, 0.8)
+    pushHashedClickModelV2Feature(features, `host:${hostKey}`, 0.7)
+    pushHashedClickModelV2Feature(features, `sourceHost:${sourceHostKey}`, 0.65)
+    let tokenWeight = 1
+    titleTokens.forEach((token) => {
+        pushHashedClickModelV2Feature(features, `token:${token}`, tokenWeight)
+        tokenWeight *= 0.82
+    })
+    return normalizeClickModelV2FeatureVector(features)
+}
+
+function pushHashedClickModelV2Feature(featureVector, featureKey, value = 1) {
+    const normalizedKey = String(featureKey || '').trim()
+    const normalizedValue = Number(value)
+    if (!normalizedKey || !Number.isFinite(normalizedValue) || normalizedValue <= 0) {
+        return
+    }
+    const hashedIndex = hashClickModelV2FeatureKey(normalizedKey)
+    featureVector.push([hashedIndex, normalizedValue])
+}
+
+function hashClickModelV2FeatureKey(featureKey) {
+    let hash = 2166136261
+    for (let index = 0; index < featureKey.length; index += 1) {
+        hash ^= featureKey.charCodeAt(index)
+        hash +=
+            (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24)
+    }
+    return (hash >>> 0) % CLICK_MODEL_V2_DIMENSION
+}
+
+function normalizeClickModelV2FeatureVector(featureVector) {
+    if (!Array.isArray(featureVector)) {
+        return []
+    }
+    const aggregate = {}
+    featureVector.forEach((feature) => {
+        if (!Array.isArray(feature)) {
+            return
+        }
+        const index = Number(feature[0])
+        const value = Number(feature[1])
+        if (
+            !Number.isInteger(index) ||
+            index < 0 ||
+            index >= CLICK_MODEL_V2_DIMENSION ||
+            !Number.isFinite(value) ||
+            value <= 0
+        ) {
+            return
+        }
+        const featureKey = String(index)
+        aggregate[featureKey] = (aggregate[featureKey] || 0) + value
+    })
+    const sortedEntries = Object.entries(aggregate).sort((left, right) => {
+        return right[1] - left[1]
+    })
+    return sortedEntries
+        .slice(0, MAX_CLICK_MODEL_V2_FEATURES_PER_ITEM)
+        .map(([index, value]) => [Number(index), value])
+}
+
 function incrementCounter(counterMap, key) {
     if (!counterMap || typeof counterMap !== 'object') {
         return
@@ -789,10 +1133,11 @@ function extractTitleTokens(value) {
     return tokens.slice(0, TITLE_TOKENS_LIMIT)
 }
 
-function createLearningUsefulness(totalClicks, percentage = null) {
-    const detailsText = totalClicks
-        ? `Нужно больше кликов для точного прогноза (сейчас: ${totalClicks})`
-        : 'Нужны первые клики, чтобы обучить прогноз полезности'
+function createLearningUsefulness(totalSamples, percentage = null, mode = 'clicks') {
+    const sampleLabel = mode === 'events' ? 'показов' : 'кликов'
+    const detailsText = totalSamples
+        ? `Нужно больше данных для точного прогноза (сейчас: ${totalSamples} ${sampleLabel})`
+        : 'Нужны первые взаимодействия, чтобы обучить прогноз полезности'
     return {
         tone: 'learning',
         score: null,
@@ -800,6 +1145,17 @@ function createLearningUsefulness(totalClicks, percentage = null) {
         label: percentage ? `обуч. ${percentage}%` : 'обучается',
         title: detailsText,
     }
+}
+
+function normalizeRange(value, min, max) {
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue)) {
+        return 0
+    }
+    if (max <= min) {
+        return numericValue >= max ? 1 : 0
+    }
+    return clamp((numericValue - min) / (max - min), 0, 1)
 }
 
 function clamp(value, min, max) {
