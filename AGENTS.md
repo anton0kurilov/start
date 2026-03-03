@@ -2,18 +2,28 @@
 
 ## Project Structure & Module Organization
 
-- `public/index.html` is the Parcel entry and wires styles/scripts.
-- `src/scripts/` contains ES modules: `main.js` bootstraps; `domain.js` logic; `ui.js` rendering; `storage.js` localStorage; `utils.js`, `constants.js`.
-- `src/styles/` holds SCSS: `main.scss`, `mobile.scss`, partials `_tasks.scss`, `_stats.scss` via `@use`.
-- `src/icons/` assets (manifest, favicon, bundled font).
+- `public/index.html` is the Parcel entry and links the app stylesheet from `src/styles/base.scss`.
+- `public/assets/icons/` stores static assets (manifest, favicon, apple touch icon, app svg).
+- `src/app.js` is the JS entry file and imports `src/scripts/main.js`.
+- `src/scripts/` contains ES modules:
+    - `main.js` bootstraps the app, binds UI events, and refreshes safe-area vars.
+    - `domain.js` manages state, RSS refresh, and business rules.
+    - `ui.js` renders columns/settings and handles UI state helpers.
+    - `app-actions.js` encapsulates app-level handlers (refresh, import/export, status updates).
+    - `column-interactions.js` handles column header/scroll interactions and auto mark-as-read behavior.
+    - `state-normalizers.js` normalizes imported state.
+    - `storage.js`, `utils.js`, `constants.js` provide persistence and shared helpers.
+- `src/styles/` holds SCSS: `base.scss` and partials `_columns.scss`, `_settings.scss` via `@use`.
+- `tests/smoke/` contains smoke tests using `node:test`.
 - `dist/` is generated build output; do not edit by hand.
 
 ## Build, Test, and Development Commands
 
 - `npm install` installs Parcel and dev dependencies.
-- `npm run dev` (or `npm start`) runs the Parcel dev server for `public/index.html`.
+- `npm start` runs the Parcel dev server for `public/index.html`.
+- `npm run dev` runs the Parcel dev server and opens a browser tab.
 - `npm run build` removes `dist/*` and creates a production bundle.
-- No automated test script is configured.
+- `npm run test:smoke` runs smoke tests from `tests/smoke/*.test.mjs` via `node --test`.
 
 ## Coding Style & Naming Conventions
 
@@ -24,8 +34,8 @@
 
 ## Testing Guidelines
 
-- Manual verification in the browser is the current expectation.
-- If adding tests, introduce a `tests/` or `src/**/__tests__` location and add an npm script.
+- Run `npm run test:smoke` before finishing changes that affect behavior.
+- Add new tests under `tests/smoke/` (or introduce a dedicated test folder/script if coverage grows).
 
 ## Commit & Pull Request Guidelines
 
@@ -35,4 +45,5 @@
 
 ## Data Storage & Configuration
 
+- App state is client-side only (`localStorage`) with JSON import/export support.
 - Avoid introducing server-side dependencies without a clear migration plan.
