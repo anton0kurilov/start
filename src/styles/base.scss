@@ -117,8 +117,7 @@ a {
 
 @media (max-width: 720px) {
     .app {
-        padding: calc(var(--padding) + var(--safeAreaTop))
-            0
+        padding: max(var(--padding), var(--safeAreaTop)) 0
             calc(var(--padding) + var(--safeAreaBottom));
         height: 100vh;
         height: 100svh;
