@@ -43,6 +43,7 @@ test('createDefaultState returns complete base shape', () => {
         weights: {},
         gradSquares: {},
         pendingImpressions: {},
+        negativeHistory: {},
     })
 })
 

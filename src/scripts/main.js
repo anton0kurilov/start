@@ -83,6 +83,10 @@ function handleColumnHeaderClick(event) {
     return columnInteractions.handleColumnHeaderClick(event)
 }
 
+function handleColumnAuxClick(event) {
+    return columnInteractions.handleColumnAuxClick(event)
+}
+
 function handleColumnScroll(event) {
     return columnInteractions.handleColumnScroll(event)
 }
@@ -132,6 +136,7 @@ function bindEvents() {
     }
     if (elements.columns) {
         elements.columns.addEventListener('click', handleColumnHeaderClick)
+        elements.columns.addEventListener('auxclick', handleColumnAuxClick)
         elements.columns.addEventListener('scroll', handleColumnScroll, true)
     }
     if (elements.reset) {

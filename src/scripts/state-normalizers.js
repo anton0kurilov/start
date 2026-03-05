@@ -8,6 +8,7 @@ import {
     MAX_CLICK_MODEL_SOURCES,
     MAX_CLICK_MODEL_TOKENS,
     MAX_CLICK_MODEL_V2_FEATURES_PER_ITEM,
+    MAX_CLICK_MODEL_V2_NEGATIVE_HISTORY,
     MAX_CLICK_MODEL_V2_PENDING_IMPRESSIONS,
     MAX_CLICK_MODEL_V2_WEIGHTS,
     MAX_VISITED_ITEMS,
@@ -118,6 +119,7 @@ export function createDefaultClickModelV2() {
         weights: {},
         gradSquares: {},
         pendingImpressions: {},
+        negativeHistory: {},
     }
 }
 
@@ -177,6 +179,9 @@ export function normalizeClickModelV2(rawClickModelV2) {
         ),
         pendingImpressions: normalizePendingImpressionsMap(
             rawClickModelV2.pendingImpressions,
+        ),
+        negativeHistory: normalizeNegativeHistoryMap(
+            rawClickModelV2.negativeHistory,
         ),
     }
 }
@@ -373,6 +378,25 @@ function normalizePendingImpressionsMap(rawPendingImpressions) {
     })
     return Object.fromEntries(
         normalizedEntries.slice(0, MAX_CLICK_MODEL_V2_PENDING_IMPRESSIONS),
+    )
+}
+
+function normalizeNegativeHistoryMap(rawNegativeHistory) {
+    if (!rawNegativeHistory || typeof rawNegativeHistory !== 'object') {
+        return {}
+    }
+    const normalizedEntries = []
+    Object.entries(rawNegativeHistory).forEach(([rawItemKey, rawTimestamp]) => {
+        const itemKey = normalizeItemKey(rawItemKey)
+        const timestamp = normalizeNonNegativeInteger(rawTimestamp)
+        if (!itemKey || !timestamp) {
+            return
+        }
+        normalizedEntries.push([itemKey, timestamp])
+    })
+    normalizedEntries.sort((left, right) => right[1] - left[1])
+    return Object.fromEntries(
+        normalizedEntries.slice(0, MAX_CLICK_MODEL_V2_NEGATIVE_HISTORY),
     )
 }
 

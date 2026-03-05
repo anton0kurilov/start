@@ -8,6 +8,7 @@ export function createColumnInteractions({
     const pendingScrollMarkFrames = new WeakMap()
 
     return {
+        handleColumnAuxClick,
         handleColumnHeaderClick,
         handleColumnScroll,
         markHiddenFeedItemsInAllColumns,
@@ -66,6 +67,18 @@ export function createColumnInteractions({
             return
         }
         registerFeedItemClick(clickPayload)
+    }
+
+    function handleColumnAuxClick(event) {
+        if (event.button !== 1) {
+            return
+        }
+        const feedItem = event.target.closest('.feed__item')
+        if (!feedItem || !columnsElement?.contains(feedItem)) {
+            return
+        }
+        markFeedItemsVisited([feedItem])
+        registerClickedFeedItem(feedItem)
     }
 
     function markColumnFeedItemsVisited(column) {

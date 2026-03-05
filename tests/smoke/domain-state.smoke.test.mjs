@@ -186,6 +186,79 @@ test('registerFeedItemImpressions settles expired impressions into negative samp
     )
 })
 
+test('registerFeedItemImpressions applies negative cooldown per item key', async () => {
+    const oldTimestamp = Date.now() - 19 * 60 * 60 * 1000
+    const {domain} = await loadFreshDomainModule({
+        folders: [],
+        lastUpdated: null,
+        settings: {autoMarkReadOnScroll: false},
+        visitedItemKeys: [],
+        clickedItemKeys: [],
+        clickModel: {
+            totalClicks: 0,
+            sourceCounts: {},
+            sourceHostCounts: {},
+            hostCounts: {},
+            tokenCounts: {},
+        },
+        clickModelV2: {
+            schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
+            totalEvents: 0,
+            positiveEvents: 0,
+            negativeEvents: 0,
+            bias: 0,
+            weights: {},
+            gradSquares: {},
+            pendingImpressions: {
+                repeated: {
+                    createdAt: oldTimestamp,
+                    features: [[2, 1]],
+                },
+            },
+        },
+    })
+
+    domain.registerFeedItemImpressions([])
+
+    const firstState = domain.getState().clickModelV2
+    assert.equal(firstState.totalEvents, 1)
+    assert.equal(firstState.negativeEvents, 1)
+    assert.ok(firstState.negativeHistory.repeated)
+
+    const added = domain.registerFeedItemImpressions([
+        {
+            itemKey: 'repeated',
+            source: 'Tech Daily',
+            title: 'Repeated headline',
+            link: 'https://example.com/repeated',
+        },
+    ])
+
+    const secondState = domain.getState().clickModelV2
+    assert.equal(added, 0)
+    assert.equal(secondState.totalEvents, 1)
+    assert.equal(secondState.negativeEvents, 1)
+    assert.equal(secondState.pendingImpressions.repeated, undefined)
+})
+
+test('registerFeedItemImpressions drops overflow pending without instant negative labels', async () => {
+    const {domain} = await loadFreshDomainModule()
+    const payload = Array.from({length: 805}, (_, index) => ({
+        itemKey: `overflow-${index}`,
+        source: 'Overflow',
+        title: `Overflow ${index}`,
+        link: `https://example.com/${index}`,
+    }))
+
+    const added = domain.registerFeedItemImpressions(payload)
+    const clickModelV2 = domain.getState().clickModelV2
+
+    assert.equal(added, 805)
+    assert.equal(clickModelV2.totalEvents, 0)
+    assert.equal(clickModelV2.negativeEvents, 0)
+    assert.equal(Object.keys(clickModelV2.pendingImpressions).length, 800)
+})
+
 test('getFeedItemUsefulness prioritizes strong title tokens over source bias', async () => {
     const {domain} = await loadFreshDomainModule({
         folders: [],

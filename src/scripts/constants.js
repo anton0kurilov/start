@@ -13,6 +13,7 @@ export const CLICK_MODEL_V2_SCHEMA_VERSION = 2
 export const MAX_CLICK_MODEL_V2_WEIGHTS = CLICK_MODEL_V2_DIMENSION
 export const MAX_CLICK_MODEL_V2_PENDING_IMPRESSIONS = 800
 export const MAX_CLICK_MODEL_V2_FEATURES_PER_ITEM = 16
+export const MAX_CLICK_MODEL_V2_NEGATIVE_HISTORY = 6000
 export const DEFAULT_SETTINGS = {
     autoMarkReadOnScroll: false,
     useClickModelV2: false,

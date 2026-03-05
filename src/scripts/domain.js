@@ -8,6 +8,7 @@ import {
     MAX_CLICK_MODEL_SOURCES,
     MAX_CLICK_MODEL_TOKENS,
     MAX_CLICK_MODEL_V2_FEATURES_PER_ITEM,
+    MAX_CLICK_MODEL_V2_NEGATIVE_HISTORY,
     MAX_CLICK_MODEL_V2_PENDING_IMPRESSIONS,
 } from './constants.js'
 import {loadState, saveState, clearState} from './storage.js'
@@ -43,6 +44,7 @@ const SCORE_EVIDENCE_GAIN = 0.72
 const SCORE_EVIDENCE_EXPONENT = 0.38
 const TOKEN_SIGNAL_FALLOFF = 0.55
 const CLICK_MODEL_V2_NEGATIVE_DELAY_MS = 18 * 60 * 60 * 1000
+const CLICK_MODEL_V2_NEGATIVE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
 const CLICK_MODEL_V2_CONFIDENCE_EVENTS = 110
 const CLICK_MODEL_V2_LEARNING_EVENTS = 12
 const CLICK_MODEL_V2_BASE_LEARNING_RATE = 0.08
@@ -50,6 +52,8 @@ const CLICK_MODEL_V2_REGULARIZATION = 0.002
 const CLICK_MODEL_V2_GRADIENT_CLIP = 0.8
 const CLICK_MODEL_V2_MAX_ABS_WEIGHT = 6
 const CLICK_MODEL_V2_MIN_GRAD_SQUARE = 1e-6
+const CLICK_MODEL_V2_POSITIVE_WEIGHT_MAX = 4
+const CLICK_MODEL_V2_POSITIVE_WEIGHT_EXPONENT = 0.5
 const CLICK_MODEL_V2_PRIOR_ALPHA = 2
 const CLICK_MODEL_V2_PRIOR_BETA = 8
 const CLICK_MODEL_V2_MIN_EVENTS_FOR_PERCENT = 120
@@ -295,6 +299,9 @@ export function registerFeedItemImpressions(itemsMeta) {
             clickedItemKeysSet.has(normalizedItemKey) ||
             clickModelV2.pendingImpressions[normalizedItemKey]
         ) {
+            return
+        }
+        if (shouldSkipNegativeLabel(clickModelV2, normalizedItemKey, now)) {
             return
         }
         clickModelV2.pendingImpressions[normalizedItemKey] = {
@@ -784,6 +791,7 @@ function applyClickToModelV2(rawClickModelV2, itemKey, itemMeta) {
     } else {
         featureVector = buildClickModelV2FeatureVector(itemMeta)
     }
+    delete clickModelV2.negativeHistory[itemKey]
     trainClickModelV2Sample(clickModelV2, featureVector, 1)
     trimPendingImpressions(clickModelV2)
     return clickModelV2
@@ -804,10 +812,11 @@ function settleExpiredPendingImpressions(clickModelV2, now = Date.now()) {
         ) {
             return
         }
-        trainClickModelV2Sample(
+        trainNegativeImpression(
             clickModelV2,
+            itemKey,
             normalizeClickModelV2FeatureVector(impression?.features),
-            0,
+            now,
         )
         delete pendingImpressions[itemKey]
         isChanged = true
@@ -829,16 +838,69 @@ function trimPendingImpressions(clickModelV2) {
     })
     let isChanged = false
     while (pendingEntries.length > MAX_CLICK_MODEL_V2_PENDING_IMPRESSIONS) {
-        const [itemKey, impression] = pendingEntries.shift()
-        trainClickModelV2Sample(
-            clickModelV2,
-            normalizeClickModelV2FeatureVector(impression?.features),
-            0,
-        )
+        const [itemKey] = pendingEntries.shift()
         delete pendingImpressions[itemKey]
         isChanged = true
     }
     return isChanged
+}
+
+function trainNegativeImpression(
+    clickModelV2,
+    itemKey,
+    featureVector,
+    now = Date.now(),
+) {
+    const normalizedItemKey = stateNormalizers.normalizeItemKey(itemKey)
+    if (
+        !normalizedItemKey ||
+        shouldSkipNegativeLabel(clickModelV2, normalizedItemKey, now)
+    ) {
+        return false
+    }
+    trainClickModelV2Sample(clickModelV2, featureVector, 0)
+    markNegativeHistory(clickModelV2, normalizedItemKey, now)
+    return true
+}
+
+function shouldSkipNegativeLabel(clickModelV2, itemKey, now = Date.now()) {
+    const normalizedItemKey = stateNormalizers.normalizeItemKey(itemKey)
+    if (!normalizedItemKey) {
+        return true
+    }
+    const lastNegativeAt = Number(
+        clickModelV2?.negativeHistory?.[normalizedItemKey] || 0,
+    )
+    if (!Number.isFinite(lastNegativeAt) || lastNegativeAt <= 0) {
+        return false
+    }
+    return now - lastNegativeAt < CLICK_MODEL_V2_NEGATIVE_COOLDOWN_MS
+}
+
+function markNegativeHistory(clickModelV2, itemKey, now = Date.now()) {
+    const normalizedItemKey = stateNormalizers.normalizeItemKey(itemKey)
+    if (!normalizedItemKey || !clickModelV2?.negativeHistory) {
+        return
+    }
+    clickModelV2.negativeHistory[normalizedItemKey] = Math.max(0, Math.round(now))
+    trimNegativeHistory(clickModelV2)
+}
+
+function trimNegativeHistory(clickModelV2) {
+    const negativeHistory = clickModelV2?.negativeHistory
+    if (!negativeHistory || typeof negativeHistory !== 'object') {
+        return
+    }
+    const historyEntries = Object.entries(negativeHistory)
+    if (historyEntries.length <= MAX_CLICK_MODEL_V2_NEGATIVE_HISTORY) {
+        return
+    }
+    historyEntries.sort((left, right) => {
+        return Number(right[1] || 0) - Number(left[1] || 0)
+    })
+    clickModelV2.negativeHistory = Object.fromEntries(
+        historyEntries.slice(0, MAX_CLICK_MODEL_V2_NEGATIVE_HISTORY),
+    )
 }
 
 function predictClickModelV2(clickModelV2, featureVector) {
@@ -859,7 +921,11 @@ function trainClickModelV2Sample(clickModelV2, featureVector, label) {
     const normalizedFeatures = normalizeClickModelV2FeatureVector(featureVector)
     const normalizedLabel = Number(label) >= 0.5 ? 1 : 0
     const prediction = predictClickModelV2(clickModelV2, normalizedFeatures)
-    let error = prediction - normalizedLabel
+    const sampleWeight = resolveClickModelV2SampleWeight(
+        clickModelV2,
+        normalizedLabel,
+    )
+    let error = (prediction - normalizedLabel) * sampleWeight
     error = clamp(error, -CLICK_MODEL_V2_GRADIENT_CLIP, CLICK_MODEL_V2_GRADIENT_CLIP)
 
     const bias = Number(clickModelV2.bias || 0)
@@ -903,6 +969,20 @@ function trainClickModelV2Sample(clickModelV2, featureVector, label) {
         clickModelV2.negativeEvents += 1
     }
     clickModelV2.totalEvents += 1
+}
+
+function resolveClickModelV2SampleWeight(clickModelV2, normalizedLabel) {
+    if (!normalizedLabel) {
+        return 1
+    }
+    const positiveEvents = Math.max(1, Number(clickModelV2?.positiveEvents || 0))
+    const negativeEvents = Math.max(1, Number(clickModelV2?.negativeEvents || 0))
+    const imbalanceRatio = negativeEvents / positiveEvents
+    const adjustedWeight = Math.pow(
+        imbalanceRatio,
+        CLICK_MODEL_V2_POSITIVE_WEIGHT_EXPONENT,
+    )
+    return clamp(adjustedWeight, 1, CLICK_MODEL_V2_POSITIVE_WEIGHT_MAX)
 }
 
 function buildClickModelV2FeatureVector(itemMeta) {
