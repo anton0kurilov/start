@@ -113,6 +113,47 @@ test('registerFeedItemClick stores a single click per item key', async () => {
     )
 })
 
+test('getFeedItemUsefulness marks previously clicked item as clicked', async () => {
+    const {domain} = await loadFreshDomainModule({
+        folders: [],
+        lastUpdated: null,
+        settings: {
+            autoMarkReadOnScroll: false,
+            useClickModelV2: true,
+        },
+        visitedItemKeys: [],
+        clickedItemKeys: ['https://example.com/repeat'],
+        clickModel: {
+            totalClicks: 1,
+            sourceCounts: {},
+            sourceHostCounts: {},
+            hostCounts: {},
+            tokenCounts: {},
+        },
+        clickModelV2: {
+            schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
+            totalEvents: 140,
+            positiveEvents: 40,
+            negativeEvents: 100,
+            bias: -0.2,
+            weights: {},
+            gradSquares: {},
+            pendingImpressions: {},
+        },
+    })
+
+    const usefulness = domain.getFeedItemUsefulness({
+        id: 'id-1',
+        source: 'Any source',
+        title: 'Any headline',
+        link: 'https://example.com/repeat',
+    })
+
+    assert.equal(usefulness.label, 'кликнуто')
+    assert.equal(usefulness.tone, 'high')
+    assert.ok(usefulness.percentage >= 90)
+})
+
 test('registerFeedItemImpressions stores pending entries and click trains V2 positive sample', async () => {
     const {domain} = await loadFreshDomainModule()
 

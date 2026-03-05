@@ -61,6 +61,8 @@ const CLICK_MODEL_V2_MODEL_BLEND_MIN_EVENTS = 32
 const CLICK_MODEL_V2_MODEL_BLEND_MAX_EVENTS = 180
 const CLICK_MODEL_V2_MODEL_BLEND_MIN = 0.2
 const CLICK_MODEL_V2_MODEL_BLEND_MAX = 0.82
+const CLICK_MODEL_V2_HEURISTIC_BLEND = 0.22
+const CLICKED_ITEM_USEFULNESS_SCORE = 0.91
 const TITLE_STOP_WORDS = new Set([
     'a',
     'an',
@@ -283,7 +285,9 @@ export function unmarkItemsVisited(itemKeys) {
 
 export function registerFeedItemImpressions(itemsMeta) {
     const items = Array.isArray(itemsMeta) ? itemsMeta : [itemsMeta]
-    let clickModelV2 = stateNormalizers.normalizeClickModelV2(state.clickModelV2)
+    let clickModelV2 = stateNormalizers.normalizeClickModelV2(
+        state.clickModelV2,
+    )
     const now = Date.now()
     let isChanged = settleExpiredPendingImpressions(clickModelV2, now)
     let addedCount = 0
@@ -349,6 +353,9 @@ export function registerFeedItemClick(itemMeta) {
 }
 
 export function getFeedItemUsefulness(item) {
+    if (isKnownClickedItem(item)) {
+        return createClickedUsefulness()
+    }
     if (shouldUseClickModelV2()) {
         return getFeedItemUsefulnessV2(item)
     }
@@ -416,7 +423,10 @@ function getFeedItemUsefulnessV1(item) {
         getBaselineSignal(totalClicks),
     )
     const baselineSignal = getBaselineSignal(totalClicks)
-    const normalizedEvidence = normalizeSignalDelta(behaviorScore, baselineSignal)
+    const normalizedEvidence = normalizeSignalDelta(
+        behaviorScore,
+        baselineSignal,
+    )
     const amplifiedEvidence = Math.pow(
         normalizedEvidence,
         SCORE_EVIDENCE_EXPONENT,
@@ -447,7 +457,9 @@ function getFeedItemUsefulnessV1(item) {
 }
 
 function getFeedItemUsefulnessV2(item) {
-    const clickModelV2 = stateNormalizers.normalizeClickModelV2(state.clickModelV2)
+    const clickModelV2 = stateNormalizers.normalizeClickModelV2(
+        state.clickModelV2,
+    )
     const totalEvents = clickModelV2.totalEvents
     if (!totalEvents) {
         return createLearningUsefulness(0, null, 'events')
@@ -461,7 +473,10 @@ function getFeedItemUsefulnessV2(item) {
             clickModelV2.negativeEvents +
             CLICK_MODEL_V2_PRIOR_ALPHA +
             CLICK_MODEL_V2_PRIOR_BETA)
-    const confidence = Math.min(1, totalEvents / CLICK_MODEL_V2_CONFIDENCE_EVENTS)
+    const confidence = Math.min(
+        1,
+        totalEvents / CLICK_MODEL_V2_CONFIDENCE_EVENTS,
+    )
     const blendProgress = normalizeRange(
         totalEvents,
         CLICK_MODEL_V2_MODEL_BLEND_MIN_EVENTS,
@@ -473,8 +488,15 @@ function getFeedItemUsefulnessV2(item) {
             (CLICK_MODEL_V2_MODEL_BLEND_MAX - CLICK_MODEL_V2_MODEL_BLEND_MIN)
     const effectiveModelBlend = modelBlend * confidence
     const effectiveScore =
-        priorScore * (1 - effectiveModelBlend) + modelScore * effectiveModelBlend
-    const score = clamp(effectiveScore, 0.06, 0.97)
+        priorScore * (1 - effectiveModelBlend) +
+        modelScore * effectiveModelBlend
+    const v1Usefulness = getFeedItemUsefulnessV1(item)
+    const heuristicScore = Number(v1Usefulness?.score)
+    const blendedScore = Number.isFinite(heuristicScore)
+        ? effectiveScore * (1 - CLICK_MODEL_V2_HEURISTIC_BLEND) +
+          heuristicScore * CLICK_MODEL_V2_HEURISTIC_BLEND
+        : effectiveScore
+    const score = clamp(blendedScore, 0.06, 0.97)
     const percentage = Math.round(score * 100)
 
     if (
@@ -786,7 +808,9 @@ function applyClickToModelV2(rawClickModelV2, itemKey, itemMeta) {
     const pendingImpression = clickModelV2.pendingImpressions[itemKey]
     let featureVector = []
     if (pendingImpression) {
-        featureVector = normalizeClickModelV2FeatureVector(pendingImpression.features)
+        featureVector = normalizeClickModelV2FeatureVector(
+            pendingImpression.features,
+        )
         delete clickModelV2.pendingImpressions[itemKey]
     } else {
         featureVector = buildClickModelV2FeatureVector(itemMeta)
@@ -834,7 +858,9 @@ function trimPendingImpressions(clickModelV2) {
         return false
     }
     pendingEntries.sort((left, right) => {
-        return Number(left[1]?.createdAt || 0) - Number(right[1]?.createdAt || 0)
+        return (
+            Number(left[1]?.createdAt || 0) - Number(right[1]?.createdAt || 0)
+        )
     })
     let isChanged = false
     while (pendingEntries.length > MAX_CLICK_MODEL_V2_PENDING_IMPRESSIONS) {
@@ -882,7 +908,10 @@ function markNegativeHistory(clickModelV2, itemKey, now = Date.now()) {
     if (!normalizedItemKey || !clickModelV2?.negativeHistory) {
         return
     }
-    clickModelV2.negativeHistory[normalizedItemKey] = Math.max(0, Math.round(now))
+    clickModelV2.negativeHistory[normalizedItemKey] = Math.max(
+        0,
+        Math.round(now),
+    )
     trimNegativeHistory(clickModelV2)
 }
 
@@ -926,7 +955,11 @@ function trainClickModelV2Sample(clickModelV2, featureVector, label) {
         normalizedLabel,
     )
     let error = (prediction - normalizedLabel) * sampleWeight
-    error = clamp(error, -CLICK_MODEL_V2_GRADIENT_CLIP, CLICK_MODEL_V2_GRADIENT_CLIP)
+    error = clamp(
+        error,
+        -CLICK_MODEL_V2_GRADIENT_CLIP,
+        CLICK_MODEL_V2_GRADIENT_CLIP,
+    )
 
     const bias = Number(clickModelV2.bias || 0)
     const biasGradient = error + CLICK_MODEL_V2_REGULARIZATION * bias
@@ -975,8 +1008,14 @@ function resolveClickModelV2SampleWeight(clickModelV2, normalizedLabel) {
     if (!normalizedLabel) {
         return 1
     }
-    const positiveEvents = Math.max(1, Number(clickModelV2?.positiveEvents || 0))
-    const negativeEvents = Math.max(1, Number(clickModelV2?.negativeEvents || 0))
+    const positiveEvents = Math.max(
+        1,
+        Number(clickModelV2?.positiveEvents || 0),
+    )
+    const negativeEvents = Math.max(
+        1,
+        Number(clickModelV2?.negativeEvents || 0),
+    )
     const imbalanceRatio = negativeEvents / positiveEvents
     const adjustedWeight = Math.pow(
         imbalanceRatio,
@@ -1005,7 +1044,11 @@ function buildClickModelV2FeatureVector(itemMeta) {
 function pushHashedClickModelV2Feature(featureVector, featureKey, value = 1) {
     const normalizedKey = String(featureKey || '').trim()
     const normalizedValue = Number(value)
-    if (!normalizedKey || !Number.isFinite(normalizedValue) || normalizedValue <= 0) {
+    if (
+        !normalizedKey ||
+        !Number.isFinite(normalizedValue) ||
+        normalizedValue <= 0
+    ) {
         return
     }
     const hashedIndex = hashClickModelV2FeatureKey(normalizedKey)
@@ -1077,9 +1120,7 @@ function trimCounterMap(counterMap, limit) {
     if (normalizedEntries.length <= limit) {
         return Object.fromEntries(normalizedEntries)
     }
-    const trimThreshold = Math.ceil(
-        limit * CLICK_MODEL_TRIM_TRIGGER_MULTIPLIER,
-    )
+    const trimThreshold = Math.ceil(limit * CLICK_MODEL_TRIM_TRIGGER_MULTIPLIER)
     if (normalizedEntries.length <= trimThreshold) {
         return Object.fromEntries(normalizedEntries)
     }
@@ -1213,7 +1254,11 @@ function extractTitleTokens(value) {
     return tokens.slice(0, TITLE_TOKENS_LIMIT)
 }
 
-function createLearningUsefulness(totalSamples, percentage = null, mode = 'clicks') {
+function createLearningUsefulness(
+    totalSamples,
+    percentage = null,
+    mode = 'clicks',
+) {
     const sampleLabel = mode === 'events' ? 'показов' : 'кликов'
     const detailsText = totalSamples
         ? `Нужно больше данных для точного прогноза (сейчас: ${totalSamples} ${sampleLabel})`
@@ -1225,6 +1270,38 @@ function createLearningUsefulness(totalSamples, percentage = null, mode = 'click
         label: percentage ? `обуч. ${percentage}%` : 'обучается',
         title: detailsText,
     }
+}
+
+function createClickedUsefulness() {
+    return {
+        tone: 'high',
+        score: CLICKED_ITEM_USEFULNESS_SCORE,
+        percentage: Math.round(CLICKED_ITEM_USEFULNESS_SCORE * 100),
+        label: '100%',
+        title: 'Вы уже открывали эту новость',
+    }
+}
+
+function isKnownClickedItem(item) {
+    const itemKey = resolveFeedItemKey(item)
+    if (!itemKey) {
+        return false
+    }
+    return clickedItemKeysSet.has(itemKey)
+}
+
+function resolveFeedItemKey(item) {
+    const primaryKey = stateNormalizers.normalizeItemKey(item?.link || item?.id)
+    if (primaryKey) {
+        return primaryKey
+    }
+    const publishedAt =
+        item?.date instanceof Date && !Number.isNaN(item.date.getTime())
+            ? item.date.toISOString()
+            : ''
+    return stateNormalizers.normalizeItemKey(
+        `${item?.source || ''}|${item?.title || ''}|${publishedAt}`,
+    )
 }
 
 function normalizeRange(value, min, max) {
