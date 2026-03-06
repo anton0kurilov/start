@@ -220,8 +220,8 @@ function renderColumns(state) {
 
         const header = document.createElement('div')
         header.className = 'columns__header'
-        const headerTop = document.createElement('div')
-        headerTop.className = 'columns__header-top'
+        const headerText = document.createElement('div')
+        headerText.className = 'columns__header-text'
         const title = document.createElement('h2')
         title.className = 'columns__title'
         title.textContent = folder.name
@@ -253,8 +253,8 @@ function renderColumns(state) {
             </svg>
         `
 
-        headerTop.append(title, markReadButton)
-        header.append(headerTop, meta)
+        headerText.append(title, meta)
+        header.append(headerText, markReadButton)
 
         const content = document.createElement('div')
         content.className = 'columns__content'
