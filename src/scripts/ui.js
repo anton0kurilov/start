@@ -195,7 +195,7 @@ function createFeedRow({feed, isEditing}) {
         fields.className = 'settings__feed-fields'
 
         const nameInput = document.createElement('input')
-        nameInput.className = 'settings__feed-input'
+        nameInput.className = 'control'
         nameInput.type = 'text'
         nameInput.value = feed.name
         nameInput.required = true
@@ -204,7 +204,7 @@ function createFeedRow({feed, isEditing}) {
         nameInput.dataset.feedField = 'name'
 
         const urlInput = document.createElement('input')
-        urlInput.className = 'settings__feed-input'
+        urlInput.className = 'control'
         urlInput.type = 'text'
         urlInput.value = feed.url
         urlInput.required = true
@@ -220,7 +220,7 @@ function createFeedRow({feed, isEditing}) {
         actions.className = 'settings__feed-actions'
 
         const saveButton = document.createElement('button')
-        saveButton.className = 'btn settings__feed-btn settings__feed-btn--save'
+        saveButton.className = 'btn btn--primary settings__feed-btn'
         saveButton.type = 'button'
         saveButton.dataset.action = 'save-feed'
         saveButton.textContent = 'Сохранить'

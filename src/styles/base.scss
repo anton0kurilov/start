@@ -1,3 +1,4 @@
+@use '_components';
 @use '_settings';
 @use '_columns';
 
@@ -64,46 +65,6 @@ a {
     height: 100vh;
     padding: calc(var(--padding) * 1.4) 0;
     position: relative;
-}
-
-.btn {
-    padding: var(--padding) calc(var(--padding) * 1.5);
-    border-radius: var(--borderRadius);
-    border: 1px solid var(--colorBorder);
-    font-family: var(--fontBody);
-    font-weight: 600;
-    font-size: 0.95rem;
-    cursor: pointer;
-
-    &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
-    }
-
-    &--primary {
-        color: #05170f;
-    }
-
-    &--ghost {
-        background-color: transparent;
-        color: var(--colorText);
-        border-color: var(--colorBorder);
-
-        &:hover {
-            color: var(--colorAccent);
-        }
-    }
-
-    &--danger {
-        background: rgba(249, 115, 115, 0.08);
-        color: var(--colorDanger);
-
-        &:hover {
-            background: rgba(249, 115, 115, 0.2);
-        }
-    }
 }
 
 .is-muted {

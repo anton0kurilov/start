@@ -405,17 +405,6 @@
         gap: 8px;
     }
 
-    &__feed-input {
-        width: 100%;
-        padding: 10px 12px;
-        border-radius: 12px;
-        border: 1px solid var(--colorBorder);
-        background: var(--colorSurface);
-        color: var(--colorText);
-        font-size: 0.9rem;
-        outline: none;
-    }
-
     &__feed-actions {
         display: flex;
         flex-wrap: wrap;
@@ -427,16 +416,6 @@
         padding: 6px 12px;
         font-size: 0.78rem;
         min-height: 34px;
-    }
-
-    &__feed-btn--save {
-        background: #f4f4f4;
-        border-color: transparent;
-        color: #050505;
-
-        &:hover {
-            background: #fff;
-        }
     }
 
     &__feed-name {
@@ -523,88 +502,6 @@
     &__accordion[open] &__summary-icon {
         transform: rotate(180deg);
         color: var(--colorAccent);
-    }
-}
-
-.form {
-    display: grid;
-    gap: var(--padding);
-
-    &__field {
-        display: grid;
-        gap: 6px;
-        font-size: 0.85rem;
-        color: var(--colorMuted);
-
-        input,
-        select {
-            width: 100%;
-            padding: 10px 12px;
-            border-radius: 12px;
-            border: 1px solid var(--colorBorder);
-            background: var(--colorSurface);
-            color: var(--colorText);
-            font-size: 0.95rem;
-            outline: none;
-        }
-    }
-
-    &__field--file {
-        gap: 10px;
-    }
-
-    &__file {
-        position: relative;
-        display: inline-grid;
-        align-items: center;
-        justify-items: start;
-    }
-
-    &__file-button {
-        justify-self: start;
-    }
-
-    &__file-input {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        opacity: 0;
-        cursor: pointer;
-    }
-
-    &__file-name {
-        font-size: 0.8rem;
-        color: var(--colorMuted);
-        word-break: break-word;
-    }
-}
-
-.icon-btn {
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    background: transparent;
-    color: var(--colorMuted);
-    border-radius: 10px;
-    padding: 6px 10px;
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition:
-        border-color 0.2s ease,
-        color 0.2s ease;
-
-    &:hover {
-        color: var(--colorAccent);
-        border-color: rgba(99, 247, 196, 0.4);
-    }
-
-    &--danger {
-        color: var(--colorDanger);
-        border-color: rgba(249, 115, 115, 0.35);
-
-        &:hover {
-            color: var(--colorDanger);
-            border-color: rgba(249, 115, 115, 0.6);
-        }
     }
 }
 
