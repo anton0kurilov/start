@@ -149,7 +149,7 @@ test('getFeedItemUsefulness marks previously clicked item as clicked', async () 
         link: 'https://example.com/repeat',
     })
 
-    assert.equal(usefulness.label, 'кликнуто')
+    assert.equal(usefulness.label, 'посетил')
     assert.equal(usefulness.tone, 'high')
     assert.ok(usefulness.percentage >= 90)
 })
