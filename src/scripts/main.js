@@ -14,6 +14,7 @@ import {
     setUseClickModelV2,
     shouldAutoMarkReadOnScroll,
     unmarkItemsVisited,
+    updateFeed,
 } from './domain.js'
 import {
     applySettingsOpen,
@@ -28,9 +29,11 @@ import {
 import {createAppActions} from './app-actions.js'
 import {createColumnInteractions} from './column-interactions.js'
 
+let editingFeed = null
+
 function syncAppView({state = null, withLastUpdated = false} = {}) {
     const nextState = state || getState()
-    render(nextState)
+    render(nextState, {editingFeed})
     if (withLastUpdated) {
         updateLastUpdated(nextState.lastUpdated)
     }
@@ -190,7 +193,7 @@ function handleGlobalKeydown(event) {
         return
     }
     if (event.key === 'Escape') {
-        applySettingsOpen(false)
+        closeSettings()
         return
     }
     if (isEditableTarget(event.target)) {
@@ -276,6 +279,18 @@ function handleListActions(event) {
         handleRemoveFolderAction(button)
         return
     }
+    if (action === 'edit-feed') {
+        handleEditFeedAction(button)
+        return
+    }
+    if (action === 'cancel-edit-feed') {
+        handleCancelEditFeedAction()
+        return
+    }
+    if (action === 'save-feed') {
+        handleSaveFeedAction(button)
+        return
+    }
     if (action === 'remove-feed') {
         handleRemoveFeedAction(button)
     }
@@ -287,6 +302,9 @@ function handleRemoveFolderAction(button) {
         return
     }
     const folderId = wrapper.dataset.folderId
+    if (editingFeed?.folderId === folderId) {
+        editingFeed = null
+    }
     removeFolder(folderId)
     syncAppAndRefreshFeeds()
 }
@@ -299,8 +317,62 @@ function handleRemoveFeedAction(button) {
     }
     const feedId = feedRow.dataset.feedId
     const folderId = folderWrapper.dataset.folderId
+    if (isEditingFeed(folderId, feedId)) {
+        editingFeed = null
+    }
     removeFeed(folderId, feedId)
     syncAppAndRefreshFeeds()
+}
+
+function handleEditFeedAction(button) {
+    const context = resolveFeedContext(button)
+    if (!context) {
+        return
+    }
+    editingFeed = context
+    syncAppView()
+    focusEditingFeedNameInput(context.feedId)
+}
+
+function handleCancelEditFeedAction() {
+    if (!editingFeed) {
+        return
+    }
+    editingFeed = null
+    syncAppView()
+}
+
+function handleSaveFeedAction(button) {
+    const context = resolveFeedContext(button)
+    if (!context) {
+        return
+    }
+    const feedRow = button.closest('[data-feed-id]')
+    const nameInput = feedRow?.querySelector('[data-feed-field="name"]')
+    const urlInput = feedRow?.querySelector('[data-feed-field="url"]')
+    const name = String(nameInput?.value || '').trim()
+    const rawUrl = String(urlInput?.value || '').trim()
+
+    if (!name) {
+        nameInput?.focus()
+        return
+    }
+    if (!rawUrl) {
+        urlInput?.focus()
+        return
+    }
+
+    const result = updateFeed({
+        ...context,
+        name,
+        url: rawUrl,
+    })
+    if (!result.ok) {
+        return
+    }
+
+    editingFeed = null
+    appActions.handleFeedUpdated(result)
 }
 
 function handleReset() {
@@ -316,7 +388,11 @@ function handleReset() {
 
 function handleToggleSettings() {
     const isOpen = elements.settings?.classList.contains('settings--open')
-    applySettingsOpen(!isOpen)
+    if (isOpen) {
+        closeSettings()
+        return
+    }
+    applySettingsOpen(true)
 }
 
 function handleSettingsTabClick(event) {
@@ -351,6 +427,15 @@ function handleDismissStatus() {
     dismissStatus()
 }
 
+function closeSettings() {
+    const hadEditingFeed = Boolean(editingFeed)
+    editingFeed = null
+    if (hadEditingFeed) {
+        syncAppView()
+    }
+    applySettingsOpen(false)
+}
+
 function handleTriggerImportFile() {
     if (elements.importFile) {
         elements.importFile.click()
@@ -363,4 +448,35 @@ function handleImportFileChange() {
     }
     const file = elements.importFile?.files?.[0]
     elements.importFileName.textContent = file ? file.name : 'Файл не выбран'
+}
+
+function resolveFeedContext(element) {
+    const feedRow = element.closest('[data-feed-id]')
+    const folderWrapper = element.closest('[data-folder-id]')
+    if (!feedRow || !folderWrapper) {
+        return null
+    }
+    return {
+        folderId: folderWrapper.dataset.folderId,
+        feedId: feedRow.dataset.feedId,
+    }
+}
+
+function isEditingFeed(folderId, feedId) {
+    return (
+        editingFeed?.folderId === folderId && editingFeed?.feedId === feedId
+    )
+}
+
+function focusEditingFeedNameInput(feedId) {
+    const nameInput = elements.foldersList?.querySelector(
+        `[data-feed-id="${feedId}"] [data-feed-field="name"]`,
+    )
+    if (!nameInput || typeof nameInput.focus !== 'function') {
+        return
+    }
+    nameInput.focus()
+    if (typeof nameInput.select === 'function') {
+        nameInput.select()
+    }
 }

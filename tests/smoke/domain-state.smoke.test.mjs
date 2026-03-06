@@ -76,6 +76,79 @@ test('domain state mutations persist folders and feeds into storage', async () =
     assert.equal(domain.getState().folders[0].feeds.length, 0)
 })
 
+test('updateFeed updates stored feed name and normalizes url', async () => {
+    const initialState = {
+        folders: [
+            {
+                id: 'folder-1',
+                name: 'Tech',
+                feeds: [
+                    {
+                        id: 'feed-1',
+                        name: 'Hacker News',
+                        url: 'https://news.ycombinator.com/rss',
+                    },
+                    {
+                        id: 'feed-2',
+                        name: 'Lobsters',
+                        url: 'https://lobste.rs/rss',
+                    },
+                ],
+            },
+        ],
+        lastUpdated: null,
+        settings: {
+            autoMarkReadOnScroll: false,
+            useClickModelV2: false,
+        },
+        visitedItemKeys: [],
+        clickedItemKeys: [],
+        clickModel: {
+            totalClicks: 0,
+            sourceCounts: {},
+            sourceHostCounts: {},
+            hostCounts: {},
+            tokenCounts: {},
+        },
+        clickModelV2: {
+            schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
+            totalEvents: 0,
+            positiveEvents: 0,
+            negativeEvents: 0,
+            bias: 0,
+            weights: {},
+            gradSquares: {},
+            pendingImpressions: {},
+            negativeHistory: {},
+        },
+    }
+    const {domain, localStorage} = await loadFreshDomainModule(initialState)
+
+    const result = domain.updateFeed({
+        folderId: 'folder-1',
+        feedId: 'feed-1',
+        name: 'HN Frontpage',
+        url: 'hnrss.github.io/frontpage',
+    })
+
+    assert.deepEqual(result, {ok: true, urlChanged: true})
+
+    const updatedFeed = domain.getState().folders[0].feeds[0]
+    assert.equal(updatedFeed.name, 'HN Frontpage')
+    assert.equal(updatedFeed.url, 'https://hnrss.github.io/frontpage')
+
+    const untouchedFeed = domain.getState().folders[0].feeds[1]
+    assert.equal(untouchedFeed.name, 'Lobsters')
+    assert.equal(untouchedFeed.url, 'https://lobste.rs/rss')
+
+    const persistedState = getStoredState(localStorage)
+    assert.equal(persistedState.folders[0].feeds[0].name, 'HN Frontpage')
+    assert.equal(
+        persistedState.folders[0].feeds[0].url,
+        'https://hnrss.github.io/frontpage',
+    )
+})
+
 test('markItemsVisited and unmarkItemsVisited keep unique visited keys', async () => {
     const {domain} = await loadFreshDomainModule()
 

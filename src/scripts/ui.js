@@ -53,10 +53,10 @@ let activeSettingsTab = null
 let feedItemImpressionObserver = null
 const feedItemImpressionTimers = new Map()
 
-export function render(state) {
+export function render(state, {editingFeed = null} = {}) {
     renderSettings(state)
     renderFolderSelect(state)
-    renderFoldersList(state)
+    renderFoldersList(state, editingFeed)
     renderColumns(state)
 }
 
@@ -112,7 +112,7 @@ function renderFolderSelect(state) {
     })
 }
 
-function renderFoldersList(state) {
+function renderFoldersList(state, editingFeed) {
     if (!elements.foldersList) {
         return
     }
@@ -165,26 +165,12 @@ function renderFoldersList(state) {
             feeds.appendChild(emptyFeed)
         } else {
             folder.feeds.forEach((feed) => {
-                const feedRow = document.createElement('div')
-                feedRow.className = 'settings__feed'
-                feedRow.dataset.feedId = feed.id
-
-                const feedInfo = document.createElement('div')
-                const feedName = document.createElement('div')
-                feedName.className = 'settings__feed-name'
-                feedName.textContent = feed.name
-                const feedUrl = document.createElement('div')
-                feedUrl.className = 'settings__feed-url'
-                feedUrl.textContent = getHostname(feed.url)
-                feedInfo.append(feedName, feedUrl)
-
-                const feedRemove = document.createElement('button')
-                feedRemove.className = 'icon-btn icon-btn--danger'
-                feedRemove.type = 'button'
-                feedRemove.dataset.action = 'remove-feed'
-                feedRemove.textContent = 'Удалить'
-
-                feedRow.append(feedInfo, feedRemove)
+                const feedRow = createFeedRow({
+                    feed,
+                    isEditing:
+                        editingFeed?.folderId === folder.id &&
+                        editingFeed?.feedId === feed.id,
+                })
                 feeds.appendChild(feedRow)
             })
         }
@@ -192,6 +178,95 @@ function renderFoldersList(state) {
         wrapper.append(header, feeds)
         elements.foldersList.appendChild(wrapper)
     })
+}
+
+function createFeedRow({feed, isEditing}) {
+    const feedRow = document.createElement('div')
+    feedRow.className = 'settings__feed'
+    feedRow.dataset.feedId = feed.id
+
+    if (isEditing) {
+        feedRow.classList.add('settings__feed--editing')
+
+        const editor = document.createElement('div')
+        editor.className = 'settings__feed-editor'
+
+        const fields = document.createElement('div')
+        fields.className = 'settings__feed-fields'
+
+        const nameInput = document.createElement('input')
+        nameInput.className = 'settings__feed-input'
+        nameInput.type = 'text'
+        nameInput.value = feed.name
+        nameInput.required = true
+        nameInput.placeholder = 'Название подписки'
+        nameInput.setAttribute('aria-label', 'Название подписки')
+        nameInput.dataset.feedField = 'name'
+
+        const urlInput = document.createElement('input')
+        urlInput.className = 'settings__feed-input'
+        urlInput.type = 'text'
+        urlInput.value = feed.url
+        urlInput.required = true
+        urlInput.placeholder = 'URL-адрес потока (RSS)'
+        urlInput.inputMode = 'url'
+        urlInput.setAttribute('aria-label', 'URL-адрес потока')
+        urlInput.dataset.feedField = 'url'
+
+        fields.append(nameInput, urlInput)
+        editor.appendChild(fields)
+
+        const actions = document.createElement('div')
+        actions.className = 'settings__feed-actions'
+
+        const saveButton = document.createElement('button')
+        saveButton.className = 'btn settings__feed-btn settings__feed-btn--save'
+        saveButton.type = 'button'
+        saveButton.dataset.action = 'save-feed'
+        saveButton.textContent = 'Сохранить'
+
+        const cancelButton = document.createElement('button')
+        cancelButton.className = 'btn btn--ghost settings__feed-btn'
+        cancelButton.type = 'button'
+        cancelButton.dataset.action = 'cancel-edit-feed'
+        cancelButton.textContent = 'Отмена'
+
+        actions.append(saveButton, cancelButton)
+        feedRow.append(editor, actions)
+        return feedRow
+    }
+
+    const feedInfo = document.createElement('div')
+    feedInfo.className = 'settings__feed-info'
+
+    const feedName = document.createElement('div')
+    feedName.className = 'settings__feed-name'
+    feedName.textContent = feed.name
+
+    const feedUrl = document.createElement('div')
+    feedUrl.className = 'settings__feed-url'
+    feedUrl.textContent = getHostname(feed.url)
+
+    feedInfo.append(feedName, feedUrl)
+
+    const actions = document.createElement('div')
+    actions.className = 'settings__feed-actions'
+
+    const feedEdit = document.createElement('button')
+    feedEdit.className = 'icon-btn'
+    feedEdit.type = 'button'
+    feedEdit.dataset.action = 'edit-feed'
+    feedEdit.textContent = 'Изменить'
+
+    const feedRemove = document.createElement('button')
+    feedRemove.className = 'icon-btn icon-btn--danger'
+    feedRemove.type = 'button'
+    feedRemove.dataset.action = 'remove-feed'
+    feedRemove.textContent = 'Удалить'
+
+    actions.append(feedEdit, feedRemove)
+    feedRow.append(feedInfo, actions)
+    return feedRow
 }
 
 function renderColumns(state) {

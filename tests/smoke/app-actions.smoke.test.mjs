@@ -120,3 +120,29 @@ test('refreshAllFeeds restores button state after failed refresh', async () => {
     )
     assert.ok(syncEvents.some((payload) => payload.withLastUpdated === true))
 })
+
+test('handleFeedUpdated refreshes only when url changes', async () => {
+    const syncEvents = []
+    let refreshCalls = 0
+
+    const actions = createActions({
+        refreshAll: async () => {
+            refreshCalls += 1
+            return {errorsCount: 0, errors: []}
+        },
+        syncAppView: (payload) => {
+            syncEvents.push(payload || {})
+        },
+    })
+
+    await actions.handleFeedUpdated({ok: true, urlChanged: false})
+    assert.equal(refreshCalls, 0)
+    assert.equal(syncEvents.length, 1)
+    assert.deepEqual(syncEvents[0], {})
+
+    syncEvents.length = 0
+
+    await actions.handleFeedUpdated({ok: true, urlChanged: true})
+    assert.equal(refreshCalls, 1)
+    assert.ok(syncEvents.some((payload) => payload.state))
+})

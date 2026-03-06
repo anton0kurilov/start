@@ -15,6 +15,7 @@ export function createAppActions({
 
     return {
         refreshAllFeeds,
+        handleFeedUpdated,
         handleExportJson,
         handleImportJson,
     }
@@ -74,6 +75,17 @@ export function createAppActions({
                 elements.refresh.disabled = false
             }
         }
+    }
+
+    async function handleFeedUpdated(updateResult) {
+        if (!updateResult?.ok) {
+            return
+        }
+        if (updateResult.urlChanged) {
+            await refreshAllFeeds()
+            return
+        }
+        syncAppView()
     }
 
     function handleExportJson() {

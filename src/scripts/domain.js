@@ -128,6 +128,49 @@ export function addFeed({folderId, name, url}) {
     saveState(state)
 }
 
+export function updateFeed({folderId, feedId, name, url}) {
+    const folder = state.folders.find((item) => item.id === folderId)
+    if (!folder) {
+        return {ok: false, urlChanged: false}
+    }
+
+    const feed = folder.feeds.find((item) => item.id === feedId)
+    if (!feed) {
+        return {ok: false, urlChanged: false}
+    }
+
+    const nextName = String(name || '').trim()
+    const nextUrl = normalizeUrl(url)
+    if (!nextName || !nextUrl) {
+        return {ok: false, urlChanged: false}
+    }
+
+    const nameChanged = feed.name !== nextName
+    const urlChanged = feed.url !== nextUrl
+    if (!nameChanged && !urlChanged) {
+        return {ok: true, urlChanged: false}
+    }
+
+    feed.name = nextName
+    feed.url = nextUrl
+
+    if (urlChanged) {
+        feedItems.delete(feedId)
+        feedErrors.delete(feedId)
+    } else if (nameChanged && feedItems.has(feedId)) {
+        feedItems.set(
+            feedId,
+            (feedItems.get(feedId) || []).map((item) => ({
+                ...item,
+                source: nextName,
+            })),
+        )
+    }
+
+    saveState(state)
+    return {ok: true, urlChanged}
+}
+
 export function removeFolder(folderId) {
     const folder = state.folders.find((item) => item.id === folderId)
     if (folder) {

@@ -386,14 +386,69 @@
         border: 1px solid var(--colorBorder);
     }
 
+    &__feed--editing {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+        gap: 12px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    &__feed-info,
+    &__feed-editor {
+        min-width: 0;
+    }
+
+    &__feed-fields {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    &__feed-input {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--colorBorder);
+        background: var(--colorSurface);
+        color: var(--colorText);
+        font-size: 0.9rem;
+        outline: none;
+    }
+
+    &__feed-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    &__feed-btn {
+        padding: 6px 12px;
+        font-size: 0.78rem;
+        min-height: 34px;
+    }
+
+    &__feed-btn--save {
+        background: #f4f4f4;
+        border-color: transparent;
+        color: #050505;
+
+        &:hover {
+            background: #fff;
+        }
+    }
+
     &__feed-name {
         font-size: 0.9rem;
         font-weight: 600;
+        overflow-wrap: anywhere;
     }
 
     &__feed-url {
         font-size: 0.75rem;
         color: var(--colorMuted);
+        overflow-wrap: anywhere;
     }
 
     &__empty {
@@ -613,6 +668,30 @@ body.settings-is-open {
             .btn {
                 width: 100%;
             }
+        }
+
+        &__feed {
+            grid-template-columns: 1fr;
+        }
+
+        &__folder-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        &__feed-fields {
+            grid-template-columns: 1fr;
+        }
+
+        &__feed-actions {
+            justify-content: stretch;
+        }
+
+        &__feed-actions .icon-btn,
+        &__feed-btn {
+            flex: 1 1 140px;
+            justify-content: center;
+            text-align: center;
         }
     }
 }
