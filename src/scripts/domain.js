@@ -1321,7 +1321,7 @@ function createClickedUsefulness() {
         score: CLICKED_ITEM_USEFULNESS_SCORE,
         percentage: Math.round(CLICKED_ITEM_USEFULNESS_SCORE * 100),
         label: 'посетил',
-        title: 'Вы уже открывали эту новость',
+        title: 'Вы уже открывали эту публикацию',
     }
 }
 

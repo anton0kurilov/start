@@ -67,7 +67,9 @@ function renderSettings(state) {
         )
     }
     if (elements.useClickModelV2) {
-        elements.useClickModelV2.checked = Boolean(state.settings?.useClickModelV2)
+        elements.useClickModelV2.checked = Boolean(
+            state.settings?.useClickModelV2,
+        )
     }
 }
 
@@ -310,7 +312,10 @@ function renderColumns(state) {
         const items = getFolderItems(folder)
         const visibleItems = items.slice(0, MAX_ITEMS_PER_FOLDER)
         markReadButton.disabled = !visibleItems.length
-        const feedsLabel = formatCountLabel(folder.feeds.length, FEED_LABEL_FORMS)
+        const feedsLabel = formatCountLabel(
+            folder.feeds.length,
+            FEED_LABEL_FORMS,
+        )
         const meta = document.createElement('div')
         meta.className = 'columns__meta'
         meta.textContent = feedsLabel
@@ -344,7 +349,7 @@ function renderColumns(state) {
             empty.className = 'columns__empty'
             empty.textContent = isRefreshing
                 ? 'Лента обновляется...'
-                : 'Здесь пока нет новостей.'
+                : 'Здесь пока нет публикаций.'
             content.appendChild(empty)
         } else {
             visibleItems.forEach((item) => {
@@ -397,7 +402,9 @@ function observeFeedItemsForImpressions() {
     if (!elements.columns || typeof IntersectionObserver !== 'function') {
         return
     }
-    const feedItems = Array.from(elements.columns.querySelectorAll('.feed__item'))
+    const feedItems = Array.from(
+        elements.columns.querySelectorAll('.feed__item'),
+    )
     if (!feedItems.length) {
         return
     }
@@ -551,7 +558,9 @@ function createFeedItemUtility(item) {
     const utility = document.createElement('span')
     const usefulness = getFeedItemUsefulness(item)
     utility.className = 'feed__item-utility'
-    utility.classList.add(`feed__item-utility--${usefulness.tone || 'learning'}`)
+    utility.classList.add(
+        `feed__item-utility--${usefulness.tone || 'learning'}`,
+    )
     if (usefulness.tone !== 'learning') {
         utility.appendChild(createFeedItemUtilityIcon())
     }
@@ -680,7 +689,10 @@ export function updateStatus(text, tone = 'ready') {
     }
     clearStatusDismissTimer()
     elements.statusText.textContent = text
-    elements.status.classList.remove('fab__status--loading', 'fab__status--error')
+    elements.status.classList.remove(
+        'fab__status--loading',
+        'fab__status--error',
+    )
     const isError = tone === 'error'
     if (elements.statusClose) {
         elements.statusClose.disabled = !isError
@@ -705,7 +717,10 @@ export function dismissStatus() {
         return
     }
     elements.status.hidden = true
-    elements.status.classList.remove('fab__status--error', 'fab__status--loading')
+    elements.status.classList.remove(
+        'fab__status--error',
+        'fab__status--loading',
+    )
     if (elements.statusClose) {
         elements.statusClose.disabled = true
     }
