@@ -31,6 +31,9 @@
 - Keep file names lowercase. JS and SCSS partials start with `_`.
 - Use existing class naming patterns (BEM-ish).
 - Prefer nested SCSS selectors (use `&` for BEM blocks/elements/modifiers) instead of flat, repeated selectors.
+- For UI work in the existing app, preserve the established visual language: reuse existing components (`btn`, `icon-btn`, `control`) and current tokens before introducing new variants.
+- Do not restyle global/base components or shared color tokens for a local screen unless the user explicitly asks for a broader visual refresh.
+- When new UI is necessary, make it feel like the same product by matching existing spacing, borders, radii, contrast, and interaction patterns.
 
 ## Testing Guidelines
 

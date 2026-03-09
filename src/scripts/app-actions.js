@@ -115,7 +115,7 @@ export function createAppActions({
             return
         }
         const confirmed = window.confirm(
-            'Импорт заменит текущие папки и потоки. Продолжить?',
+            'Импорт заменит текущие колонки и потоки. Продолжить?',
         )
         if (!confirmed) {
             return

@@ -105,7 +105,7 @@
                 >
                     <div class="settings__sticky">
                         <div class="settings__header">
-                            <div>
+                            <div class="settings__heading">
                                 <div class="settings__brand">Настройки</div>
                             </div>
                             <button
@@ -175,16 +175,13 @@
                             aria-labelledby="settings-tab-add"
                             data-settings-panel="add"
                         >
-                            <h3 class="settings__title">
-                                Создание папок и подписок
-                            </h3>
                             <div class="settings__forms">
-                                <div class="settings__block">
+                                <div class="settings__card settings__block">
                                     <h4 class="settings__subtitle">
-                                        Новая папка
+                                        Новая колонка
                                     </h4>
                                     <form
-                                        class="form form--folder"
+                                        class="form form--folder settings__form"
                                         data-action="create-folder"
                                     >
                                         <label class="form__field">
@@ -192,24 +189,26 @@
                                                 class="control"
                                                 type="text"
                                                 name="folderName"
-                                                placeholder="Название папки"
+                                                placeholder="Название колонки"
                                                 required
                                             />
                                         </label>
-                                        <button
-                                            class="btn btn--primary"
-                                            type="submit"
-                                        >
-                                            Создать папку
-                                        </button>
+                                        <div class="settings__actions-row">
+                                            <button
+                                                class="btn btn--primary settings__submit"
+                                                type="submit"
+                                            >
+                                                Создать колонку
+                                            </button>
+                                        </div>
                                     </form>
                                 </div>
-                                <div class="settings__block">
+                                <div class="settings__card settings__block">
                                     <h4 class="settings__subtitle">
                                         Новая подписка
                                     </h4>
                                     <form
-                                        class="form form--feed"
+                                        class="form form--feed settings__form"
                                         data-action="add-feed"
                                     >
                                         <label class="form__field">
@@ -237,12 +236,14 @@
                                                 required
                                             ></select>
                                         </label>
-                                        <button
-                                            class="btn btn--primary"
-                                            type="submit"
-                                        >
-                                            Подписаться
-                                        </button>
+                                        <div class="settings__actions-row">
+                                            <button
+                                                class="btn btn--primary settings__submit"
+                                                type="submit"
+                                            >
+                                                Подписаться
+                                            </button>
+                                        </div>
                                     </form>
                                 </div>
                             </div>
@@ -255,36 +256,52 @@
                             data-settings-panel="manage"
                             hidden
                         >
-                            <h3 class="settings__title">
-                                Управление контентом
-                            </h3>
-                            <div
-                                class="settings__block settings__block--option"
-                            >
-                                <label class="settings__option">
-                                    <input
-                                        type="checkbox"
-                                        name="autoMarkReadOnScroll"
-                                    />
-                                    <span>
-                                        Отмечать как прочитанное при прокрутке
-                                    </span>
-                                </label>
+                            <div class="settings__stack">
+                                <div class="settings__card settings__block">
+                                    <h4 class="settings__subtitle">
+                                        Поведение ленты
+                                    </h4>
+                                    <div class="settings__options">
+                                        <label class="settings__option">
+                                            <input
+                                                type="checkbox"
+                                                name="autoMarkReadOnScroll"
+                                            />
+                                            <span class="settings__option-copy">
+                                                <span
+                                                    class="settings__option-title"
+                                                >
+                                                    Отмечать как прочитанное при
+                                                    прокрутке
+                                                </span>
+                                            </span>
+                                        </label>
+                                        <label class="settings__option">
+                                            <input
+                                                type="checkbox"
+                                                name="useClickModelV2"
+                                            />
+                                            <span class="settings__option-copy">
+                                                <span
+                                                    class="settings__option-title"
+                                                >
+                                                    Включить нейромодель
+                                                    прогноза клика (beta)
+                                                </span>
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="settings__card settings__block">
+                                    <h4 class="settings__subtitle">
+                                        Колонки и подписки
+                                    </h4>
+                                    <div
+                                        class="settings__list"
+                                        data-folders
+                                    ></div>
+                                </div>
                             </div>
-                            <div
-                                class="settings__block settings__block--option"
-                            >
-                                <label class="settings__option">
-                                    <input
-                                        type="checkbox"
-                                        name="useClickModelV2"
-                                    />
-                                    <span>
-                                        Включить нейромодель прогноза клика (beta)
-                                    </span>
-                                </label>
-                            </div>
-                            <div class="settings__list" data-folders></div>
                         </section>
                         <section
                             class="settings__section settings__panel-section"
@@ -294,61 +311,79 @@
                             data-settings-panel="transfer"
                             hidden
                         >
-                            <h3 class="settings__title">Импорт и экспорт</h3>
-                            <div class="settings__stack">
-                                <button
-                                    class="btn btn--primary"
-                                    type="button"
-                                    data-action="export-json"
-                                >
-                                    Экспортировать в JSON
-                                </button>
-                                <form
-                                    class="form form--import"
-                                    data-action="import-json"
-                                >
-                                    <div class="form__field form__field--file">
-                                        <span>JSON-файл для импорта</span>
-                                        <div class="form__file">
-                                            <input
-                                                class="form__file-input"
-                                                type="file"
-                                                id="importFile"
-                                                name="importFile"
-                                                data-import-file
-                                                accept="application/json,.json,text/json,text/plain"
-                                                required
-                                            />
-                                            <button
-                                                class="btn btn--ghost form__file-button"
-                                                type="button"
-                                                data-action="trigger-import-file"
+                            <div class="settings__transfer-grid">
+                                <div class="settings__card settings__block">
+                                    <h4 class="settings__subtitle">Экспорт</h4>
+                                    <div class="settings__actions-row">
+                                        <button
+                                            class="btn btn--primary settings__submit"
+                                            type="button"
+                                            data-action="export-json"
+                                        >
+                                            Экспортировать в JSON
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="settings__card settings__block">
+                                    <h4 class="settings__subtitle">Импорт</h4>
+                                    <form
+                                        class="form form--import settings__form"
+                                        data-action="import-json"
+                                    >
+                                        <div
+                                            class="form__field form__field--file"
+                                        >
+                                            <span>JSON-файл для импорта</span>
+                                            <div class="form__file">
+                                                <input
+                                                    class="form__file-input"
+                                                    type="file"
+                                                    id="importFile"
+                                                    name="importFile"
+                                                    data-import-file
+                                                    accept="application/json,.json,text/json,text/plain"
+                                                    required
+                                                />
+                                                <button
+                                                    class="btn btn--ghost form__file-button"
+                                                    type="button"
+                                                    data-action="trigger-import-file"
+                                                >
+                                                    Выбрать файл
+                                                </button>
+                                            </div>
+                                            <span
+                                                class="form__file-name"
+                                                data-import-filename
                                             >
-                                                Выбрать файл
+                                                Файл не выбран
+                                            </span>
+                                        </div>
+                                        <div class="settings__actions-row">
+                                            <button
+                                                class="btn btn--primary settings__submit"
+                                                type="submit"
+                                            >
+                                                Импортировать JSON
                                             </button>
                                         </div>
-                                        <span
-                                            class="form__file-name"
-                                            data-import-filename
-                                        >
-                                            Файл не выбран
-                                        </span>
+                                    </form>
+                                    <div class="settings__note">
+                                        Импорт заменит текущие колонки и потоки.
                                     </div>
-                                    <button
-                                        class="btn btn--primary"
-                                        type="submit"
-                                    >
-                                        Импортировать JSON
-                                    </button>
-                                </form>
-                                <div class="settings__note">
-                                    Импорт заменит текущие папки и потоки.
                                 </div>
                             </div>
                         </section>
                     </div>
                     <div class="settings__footer">
-                        <button class="btn btn--ghost" data-action="reset">
+                        <p class="settings__footer-note">
+                            Сброс удалит все колонки, потоки и локальные
+                            настройки.
+                        </p>
+                        <button
+                            class="btn btn--danger"
+                            data-action="reset"
+                        >
                             Сбросить настройки
                         </button>
                     </div>

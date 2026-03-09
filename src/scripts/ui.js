@@ -99,7 +99,7 @@ function renderFolderSelect(state) {
         setFeedFormDisabled(true)
         const option = document.createElement('option')
         option.value = ''
-        option.textContent = 'Сначала создайте папку'
+        option.textContent = 'Сначала создайте колонку'
         elements.folderSelect.appendChild(option)
         return
     }
@@ -120,7 +120,7 @@ function renderFoldersList(state, editingFeed) {
     if (!state.folders.length) {
         const empty = document.createElement('div')
         empty.className = 'settings__empty'
-        empty.textContent = 'Пока нет папок. Создайте первую.'
+        empty.textContent = 'Пока нет колонок. Создайте первую.'
         elements.foldersList.appendChild(empty)
         return
     }
@@ -283,7 +283,7 @@ function renderColumns(state) {
         const empty = document.createElement('div')
         empty.className = 'columns__empty'
         empty.textContent =
-            'Создайте первую папку и подпишитесь на поток в настройках'
+            'Создайте первую колонку и подпишитесь на поток в настройках'
         elements.columns.appendChild(empty)
         ensureFeedItemTimesUpdates()
         return
@@ -337,7 +337,7 @@ function renderColumns(state) {
         if (!folder.feeds.length) {
             const empty = document.createElement('div')
             empty.className = 'columns__empty'
-            empty.textContent = 'Добавьте потоки в эту папку.'
+            empty.textContent = 'Добавьте потоки в эту колонку.'
             content.appendChild(empty)
         } else if (!items.length) {
             const empty = document.createElement('div')

@@ -377,7 +377,7 @@ function handleSaveFeedAction(button) {
 
 function handleReset() {
     const confirmReset = window.confirm(
-        'Сбросить папки и потоки к начальному состоянию?',
+        'Сбросить колонки и потоки к начальному состоянию?',
     )
     if (!confirmReset) {
         return
