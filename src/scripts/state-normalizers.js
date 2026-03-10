@@ -1,18 +1,17 @@
 import {
-    CLICK_MODEL_V2_DIMENSION,
-    CLICK_MODEL_V2_SCHEMA_VERSION,
     DEFAULT_SETTINGS,
     MAX_CLICKED_ITEMS,
-    MAX_CLICK_MODEL_HOSTS,
-    MAX_CLICK_MODEL_SOURCE_HOSTS,
-    MAX_CLICK_MODEL_SOURCES,
-    MAX_CLICK_MODEL_TOKENS,
-    MAX_CLICK_MODEL_V2_FEATURES_PER_ITEM,
-    MAX_CLICK_MODEL_V2_NEGATIVE_HISTORY,
-    MAX_CLICK_MODEL_V2_PENDING_IMPRESSIONS,
-    MAX_CLICK_MODEL_V2_WEIGHTS,
+    MAX_MODEL_EVENTS,
+    MAX_MODEL_FEATURES,
     MAX_VISITED_ITEMS,
+    MODEL_STATE_SCHEMA_VERSION,
+    MODEL_VERSION,
 } from './constants.js'
+import {
+    createDefaultCalibrationArtifacts,
+    createDefaultModelArtifacts,
+    createDefaultModelState,
+} from './model-state.js'
 import {createId, normalizeUrl} from './utils.js'
 
 export function createDefaultState() {
@@ -24,8 +23,7 @@ export function createDefaultState() {
         },
         visitedItemKeys: [],
         clickedItemKeys: [],
-        clickModel: createDefaultClickModel(),
-        clickModelV2: createDefaultClickModelV2(),
+        modelState: createDefaultModelState(),
     }
 }
 
@@ -40,8 +38,7 @@ export function normalizeStatePayload(rawState) {
         settings: normalizeSettings(rawState.settings),
         visitedItemKeys: normalizeVisitedItemKeys(rawState.visitedItemKeys),
         clickedItemKeys: normalizeClickedItemKeys(rawState.clickedItemKeys),
-        clickModel: normalizeClickModel(rawState.clickModel),
-        clickModelV2: normalizeClickModelV2(rawState.clickModelV2),
+        modelState: normalizeModelState(rawState.modelState),
     }
 }
 
@@ -54,7 +51,6 @@ export function normalizeSettings(rawSettings) {
     return {
         ...DEFAULT_SETTINGS,
         autoMarkReadOnScroll: Boolean(rawSettings.autoMarkReadOnScroll),
-        useClickModelV2: Boolean(rawSettings.useClickModelV2),
     }
 }
 
@@ -79,6 +75,7 @@ export function normalizeVisitedItemKeys(rawKeys, maxItems = MAX_VISITED_ITEMS) 
             : MAX_VISITED_ITEMS
     const seen = new Set()
     const normalized = []
+
     rawKeys.forEach((itemKey) => {
         const nextKey = normalizeItemKey(itemKey)
         if (!nextKey || seen.has(nextKey)) {
@@ -88,100 +85,31 @@ export function normalizeVisitedItemKeys(rawKeys, maxItems = MAX_VISITED_ITEMS) 
         normalized.push(nextKey)
     })
 
-    if (normalized.length <= limit) {
-        return normalized
-    }
-
-    return normalized.slice(-limit)
+    return normalized.length <= limit ? normalized : normalized.slice(-limit)
 }
 
 export function normalizeClickedItemKeys(rawKeys) {
     return normalizeVisitedItemKeys(rawKeys, MAX_CLICKED_ITEMS)
 }
 
-export function createDefaultClickModel() {
-    return {
-        totalClicks: 0,
-        sourceCounts: {},
-        sourceHostCounts: {},
-        hostCounts: {},
-        tokenCounts: {},
+export function normalizeModelState(rawModelState) {
+    if (!rawModelState || typeof rawModelState !== 'object') {
+        return createDefaultModelState()
     }
-}
 
-export function createDefaultClickModelV2() {
-    return {
-        schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
-        totalEvents: 0,
-        positiveEvents: 0,
-        negativeEvents: 0,
-        bias: 0,
-        weights: {},
-        gradSquares: {},
-        pendingImpressions: {},
-        negativeHistory: {},
-    }
-}
-
-export function normalizeClickModel(rawClickModel) {
-    if (!rawClickModel || typeof rawClickModel !== 'object') {
-        return createDefaultClickModel()
-    }
-    return {
-        totalClicks: normalizeTotalClicks(rawClickModel.totalClicks),
-        sourceCounts: normalizeCountMap(
-            rawClickModel.sourceCounts,
-            MAX_CLICK_MODEL_SOURCES,
-        ),
-        sourceHostCounts: normalizeCountMap(
-            rawClickModel.sourceHostCounts,
-            MAX_CLICK_MODEL_SOURCE_HOSTS,
-        ),
-        hostCounts: normalizeCountMap(
-            rawClickModel.hostCounts,
-            MAX_CLICK_MODEL_HOSTS,
-        ),
-        tokenCounts: normalizeCountMap(
-            rawClickModel.tokenCounts,
-            MAX_CLICK_MODEL_TOKENS,
-        ),
-    }
-}
-
-export function normalizeClickModelV2(rawClickModelV2) {
-    if (!rawClickModelV2 || typeof rawClickModelV2 !== 'object') {
-        return createDefaultClickModelV2()
-    }
-    const schemaVersion = Number(rawClickModelV2.schemaVersion || 1)
-    if (schemaVersion !== CLICK_MODEL_V2_SCHEMA_VERSION) {
-        return createDefaultClickModelV2()
-    }
-    const positiveEvents = normalizeNonNegativeInteger(rawClickModelV2.positiveEvents)
-    const negativeEvents = normalizeNonNegativeInteger(rawClickModelV2.negativeEvents)
-    const totalEvents = Math.max(
-        normalizeNonNegativeInteger(rawClickModelV2.totalEvents),
-        positiveEvents + negativeEvents,
-    )
+    const schemaVersion = Number(rawModelState.schemaVersion || 0)
+    const interactionLog =
+        schemaVersion === MODEL_STATE_SCHEMA_VERSION
+            ? normalizeInteractionLog(rawModelState.interactionLog)
+            : []
 
     return {
-        schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
-        totalEvents,
-        positiveEvents,
-        negativeEvents,
-        bias: normalizeBoundedFloat(rawClickModelV2.bias, -6, 6, 0),
-        weights: normalizeSparseWeightMap(
-            rawClickModelV2.weights,
-            MAX_CLICK_MODEL_V2_WEIGHTS,
-        ),
-        gradSquares: normalizeSparseAccumulatorMap(
-            rawClickModelV2.gradSquares,
-            MAX_CLICK_MODEL_V2_WEIGHTS,
-        ),
-        pendingImpressions: normalizePendingImpressionsMap(
-            rawClickModelV2.pendingImpressions,
-        ),
-        negativeHistory: normalizeNegativeHistoryMap(
-            rawClickModelV2.negativeHistory,
+        schemaVersion: MODEL_STATE_SCHEMA_VERSION,
+        modelVersion: MODEL_VERSION,
+        interactionLog,
+        modelArtifacts: normalizeModelArtifacts(rawModelState.modelArtifacts),
+        calibrationArtifacts: normalizeCalibrationArtifacts(
+            rawModelState.calibrationArtifacts,
         ),
     }
 }
@@ -238,6 +166,203 @@ function normalizeFeed(rawFeed, usedFeedIds) {
     }
 }
 
+function normalizeInteractionLog(rawInteractionLog) {
+    if (!Array.isArray(rawInteractionLog)) {
+        return []
+    }
+    const normalizedEntries = []
+    rawInteractionLog.forEach((rawEntry) => {
+        const normalizedEntry = normalizeInteractionEvent(rawEntry)
+        if (!normalizedEntry) {
+            return
+        }
+        normalizedEntries.push(normalizedEntry)
+    })
+
+    normalizedEntries.sort((left, right) => {
+        const recordedAtDelta = left.recordedAt - right.recordedAt
+        if (recordedAtDelta !== 0) {
+            return recordedAtDelta
+        }
+        const itemKeyDelta = left.itemKey.localeCompare(right.itemKey)
+        if (itemKeyDelta !== 0) {
+            return itemKeyDelta
+        }
+        return left.type.localeCompare(right.type)
+    })
+
+    return normalizedEntries.slice(-MAX_MODEL_EVENTS)
+}
+
+function normalizeInteractionEvent(rawEntry) {
+    if (!rawEntry || typeof rawEntry !== 'object') {
+        return null
+    }
+    const type = normalizeInteractionType(rawEntry.type)
+    const itemKey = normalizeItemKey(rawEntry.itemKey)
+    const recordedAt = normalizeNonNegativeInteger(rawEntry.recordedAt)
+    const snapshot = normalizeItemSnapshot(rawEntry.snapshot)
+    if (!type || !itemKey || !recordedAt) {
+        return null
+    }
+    return {
+        type,
+        itemKey,
+        recordedAt,
+        snapshot,
+    }
+}
+
+function normalizeInteractionType(value) {
+    const normalizedType = normalizeText(value)
+    return ['impression', 'click', 'dismiss'].includes(normalizedType)
+        ? normalizedType
+        : ''
+}
+
+function normalizeItemSnapshot(rawSnapshot) {
+    if (!rawSnapshot || typeof rawSnapshot !== 'object') {
+        return {
+            source: '',
+            feedId: '',
+            title: '',
+            link: '',
+            publishedAt: null,
+        }
+    }
+    return {
+        source: normalizeText(rawSnapshot.source),
+        feedId: normalizeText(rawSnapshot.feedId),
+        title: normalizeText(rawSnapshot.title),
+        link: normalizeText(rawSnapshot.link),
+        publishedAt: normalizeIsoDate(rawSnapshot.publishedAt),
+    }
+}
+
+function normalizeModelArtifacts(rawArtifacts) {
+    const defaults = createDefaultModelArtifacts()
+    if (!rawArtifacts || typeof rawArtifacts !== 'object') {
+        return defaults
+    }
+    return {
+        trainedAt: normalizeIsoDate(rawArtifacts.trainedAt),
+        totalLabeledSamples: normalizeNonNegativeInteger(
+            rawArtifacts.totalLabeledSamples,
+        ),
+        trainingSize: normalizeNonNegativeInteger(rawArtifacts.trainingSize),
+        holdoutSize: normalizeNonNegativeInteger(rawArtifacts.holdoutSize),
+        positiveSamples: normalizeNonNegativeInteger(rawArtifacts.positiveSamples),
+        explicitNegativeSamples: normalizeNonNegativeInteger(
+            rawArtifacts.explicitNegativeSamples,
+        ),
+        weakNegativeSamples: normalizeNonNegativeInteger(
+            rawArtifacts.weakNegativeSamples,
+        ),
+        baselineCtr: normalizeBoundedFloat(rawArtifacts.baselineCtr, 0, 1, null),
+        bias: normalizeBoundedFloat(rawArtifacts.bias, -6, 6, 0),
+        weights: normalizeWeightMap(rawArtifacts.weights),
+        topFeatures: normalizeTopFeatures(rawArtifacts.topFeatures),
+    }
+}
+
+function normalizeCalibrationArtifacts(rawArtifacts) {
+    const defaults = createDefaultCalibrationArtifacts()
+    if (!rawArtifacts || typeof rawArtifacts !== 'object') {
+        return defaults
+    }
+    return {
+        ready: Boolean(rawArtifacts.ready),
+        trainedAt: normalizeIsoDate(rawArtifacts.trainedAt),
+        slope: normalizeBoundedFloat(rawArtifacts.slope, -4, 4, 1),
+        intercept: normalizeBoundedFloat(rawArtifacts.intercept, -8, 8, 0),
+        holdoutSize: normalizeNonNegativeInteger(rawArtifacts.holdoutSize),
+        metrics: normalizeCalibrationMetrics(rawArtifacts.metrics),
+    }
+}
+
+function normalizeCalibrationMetrics(rawMetrics) {
+    const defaults = createDefaultCalibrationArtifacts().metrics
+    if (!rawMetrics || typeof rawMetrics !== 'object') {
+        return defaults
+    }
+    return {
+        prAuc: normalizeBoundedFloat(rawMetrics.prAuc, 0, 1, null),
+        logLoss: normalizeBoundedFloat(rawMetrics.logLoss, 0, 10, null),
+        brier: normalizeBoundedFloat(rawMetrics.brier, 0, 1, null),
+        ece: normalizeBoundedFloat(rawMetrics.ece, 0, 1, null),
+        baselineCtr: normalizeBoundedFloat(rawMetrics.baselineCtr, 0, 1, null),
+        bucketCtrs: normalizeBucketCtrs(rawMetrics.bucketCtrs),
+    }
+}
+
+function normalizeBucketCtrs(rawBucketCtrs) {
+    if (!Array.isArray(rawBucketCtrs)) {
+        return []
+    }
+    return rawBucketCtrs
+        .map((bucket) => {
+            if (!bucket || typeof bucket !== 'object') {
+                return null
+            }
+            return {
+                bucket: normalizeNonNegativeInteger(bucket.bucket),
+                size: normalizeNonNegativeInteger(bucket.size),
+                positiveRate: normalizeBoundedFloat(
+                    bucket.positiveRate,
+                    0,
+                    1,
+                    null,
+                ),
+            }
+        })
+        .filter((bucket) => bucket && bucket.bucket > 0 && bucket.size > 0)
+}
+
+function normalizeWeightMap(rawWeights) {
+    if (!rawWeights || typeof rawWeights !== 'object') {
+        return {}
+    }
+    const normalizedEntries = Object.entries(rawWeights)
+        .map(([rawKey, rawValue]) => [
+            normalizeText(rawKey),
+            normalizeBoundedFloat(rawValue, -6, 6, 0),
+        ])
+        .filter(([featureKey, weight]) => featureKey && weight)
+
+    normalizedEntries.sort((left, right) => {
+        const absoluteDelta = Math.abs(right[1]) - Math.abs(left[1])
+        if (absoluteDelta !== 0) {
+            return absoluteDelta
+        }
+        return left[0].localeCompare(right[0])
+    })
+
+    return Object.fromEntries(normalizedEntries.slice(0, MAX_MODEL_FEATURES))
+}
+
+function normalizeTopFeatures(rawTopFeatures) {
+    if (!Array.isArray(rawTopFeatures)) {
+        return []
+    }
+    return rawTopFeatures
+        .map((feature) => {
+            if (!feature || typeof feature !== 'object') {
+                return null
+            }
+            const featureKey = normalizeText(feature.featureKey)
+            const weight = normalizeBoundedFloat(feature.weight, -6, 6, 0)
+            if (!featureKey || !weight) {
+                return null
+            }
+            return {
+                featureKey,
+                weight,
+            }
+        })
+        .filter(Boolean)
+        .slice(0, 12)
+}
+
 function ensureUniqueId(rawId, usedIds) {
     let nextId = normalizeText(rawId) || createId()
     while (usedIds.has(nextId)) {
@@ -254,49 +379,6 @@ function normalizeText(value) {
     return value.trim()
 }
 
-function normalizeTotalClicks(value) {
-    const parsedValue = Number(value)
-    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
-        return 0
-    }
-    return Math.round(parsedValue)
-}
-
-function normalizeCountMap(rawCounts, maxEntries) {
-    if (!rawCounts || typeof rawCounts !== 'object') {
-        return {}
-    }
-    const limit = Number.isInteger(maxEntries) && maxEntries > 0 ? maxEntries : 0
-    if (!limit) {
-        return {}
-    }
-    const aggregate = {}
-    Object.entries(rawCounts).forEach(([rawKey, rawValue]) => {
-        const key = normalizeCounterKey(rawKey)
-        const value = normalizeCounterValue(rawValue)
-        if (!key || !value) {
-            return
-        }
-        aggregate[key] = (aggregate[key] || 0) + value
-    })
-    const sortedEntries = Object.entries(aggregate).sort((left, right) => {
-        return right[1] - left[1]
-    })
-    return Object.fromEntries(sortedEntries.slice(0, limit))
-}
-
-function normalizeCounterKey(value) {
-    return String(value || '').trim().toLowerCase()
-}
-
-function normalizeCounterValue(value) {
-    const parsedValue = Number(value)
-    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
-        return 0
-    }
-    return Math.round(parsedValue)
-}
-
 function normalizeNonNegativeInteger(value) {
     const parsedValue = Number(value)
     if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
@@ -306,132 +388,12 @@ function normalizeNonNegativeInteger(value) {
 }
 
 function normalizeBoundedFloat(value, min, max, fallback = 0) {
+    if (value === null && fallback === null) {
+        return null
+    }
     const parsedValue = Number(value)
     if (!Number.isFinite(parsedValue)) {
         return fallback
     }
     return Math.min(Math.max(parsedValue, min), max)
-}
-
-function normalizeSparseWeightMap(rawMap, maxEntries) {
-    if (!rawMap || typeof rawMap !== 'object') {
-        return {}
-    }
-    const aggregate = {}
-    Object.entries(rawMap).forEach(([rawIndex, rawValue]) => {
-        const index = normalizeSparseIndex(rawIndex)
-        const value = normalizeBoundedFloat(rawValue, -6, 6, 0)
-        if (index === null || !value) {
-            return
-        }
-        aggregate[index] = (aggregate[index] || 0) + value
-    })
-    const sortedEntries = Object.entries(aggregate).sort((left, right) => {
-        return Math.abs(right[1]) - Math.abs(left[1])
-    })
-    return Object.fromEntries(sortedEntries.slice(0, maxEntries))
-}
-
-function normalizeSparseAccumulatorMap(rawMap, maxEntries) {
-    if (!rawMap || typeof rawMap !== 'object') {
-        return {}
-    }
-    const aggregate = {}
-    Object.entries(rawMap).forEach(([rawIndex, rawValue]) => {
-        const index = normalizeSparseIndex(rawIndex)
-        const value = normalizeBoundedFloat(rawValue, 0, 100000, 0)
-        if (index === null || !value) {
-            return
-        }
-        aggregate[index] = (aggregate[index] || 0) + value
-    })
-    const sortedEntries = Object.entries(aggregate).sort((left, right) => {
-        return right[1] - left[1]
-    })
-    return Object.fromEntries(sortedEntries.slice(0, maxEntries))
-}
-
-function normalizePendingImpressionsMap(rawPendingImpressions) {
-    if (!rawPendingImpressions || typeof rawPendingImpressions !== 'object') {
-        return {}
-    }
-    const normalizedEntries = []
-    Object.entries(rawPendingImpressions).forEach(([rawItemKey, rawValue]) => {
-        const itemKey = normalizeItemKey(rawItemKey)
-        if (!itemKey || !rawValue || typeof rawValue !== 'object') {
-            return
-        }
-        const createdAt = normalizeNonNegativeInteger(rawValue.createdAt)
-        if (!createdAt) {
-            return
-        }
-        normalizedEntries.push([
-            itemKey,
-            {
-                createdAt,
-                features: normalizeSparseFeatures(rawValue.features),
-            },
-        ])
-    })
-    normalizedEntries.sort((left, right) => {
-        return right[1].createdAt - left[1].createdAt
-    })
-    return Object.fromEntries(
-        normalizedEntries.slice(0, MAX_CLICK_MODEL_V2_PENDING_IMPRESSIONS),
-    )
-}
-
-function normalizeNegativeHistoryMap(rawNegativeHistory) {
-    if (!rawNegativeHistory || typeof rawNegativeHistory !== 'object') {
-        return {}
-    }
-    const normalizedEntries = []
-    Object.entries(rawNegativeHistory).forEach(([rawItemKey, rawTimestamp]) => {
-        const itemKey = normalizeItemKey(rawItemKey)
-        const timestamp = normalizeNonNegativeInteger(rawTimestamp)
-        if (!itemKey || !timestamp) {
-            return
-        }
-        normalizedEntries.push([itemKey, timestamp])
-    })
-    normalizedEntries.sort((left, right) => right[1] - left[1])
-    return Object.fromEntries(
-        normalizedEntries.slice(0, MAX_CLICK_MODEL_V2_NEGATIVE_HISTORY),
-    )
-}
-
-function normalizeSparseFeatures(rawFeatures) {
-    if (!Array.isArray(rawFeatures)) {
-        return []
-    }
-    const aggregate = {}
-    rawFeatures.forEach((feature) => {
-        const source = Array.isArray(feature) ? feature : null
-        const rawIndex = source ? source[0] : feature?.index
-        const rawValue = source ? source[1] : feature?.value
-        const index = normalizeSparseIndex(rawIndex)
-        const value = normalizeBoundedFloat(rawValue, 0, 4, 0)
-        if (index === null || !value) {
-            return
-        }
-        aggregate[index] = (aggregate[index] || 0) + value
-    })
-    const sortedEntries = Object.entries(aggregate).sort((left, right) => {
-        return right[1] - left[1]
-    })
-    return sortedEntries
-        .slice(0, MAX_CLICK_MODEL_V2_FEATURES_PER_ITEM)
-        .map(([index, value]) => [Number(index), value])
-}
-
-function normalizeSparseIndex(value) {
-    const parsedValue = Number(value)
-    if (
-        !Number.isInteger(parsedValue) ||
-        parsedValue < 0 ||
-        parsedValue >= CLICK_MODEL_V2_DIMENSION
-    ) {
-        return null
-    }
-    return parsedValue
 }

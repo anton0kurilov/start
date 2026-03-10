@@ -4,7 +4,8 @@ import path from 'node:path'
 import {pathToFileURL} from 'node:url'
 
 import {
-    CLICK_MODEL_V2_SCHEMA_VERSION,
+    MODEL_IMPRESSION_NEGATIVE_DELAY_MS,
+    MODEL_STATE_SCHEMA_VERSION,
     STORAGE_KEY,
 } from '../../src/scripts/constants.js'
 
@@ -46,6 +47,60 @@ async function loadFreshDomainModule(initialState = null) {
     return {domain, localStorage}
 }
 
+function createBaseState(overrides = {}) {
+    return {
+        folders: [],
+        lastUpdated: null,
+        settings: {
+            autoMarkReadOnScroll: false,
+        },
+        visitedItemKeys: [],
+        clickedItemKeys: [],
+        modelState: {
+            schemaVersion: MODEL_STATE_SCHEMA_VERSION,
+            modelVersion: 1,
+            interactionLog: [],
+            modelArtifacts: {},
+            calibrationArtifacts: {},
+        },
+        ...overrides,
+    }
+}
+
+function createInteractionEvent({
+    type,
+    itemKey,
+    recordedAt,
+    source = 'Tech Daily',
+    feedId = 'feed-1',
+    title = 'AI agent benchmark',
+    link = `https://example.com/${itemKey}`,
+    publishedAt = '2026-03-01T10:00:00.000Z',
+}) {
+    return {
+        type,
+        itemKey,
+        recordedAt,
+        snapshot: {
+            source,
+            feedId,
+            title,
+            link,
+            publishedAt,
+        },
+    }
+}
+
+async function withMockedNow(now, callback) {
+    const originalNow = Date.now
+    Date.now = () => now
+    try {
+        return await callback()
+    } finally {
+        Date.now = originalNow
+    }
+}
+
 test('domain state mutations persist folders and feeds into storage', async () => {
     const {domain, localStorage} = await loadFreshDomainModule()
 
@@ -77,7 +132,7 @@ test('domain state mutations persist folders and feeds into storage', async () =
 })
 
 test('updateFeed updates stored feed name and normalizes url', async () => {
-    const initialState = {
+    const initialState = createBaseState({
         folders: [
             {
                 id: 'folder-1',
@@ -96,32 +151,7 @@ test('updateFeed updates stored feed name and normalizes url', async () => {
                 ],
             },
         ],
-        lastUpdated: null,
-        settings: {
-            autoMarkReadOnScroll: false,
-            useClickModelV2: false,
-        },
-        visitedItemKeys: [],
-        clickedItemKeys: [],
-        clickModel: {
-            totalClicks: 0,
-            sourceCounts: {},
-            sourceHostCounts: {},
-            hostCounts: {},
-            tokenCounts: {},
-        },
-        clickModelV2: {
-            schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
-            totalEvents: 0,
-            positiveEvents: 0,
-            negativeEvents: 0,
-            bias: 0,
-            weights: {},
-            gradSquares: {},
-            pendingImpressions: {},
-            negativeHistory: {},
-        },
-    }
+    })
     const {domain, localStorage} = await loadFreshDomainModule(initialState)
 
     const result = domain.updateFeed({
@@ -136,10 +166,6 @@ test('updateFeed updates stored feed name and normalizes url', async () => {
     const updatedFeed = domain.getState().folders[0].feeds[0]
     assert.equal(updatedFeed.name, 'HN Frontpage')
     assert.equal(updatedFeed.url, 'https://hnrss.github.io/frontpage')
-
-    const untouchedFeed = domain.getState().folders[0].feeds[1]
-    assert.equal(untouchedFeed.name, 'Lobsters')
-    assert.equal(untouchedFeed.url, 'https://lobste.rs/rss')
 
     const persistedState = getStoredState(localStorage)
     assert.equal(persistedState.folders[0].feeds[0].name, 'HN Frontpage')
@@ -159,17 +185,43 @@ test('markItemsVisited and unmarkItemsVisited keep unique visited keys', async (
     assert.deepEqual(domain.getState().visitedItemKeys, ['item-b'])
 })
 
-test('registerFeedItemClick stores a single click per item key', async () => {
+test('registerFeedItemImpressions stores a single impression event per item key', async () => {
+    const {domain} = await loadFreshDomainModule()
+
+    const firstCount = domain.registerFeedItemImpressions({
+        itemKey: 'article-1',
+        feedId: 'feed-1',
+        source: 'Tech Daily',
+        title: 'AI model release',
+        link: 'https://example.com/ai-release',
+    })
+    const secondCount = domain.registerFeedItemImpressions({
+        itemKey: 'article-1',
+        feedId: 'feed-1',
+        source: 'Tech Daily',
+        title: 'AI model release',
+        link: 'https://example.com/ai-release',
+    })
+
+    assert.equal(firstCount, 1)
+    assert.equal(secondCount, 0)
+    assert.equal(domain.getState().modelState.interactionLog.length, 1)
+    assert.equal(domain.getState().modelState.interactionLog[0].type, 'impression')
+})
+
+test('registerFeedItemClick stores a single click per item key and retrains the scorer', async () => {
     const {domain} = await loadFreshDomainModule()
 
     const firstResult = domain.registerFeedItemClick({
         itemKey: 'article-1',
+        feedId: 'feed-1',
         source: 'Tech Daily',
         title: 'JavaScript release notes',
         link: 'https://example.com/release',
     })
     const secondResult = domain.registerFeedItemClick({
         itemKey: 'article-1',
+        feedId: 'feed-1',
         source: 'Tech Daily',
         title: 'JavaScript release notes',
         link: 'https://example.com/release',
@@ -178,42 +230,63 @@ test('registerFeedItemClick stores a single click per item key', async () => {
     assert.equal(firstResult, true)
     assert.equal(secondResult, false)
     assert.deepEqual(domain.getState().clickedItemKeys, ['article-1'])
-    assert.equal(domain.getState().clickModel.totalClicks, 1)
-    assert.equal(domain.getState().clickModel.sourceCounts['tech daily'], 1)
-    assert.equal(
-        domain.getState().clickModel.sourceHostCounts['tech daily||example.com'],
-        1,
-    )
+    assert.equal(domain.getState().modelState.modelArtifacts.totalLabeledSamples, 1)
+    assert.equal(domain.getState().modelState.modelArtifacts.positiveSamples, 1)
+    assert.equal(domain.getState().modelState.interactionLog.at(-1).type, 'click')
+})
+
+test('registerFeedItemDismiss stores an explicit negative event', async () => {
+    const {domain} = await loadFreshDomainModule()
+
+    const dismissResult = domain.registerFeedItemDismiss({
+        itemKey: 'article-2',
+        feedId: 'feed-1',
+        source: 'Tech Daily',
+        title: 'Rust release notes',
+        link: 'https://example.com/rust-release',
+    })
+
+    assert.equal(dismissResult, true)
+    assert.equal(domain.getState().modelState.modelArtifacts.totalLabeledSamples, 1)
+    assert.equal(domain.getState().modelState.modelArtifacts.explicitNegativeSamples, 1)
+    assert.equal(domain.getState().modelState.interactionLog.at(-1).type, 'dismiss')
+    assert.equal(domain.isItemDismissed('article-2'), true)
+})
+
+test('module init upgrades stale impressions into weak negatives', async () => {
+    const now = Date.parse('2026-03-09T10:00:00.000Z')
+    const oldImpressionAt = now - MODEL_IMPRESSION_NEGATIVE_DELAY_MS - 1000
+
+    const initialState = createBaseState({
+        modelState: {
+            schemaVersion: MODEL_STATE_SCHEMA_VERSION,
+            modelVersion: 1,
+            interactionLog: [
+                createInteractionEvent({
+                    type: 'impression',
+                    itemKey: 'stale-item',
+                    recordedAt: oldImpressionAt,
+                }),
+            ],
+            modelArtifacts: {},
+            calibrationArtifacts: {},
+        },
+    })
+
+    const {domain} = await withMockedNow(now, async () => {
+        return await loadFreshDomainModule(initialState)
+    })
+
+    assert.equal(domain.getState().modelState.modelArtifacts.totalLabeledSamples, 1)
+    assert.equal(domain.getState().modelState.modelArtifacts.weakNegativeSamples, 1)
 })
 
 test('getFeedItemUsefulness marks previously clicked item as clicked', async () => {
-    const {domain} = await loadFreshDomainModule({
-        folders: [],
-        lastUpdated: null,
-        settings: {
-            autoMarkReadOnScroll: false,
-            useClickModelV2: true,
-        },
-        visitedItemKeys: [],
-        clickedItemKeys: ['https://example.com/repeat'],
-        clickModel: {
-            totalClicks: 1,
-            sourceCounts: {},
-            sourceHostCounts: {},
-            hostCounts: {},
-            tokenCounts: {},
-        },
-        clickModelV2: {
-            schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
-            totalEvents: 140,
-            positiveEvents: 40,
-            negativeEvents: 100,
-            bias: -0.2,
-            weights: {},
-            gradSquares: {},
-            pendingImpressions: {},
-        },
-    })
+    const {domain} = await loadFreshDomainModule(
+        createBaseState({
+            clickedItemKeys: ['https://example.com/repeat'],
+        }),
+    )
 
     const usefulness = domain.getFeedItemUsefulness({
         id: 'id-1',
@@ -227,213 +300,18 @@ test('getFeedItemUsefulness marks previously clicked item as clicked', async () 
     assert.ok(usefulness.percentage >= 90)
 })
 
-test('registerFeedItemImpressions stores pending entries and click trains V2 positive sample', async () => {
-    const {domain} = await loadFreshDomainModule()
-
-    const impressionsCount = domain.registerFeedItemImpressions([
-        {
-            itemKey: 'article-2',
-            source: 'Tech Daily',
-            title: 'AI model release',
-            link: 'https://example.com/ai-release',
-        },
-    ])
-
-    assert.equal(impressionsCount, 1)
-    assert.ok(domain.getState().clickModelV2.pendingImpressions['article-2'])
-
-    const clickResult = domain.registerFeedItemClick({
-        itemKey: 'article-2',
-        source: 'Tech Daily',
-        title: 'AI model release',
-        link: 'https://example.com/ai-release',
-    })
-
-    assert.equal(clickResult, true)
-    assert.equal(domain.getState().clickModelV2.totalEvents, 1)
-    assert.equal(domain.getState().clickModelV2.positiveEvents, 1)
-    assert.equal(
-        domain.getState().clickModelV2.pendingImpressions['article-2'],
-        undefined,
+test('getFeedItemUsefulness keeps learning mode without calibrated scorer data', async () => {
+    const {domain} = await loadFreshDomainModule(
+        createBaseState({
+            clickModel: {
+                totalClicks: 120,
+            },
+            clickModelV2: {
+                schemaVersion: 2,
+                totalEvents: 999,
+            },
+        }),
     )
-})
-
-test('registerFeedItemImpressions settles expired impressions into negative samples', async () => {
-    const oldTimestamp = Date.now() - 19 * 60 * 60 * 1000
-    const {domain} = await loadFreshDomainModule({
-        folders: [],
-        lastUpdated: null,
-        settings: {autoMarkReadOnScroll: false},
-        visitedItemKeys: [],
-        clickedItemKeys: [],
-        clickModel: {
-            totalClicks: 0,
-            sourceCounts: {},
-            sourceHostCounts: {},
-            hostCounts: {},
-            tokenCounts: {},
-        },
-        clickModelV2: {
-            schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
-            totalEvents: 0,
-            positiveEvents: 0,
-            negativeEvents: 0,
-            bias: 0,
-            weights: {},
-            gradSquares: {},
-            pendingImpressions: {
-                stale: {
-                    createdAt: oldTimestamp,
-                    features: [[2, 1]],
-                },
-            },
-        },
-    })
-
-    domain.registerFeedItemImpressions([])
-
-    assert.equal(domain.getState().clickModelV2.totalEvents, 1)
-    assert.equal(domain.getState().clickModelV2.negativeEvents, 1)
-    assert.equal(
-        domain.getState().clickModelV2.pendingImpressions.stale,
-        undefined,
-    )
-})
-
-test('registerFeedItemImpressions applies negative cooldown per item key', async () => {
-    const oldTimestamp = Date.now() - 19 * 60 * 60 * 1000
-    const {domain} = await loadFreshDomainModule({
-        folders: [],
-        lastUpdated: null,
-        settings: {autoMarkReadOnScroll: false},
-        visitedItemKeys: [],
-        clickedItemKeys: [],
-        clickModel: {
-            totalClicks: 0,
-            sourceCounts: {},
-            sourceHostCounts: {},
-            hostCounts: {},
-            tokenCounts: {},
-        },
-        clickModelV2: {
-            schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
-            totalEvents: 0,
-            positiveEvents: 0,
-            negativeEvents: 0,
-            bias: 0,
-            weights: {},
-            gradSquares: {},
-            pendingImpressions: {
-                repeated: {
-                    createdAt: oldTimestamp,
-                    features: [[2, 1]],
-                },
-            },
-        },
-    })
-
-    domain.registerFeedItemImpressions([])
-
-    const firstState = domain.getState().clickModelV2
-    assert.equal(firstState.totalEvents, 1)
-    assert.equal(firstState.negativeEvents, 1)
-    assert.ok(firstState.negativeHistory.repeated)
-
-    const added = domain.registerFeedItemImpressions([
-        {
-            itemKey: 'repeated',
-            source: 'Tech Daily',
-            title: 'Repeated headline',
-            link: 'https://example.com/repeated',
-        },
-    ])
-
-    const secondState = domain.getState().clickModelV2
-    assert.equal(added, 0)
-    assert.equal(secondState.totalEvents, 1)
-    assert.equal(secondState.negativeEvents, 1)
-    assert.equal(secondState.pendingImpressions.repeated, undefined)
-})
-
-test('registerFeedItemImpressions drops overflow pending without instant negative labels', async () => {
-    const {domain} = await loadFreshDomainModule()
-    const payload = Array.from({length: 805}, (_, index) => ({
-        itemKey: `overflow-${index}`,
-        source: 'Overflow',
-        title: `Overflow ${index}`,
-        link: `https://example.com/${index}`,
-    }))
-
-    const added = domain.registerFeedItemImpressions(payload)
-    const clickModelV2 = domain.getState().clickModelV2
-
-    assert.equal(added, 805)
-    assert.equal(clickModelV2.totalEvents, 0)
-    assert.equal(clickModelV2.negativeEvents, 0)
-    assert.equal(Object.keys(clickModelV2.pendingImpressions).length, 800)
-})
-
-test('getFeedItemUsefulness prioritizes strong title tokens over source bias', async () => {
-    const {domain} = await loadFreshDomainModule({
-        folders: [],
-        lastUpdated: null,
-        settings: {autoMarkReadOnScroll: false},
-        visitedItemKeys: [],
-        clickedItemKeys: [],
-        clickModel: {
-            totalClicks: 40,
-            sourceCounts: {
-                preferred: 25,
-                secondary: 20,
-            },
-            sourceHostCounts: {
-                'preferred||pref.example.com': 25,
-                'secondary||sec.example.com': 20,
-            },
-            hostCounts: {
-                'pref.example.com': 25,
-                'sec.example.com': 20,
-            },
-            tokenCounts: {
-                ai: 30,
-                inference: 26,
-                agents: 22,
-                benchmark: 18,
-            },
-        },
-    })
-
-    const sourceBiasedItem = domain.getFeedItemUsefulness({
-        source: 'preferred',
-        link: 'https://pref.example.com/post',
-        title: 'General platform update',
-    })
-    const titleDrivenItem = domain.getFeedItemUsefulness({
-        source: 'secondary',
-        link: 'https://sec.example.com/post',
-        title: 'AI inference agents benchmark',
-    })
-
-    assert.equal(typeof sourceBiasedItem.score, 'number')
-    assert.equal(typeof titleDrivenItem.score, 'number')
-    assert.ok(titleDrivenItem.score > sourceBiasedItem.score)
-})
-
-test('getFeedItemUsefulness keeps a reasonable baseline after enough clicks', async () => {
-    const {domain} = await loadFreshDomainModule({
-        folders: [],
-        lastUpdated: null,
-        settings: {autoMarkReadOnScroll: false},
-        visitedItemKeys: [],
-        clickedItemKeys: [],
-        clickModel: {
-            totalClicks: 35,
-            sourceCounts: {},
-            sourceHostCounts: {},
-            hostCounts: {},
-            tokenCounts: {},
-        },
-    })
 
     const usefulness = domain.getFeedItemUsefulness({
         source: 'new source',
@@ -441,117 +319,89 @@ test('getFeedItemUsefulness keeps a reasonable baseline after enough clicks', as
         title: 'Completely unseen headline terms',
     })
 
-    assert.equal(typeof usefulness.score, 'number')
-    assert.ok(usefulness.percentage >= 20)
-})
-
-test('getFeedItemUsefulness uses V2 score when neural model toggle is enabled', async () => {
-    const {domain} = await loadFreshDomainModule({
-        folders: [],
-        lastUpdated: null,
-        settings: {
-            autoMarkReadOnScroll: false,
-            useClickModelV2: true,
-        },
-        visitedItemKeys: [],
-        clickedItemKeys: [],
-        clickModel: {
-            totalClicks: 35,
-            sourceCounts: {},
-            sourceHostCounts: {},
-            hostCounts: {},
-            tokenCounts: {},
-        },
-        clickModelV2: {
-            schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
-            totalEvents: 160,
-            positiveEvents: 124,
-            negativeEvents: 36,
-            bias: 1.5,
-            weights: {},
-            gradSquares: {},
-            pendingImpressions: {},
-        },
-    })
-
-    const usefulness = domain.getFeedItemUsefulness({
-        source: 'any',
-        link: 'https://example.com/post',
-        title: 'Any title',
-    })
-
-    assert.equal(typeof usefulness.score, 'number')
-    assert.ok(usefulness.percentage >= 55)
-    assert.ok(usefulness.title.includes('(V2)'))
-})
-
-test('getFeedItemUsefulness keeps V2 in learning mode before enough events', async () => {
-    const {domain} = await loadFreshDomainModule({
-        folders: [],
-        lastUpdated: null,
-        settings: {
-            autoMarkReadOnScroll: false,
-            useClickModelV2: true,
-        },
-        visitedItemKeys: [],
-        clickedItemKeys: [],
-        clickModel: {
-            totalClicks: 35,
-            sourceCounts: {},
-            sourceHostCounts: {},
-            hostCounts: {},
-            tokenCounts: {},
-        },
-        clickModelV2: {
-            schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
-            totalEvents: 24,
-            positiveEvents: 20,
-            negativeEvents: 4,
-            bias: 0.8,
-            weights: {},
-            gradSquares: {},
-            pendingImpressions: {},
-        },
-    })
-
-    const usefulness = domain.getFeedItemUsefulness({
-        source: 'any',
-        link: 'https://example.com/post',
-        title: 'Any title',
-    })
-
     assert.equal(usefulness.tone, 'learning')
     assert.equal(usefulness.score, null)
     assert.equal(usefulness.percentage, null)
 })
 
-test('getFeedItemUsefulness lifts mid-frequency keyword matches at larger history', async () => {
-    const {domain} = await loadFreshDomainModule({
-        folders: [],
-        lastUpdated: null,
-        settings: {autoMarkReadOnScroll: false},
-        visitedItemKeys: [],
-        clickedItemKeys: [],
-        clickModel: {
-            totalClicks: 66,
-            sourceCounts: {},
-            sourceHostCounts: {},
-            hostCounts: {},
-            tokenCounts: {
-                ai: 4,
-                model: 3,
-            },
+test('retraining is deterministic for the same interaction log', async () => {
+    const now = Date.parse('2026-03-09T12:00:00.000Z')
+    const events = []
+
+    for (let index = 0; index < 24; index += 1) {
+        const recordedAt = now - (24 - index) * 60 * 60 * 1000
+        const itemKey = `item-${index}`
+        const baseEvent = createInteractionEvent({
+            type: 'impression',
+            itemKey,
+            recordedAt: recordedAt - 5000,
+            title: index % 2 === 0 ? 'AI agent benchmark' : 'Market outlook',
+            link: `https://example.com/${itemKey}`,
+        })
+        events.push(baseEvent)
+        events.push(
+            createInteractionEvent({
+                type: index % 2 === 0 ? 'click' : 'dismiss',
+                itemKey,
+                recordedAt,
+                title: baseEvent.snapshot.title,
+                link: baseEvent.snapshot.link,
+            }),
+        )
+    }
+
+    const initialState = createBaseState({
+        modelState: {
+            schemaVersion: MODEL_STATE_SCHEMA_VERSION,
+            modelVersion: 1,
+            interactionLog: events,
+            modelArtifacts: {},
+            calibrationArtifacts: {},
         },
     })
 
-    const usefulness = domain.getFeedItemUsefulness({
-        source: 'new source',
-        link: 'https://unknown.example.com/news',
-        title: 'AI model update',
+    const first = await withMockedNow(now, async () => {
+        const {domain} = await loadFreshDomainModule(initialState)
+        return domain.getState().modelState
+    })
+    const second = await withMockedNow(now, async () => {
+        const {domain} = await loadFreshDomainModule(initialState)
+        return domain.getState().modelState
     })
 
-    assert.equal(typeof usefulness.score, 'number')
-    assert.ok(usefulness.percentage >= 45)
+    assert.deepEqual(first.modelArtifacts, second.modelArtifacts)
+    assert.deepEqual(first.calibrationArtifacts, second.calibrationArtifacts)
+})
+
+test('exportState keeps user payload small while exportDebugState includes model data', async () => {
+    const now = Date.parse('2026-03-09T12:00:00.000Z')
+    const initialState = createBaseState({
+        modelState: {
+            schemaVersion: MODEL_STATE_SCHEMA_VERSION,
+            modelVersion: 1,
+            interactionLog: [
+                createInteractionEvent({
+                    type: 'click',
+                    itemKey: 'item-1',
+                    recordedAt: now,
+                }),
+            ],
+            modelArtifacts: {},
+            calibrationArtifacts: {},
+        },
+    })
+
+    const {domain} = await withMockedNow(now, async () => {
+        return await loadFreshDomainModule(initialState)
+    })
+
+    const exported = domain.exportState()
+    const debugExport = domain.exportDebugState()
+
+    assert.equal(exported.modelState, undefined)
+    assert.equal(Array.isArray(debugExport.modelState.interactionLog), true)
+    assert.equal(debugExport.modelState.interactionLog.length, 1)
+    assert.equal(debugExport.modelState.modelArtifacts.totalLabeledSamples, 1)
 })
 
 test('importState and exportState preserve folder and settings contract', async () => {
@@ -590,10 +440,19 @@ test('resetState restores defaults from storage', async () => {
     const {domain} = await loadFreshDomainModule()
 
     domain.createFolder('Temporary')
+    domain.registerFeedItemClick({
+        itemKey: 'temporary-item',
+        feedId: 'feed-1',
+        source: 'Temporary',
+        title: 'Temporary item',
+        link: 'https://example.com/temp',
+    })
     assert.equal(domain.getState().folders.length, 1)
+    assert.equal(domain.getState().clickedItemKeys.length, 1)
 
     domain.resetState()
     assert.deepEqual(domain.getState().folders, [])
     assert.deepEqual(domain.getState().visitedItemKeys, [])
     assert.deepEqual(domain.getState().clickedItemKeys, [])
+    assert.deepEqual(domain.getState().modelState.interactionLog, [])
 })

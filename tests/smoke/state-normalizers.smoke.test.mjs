@@ -3,17 +3,16 @@ import assert from 'node:assert/strict'
 
 import {
     createDefaultState,
-    normalizeClickModel,
-    normalizeClickModelV2,
     normalizeClickedItemKeys,
+    normalizeModelState,
     normalizeStatePayload,
     normalizeVisitedItemKeys,
 } from '../../src/scripts/state-normalizers.js'
 import {
-    CLICK_MODEL_V2_SCHEMA_VERSION,
-    CLICK_MODEL_V2_DIMENSION,
     MAX_CLICKED_ITEMS,
+    MAX_MODEL_EVENTS,
     MAX_VISITED_ITEMS,
+    MODEL_STATE_SCHEMA_VERSION,
 } from '../../src/scripts/constants.js'
 
 test('createDefaultState returns complete base shape', () => {
@@ -23,27 +22,41 @@ test('createDefaultState returns complete base shape', () => {
     assert.equal(state.lastUpdated, null)
     assert.deepEqual(state.settings, {
         autoMarkReadOnScroll: false,
-        useClickModelV2: false,
     })
     assert.deepEqual(state.visitedItemKeys, [])
     assert.deepEqual(state.clickedItemKeys, [])
-    assert.deepEqual(state.clickModel, {
-        totalClicks: 0,
-        sourceCounts: {},
-        sourceHostCounts: {},
-        hostCounts: {},
-        tokenCounts: {},
-    })
-    assert.deepEqual(state.clickModelV2, {
-        schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
-        totalEvents: 0,
-        positiveEvents: 0,
-        negativeEvents: 0,
-        bias: 0,
-        weights: {},
-        gradSquares: {},
-        pendingImpressions: {},
-        negativeHistory: {},
+    assert.deepEqual(state.modelState, {
+        schemaVersion: MODEL_STATE_SCHEMA_VERSION,
+        modelVersion: 1,
+        interactionLog: [],
+        modelArtifacts: {
+            trainedAt: null,
+            totalLabeledSamples: 0,
+            trainingSize: 0,
+            holdoutSize: 0,
+            positiveSamples: 0,
+            explicitNegativeSamples: 0,
+            weakNegativeSamples: 0,
+            baselineCtr: null,
+            bias: 0,
+            weights: {},
+            topFeatures: [],
+        },
+        calibrationArtifacts: {
+            ready: false,
+            trainedAt: null,
+            slope: 1,
+            intercept: 0,
+            holdoutSize: 0,
+            metrics: {
+                prAuc: null,
+                logLoss: null,
+                brier: null,
+                ece: null,
+                baselineCtr: null,
+                bucketCtrs: [],
+            },
+        },
     })
 })
 
@@ -65,84 +78,73 @@ test('normalizeClickedItemKeys uses dedicated clicked limit', () => {
     assert.equal(normalized.at(-1), `item-${MAX_CLICKED_ITEMS + 1}`)
 })
 
-test('normalizeClickModel aggregates noisy counters and trims maps', () => {
-    const normalized = normalizeClickModel({
-        totalClicks: 3.6,
-        sourceCounts: {
-            Tech: 2,
-            tech: 3,
-            '': 100,
-            bad: -1,
-        },
-        sourceHostCounts: {
-            'Tech||example.com': 1,
-            'tech||EXAMPLE.com': 2,
-        },
-        hostCounts: {
-            'example.com': 2.1,
-            'EXAMPLE.COM': 0.8,
-        },
-        tokenCounts: {
-            javascript: 5,
-            release: 0,
-        },
-    })
-
-    assert.equal(normalized.totalClicks, 4)
-    assert.equal(normalized.sourceCounts.tech, 5)
-    assert.equal(normalized.sourceHostCounts['tech||example.com'], 3)
-    assert.equal(normalized.hostCounts['example.com'], 3)
-    assert.equal(normalized.tokenCounts.javascript, 5)
-    assert.equal(normalized.tokenCounts.release, undefined)
-})
-
-test('normalizeClickModelV2 sanitizes sparse weights and pending impressions', () => {
-    const normalized = normalizeClickModelV2({
-        schemaVersion: CLICK_MODEL_V2_SCHEMA_VERSION,
-        totalEvents: 2,
-        positiveEvents: 1,
-        negativeEvents: 1,
-        bias: 9,
-        weights: {
-            1: 0.5,
-            2: -1.2,
-            bad: 3,
-            [CLICK_MODEL_V2_DIMENSION + 1]: 10,
-        },
-        gradSquares: {
-            1: 2.5,
-            2: -3,
-            bad: 100,
-        },
-        pendingImpressions: {
-            'item-1': {
-                createdAt: Date.now(),
-                features: [
-                    [1, 0.7],
-                    [2, 0.3],
-                    ['bad', 1],
-                ],
+test('normalizeModelState sanitizes interaction log and ignores invalid schema', () => {
+    const invalidSchema = normalizeModelState({
+        schemaVersion: 999,
+        interactionLog: [
+            {
+                type: 'click',
+                itemKey: 'item-1',
+                recordedAt: Date.now(),
             },
-            '': {
-                createdAt: Date.now(),
-                features: [[3, 1]],
+        ],
+    })
+    assert.deepEqual(invalidSchema.interactionLog, [])
+
+    const now = Date.now()
+    const interactionLog = Array.from({length: MAX_MODEL_EVENTS + 5}, (_, index) => ({
+        type: index % 3 === 0 ? 'impression' : index % 3 === 1 ? 'click' : 'dismiss',
+        itemKey: `item-${index}`,
+        recordedAt: now + index,
+        snapshot: {
+            source: 'Tech',
+            feedId: 'feed-1',
+            title: 'AI release notes',
+            link: `https://example.com/${index}`,
+            publishedAt: new Date(now).toISOString(),
+        },
+    }))
+
+    const normalized = normalizeModelState({
+        schemaVersion: MODEL_STATE_SCHEMA_VERSION,
+        interactionLog: [
+            ...interactionLog,
+            {
+                type: 'bad',
+                itemKey: '',
+                recordedAt: 0,
+                snapshot: null,
+            },
+        ],
+        modelArtifacts: {
+            bias: 99,
+            weights: {
+                useful: 0.5,
+                bad: 'not-a-number',
+            },
+        },
+        calibrationArtifacts: {
+            ready: true,
+            slope: 10,
+            intercept: -99,
+            metrics: {
+                ece: 9,
             },
         },
     })
 
-    assert.equal(normalized.schemaVersion, CLICK_MODEL_V2_SCHEMA_VERSION)
-    assert.equal(normalized.totalEvents, 2)
-    assert.equal(normalized.bias, 6)
-    assert.equal(normalized.weights[1], 0.5)
-    assert.equal(normalized.weights[2], -1.2)
-    assert.equal(normalized.weights.bad, undefined)
-    assert.equal(normalized.gradSquares[1], 2.5)
-    assert.equal(normalized.gradSquares[2], undefined)
-    assert.equal(Object.keys(normalized.pendingImpressions).length, 1)
-    assert.equal(normalized.pendingImpressions['item-1'].features.length, 2)
+    assert.equal(normalized.schemaVersion, MODEL_STATE_SCHEMA_VERSION)
+    assert.equal(normalized.interactionLog.length, MAX_MODEL_EVENTS)
+    assert.equal(normalized.interactionLog[0].itemKey, 'item-5')
+    assert.equal(normalized.modelArtifacts.bias, 6)
+    assert.equal(normalized.modelArtifacts.weights.useful, 0.5)
+    assert.equal(normalized.calibrationArtifacts.ready, true)
+    assert.equal(normalized.calibrationArtifacts.slope, 4)
+    assert.equal(normalized.calibrationArtifacts.intercept, -8)
+    assert.equal(normalized.calibrationArtifacts.metrics.ece, 1)
 })
 
-test('normalizeStatePayload sanitizes malformed payload', () => {
+test('normalizeStatePayload sanitizes malformed payload and drops legacy scorer fields', () => {
     const rawState = {
         folders: [
             {
@@ -153,18 +155,16 @@ test('normalizeStatePayload sanitizes malformed payload', () => {
                     {id: 'feed-1', name: 'Broken', url: ''},
                 ],
             },
-            null,
-            {
-                id: 'folder-2',
-                name: '   ',
-                feeds: [],
-            },
         ],
         lastUpdated: 'not-a-date',
-        settings: {autoMarkReadOnScroll: 'yes'},
+        settings: {
+            autoMarkReadOnScroll: 'yes',
+            useClickModelV2: true,
+        },
         visitedItemKeys: ['a', 'a', 'b'],
         clickedItemKeys: ['x', 'x', 'y'],
         clickModel: {totalClicks: 1},
+        clickModelV2: {schemaVersion: 2},
     }
 
     const normalized = normalizeStatePayload(rawState)
@@ -176,10 +176,10 @@ test('normalizeStatePayload sanitizes malformed payload', () => {
     assert.equal(normalized.lastUpdated, null)
     assert.deepEqual(normalized.settings, {
         autoMarkReadOnScroll: true,
-        useClickModelV2: false,
     })
     assert.deepEqual(normalized.visitedItemKeys, ['a', 'b'])
     assert.deepEqual(normalized.clickedItemKeys, ['x', 'y'])
+    assert.deepEqual(normalized.modelState.interactionLog, [])
 })
 
 test('normalizeVisitedItemKeys falls back to MAX_VISITED_ITEMS for bad limit', () => {

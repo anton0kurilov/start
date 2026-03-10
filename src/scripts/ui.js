@@ -2,6 +2,7 @@ import {MAX_ITEMS_PER_FOLDER} from './constants.js'
 import {
     getFeedItemUsefulness,
     getFolderItems,
+    isItemDismissed,
     isItemVisited,
     registerFeedItemImpressions,
 } from './domain.js'
@@ -28,6 +29,7 @@ export const elements = {
     ),
     lastUpdated: document.querySelector('[data-last-updated]'),
     exportJson: document.querySelector('[data-action="export-json"]'),
+    exportDebugJson: document.querySelector('[data-action="export-debug-json"]'),
     importForm: document.querySelector('[data-action="import-json"]'),
     importFile: document.querySelector('[data-import-file]'),
     importFileTrigger: document.querySelector(
@@ -37,7 +39,6 @@ export const elements = {
     autoMarkReadOnScroll: document.querySelector(
         '[name="autoMarkReadOnScroll"]',
     ),
-    useClickModelV2: document.querySelector('[name="useClickModelV2"]'),
 }
 
 let lastUpdatedTimerId = null
@@ -64,11 +65,6 @@ function renderSettings(state) {
     if (elements.autoMarkReadOnScroll) {
         elements.autoMarkReadOnScroll.checked = Boolean(
             state.settings?.autoMarkReadOnScroll,
-        )
-    }
-    if (elements.useClickModelV2) {
-        elements.useClickModelV2.checked = Boolean(
-            state.settings?.useClickModelV2,
         )
     }
 }
@@ -353,10 +349,10 @@ function renderColumns(state) {
             content.appendChild(empty)
         } else {
             visibleItems.forEach((item) => {
-                const card = document.createElement('a')
+                const card = document.createElement('article')
                 card.className = 'feed__item'
-                applyFeedItemLink(card, item.link)
                 const itemKey = buildFeedItemKey(item)
+                const isDismissed = itemKey ? isItemDismissed(itemKey) : false
                 if (itemKey) {
                     card.dataset.itemKey = itemKey
                     card.classList.toggle(
@@ -364,9 +360,20 @@ function renderColumns(state) {
                         isItemVisited(itemKey),
                     )
                 }
+                card.classList.toggle('feed__item--dismissed', isDismissed)
+                card.dataset.feedId = String(item.feedId || '').trim()
                 card.dataset.itemSource = String(item.source || '').trim()
                 card.dataset.itemTitle = String(item.title || '').trim()
                 card.dataset.itemLink = String(item.link || '').trim()
+                card.dataset.itemPublishedAt =
+                    item.date instanceof Date && !Number.isNaN(item.date.getTime())
+                        ? item.date.toISOString()
+                        : ''
+
+                const link = document.createElement('a')
+                link.className = 'feed__item-link'
+                link.dataset.feedLink = 'true'
+                applyFeedItemLink(link, item.link)
 
                 const source = document.createElement('div')
                 source.className = 'feed__item-source'
@@ -383,9 +390,18 @@ function renderColumns(state) {
                 const utility = createFeedItemUtility(item)
                 const meta = document.createElement('div')
                 meta.className = 'feed__item-meta'
-                meta.append(time, utility)
+                const metaControls = document.createElement('div')
+                metaControls.className = 'feed__item-meta-controls'
 
-                card.append(source, headline, meta)
+                const actions = document.createElement('div')
+                actions.className = 'feed__item-actions'
+                actions.append(utility, createFeedItemDismissButton(isDismissed))
+
+                metaControls.appendChild(actions)
+                meta.append(time, metaControls)
+
+                link.append(source, headline)
+                card.append(link, meta)
                 content.appendChild(card)
             })
         }
@@ -491,14 +507,17 @@ function resolveFeedItemImpressionPayload(feedItem) {
     }
     return {
         itemKey: String(feedItem.dataset.itemKey || '').trim(),
+        feedId: String(feedItem.dataset.feedId || '').trim(),
         source: String(feedItem.dataset.itemSource || '').trim(),
         title: String(feedItem.dataset.itemTitle || '').trim(),
         link: String(feedItem.dataset.itemLink || '').trim(),
+        publishedAt: String(feedItem.dataset.itemPublishedAt || '').trim(),
     }
 }
 
 function isFeedItemEligibleForImpression(feedItem) {
-    if (!feedItem || feedItem.dataset.noLink === 'true') {
+    const feedItemLink = feedItem?.querySelector?.('[data-feed-link="true"]')
+    if (!feedItem || feedItemLink?.dataset.noLink === 'true') {
         return false
     }
     if (!feedItem.isConnected) {
@@ -585,6 +604,32 @@ function createFeedItemUtilityIcon() {
     )
     icon.appendChild(path)
     return icon
+}
+
+function createFeedItemDismissButton(isDismissed = false) {
+    const button = document.createElement('button')
+    button.className = 'icon-btn feed__item-dismiss'
+    button.type = 'button'
+    button.dataset.action = 'dismiss-feed-item'
+    button.setAttribute('aria-label', 'Показывать меньше похожих публикаций')
+    button.title = 'Показывать меньше похожих публикаций'
+    button.setAttribute('aria-pressed', String(isDismissed))
+    if (isDismissed) {
+        button.classList.add('feed__item-dismiss--active')
+    }
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    icon.classList.add('feed__item-dismiss-icon')
+    icon.setAttribute('viewBox', '0 -960 960 960')
+    icon.setAttribute('aria-hidden', 'true')
+    icon.setAttribute('focusable', 'false')
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    path.setAttribute(
+        'd',
+        'M240-840h440v520L400-40l-50-50q-7-7-11.5-19t-4.5-23v-14l44-174H120q-32 0-56-24t-24-56v-80q0-7 2-15t4-15l120-282q9-20 30-34t44-14Zm360 80H240L120-480v80h360l-54 220 174-174v-406Zm0 406v-406 406Zm80 34v-80h120v-360H680v-80h200v520H680Z',
+    )
+    icon.appendChild(path)
+    button.appendChild(icon)
+    return button
 }
 
 function setFeedItemTime(element, date) {

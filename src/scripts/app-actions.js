@@ -1,5 +1,6 @@
 export function createAppActions({
     elements,
+    exportDebugState,
     exportState,
     getState,
     importState,
@@ -15,6 +16,7 @@ export function createAppActions({
 
     return {
         refreshAllFeeds,
+        handleExportDebugJson,
         handleFeedUpdated,
         handleExportJson,
         handleImportJson,
@@ -104,6 +106,22 @@ export function createAppActions({
         updateStatus('Экспортировано в JSON')
     }
 
+    function handleExportDebugJson() {
+        const payload = exportDebugState()
+        const filename = buildExportFilename('start-debug')
+        const json = JSON.stringify(payload, null, 2)
+        const blob = new Blob([json], {type: 'application/json'})
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(url)
+        updateStatus('Экспортирован debug JSON')
+    }
+
     async function handleImportJson(event) {
         event.preventDefault()
         const file = elements.importFile?.files?.[0]
@@ -147,12 +165,12 @@ export function createAppActions({
     }
 }
 
-function buildExportFilename() {
+function buildExportFilename(prefix = 'start-feeds') {
     const now = new Date()
     const pad = (value) => String(value).padStart(2, '0')
     const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
         now.getDate(),
     )}`
     const time = `${pad(now.getHours())}-${pad(now.getMinutes())}`
-    return `start-feeds-${date}-${time}.json`
+    return `${prefix}-${date}-${time}.json`
 }

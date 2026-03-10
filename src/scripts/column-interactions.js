@@ -2,7 +2,9 @@ export function createColumnInteractions({
     columnsElement,
     markItemsVisited,
     registerFeedItemClick,
+    registerFeedItemDismiss,
     shouldAutoMarkReadOnScroll,
+    syncAppView,
     unmarkItemsVisited,
 }) {
     const pendingScrollMarkFrames = new WeakMap()
@@ -15,15 +17,32 @@ export function createColumnInteractions({
     }
 
     function handleColumnHeaderClick(event) {
-        const feedItem = event.target.closest('.feed__item')
+        const dismissButton = event.target.closest(
+            '[data-action="dismiss-feed-item"]',
+        )
+        if (dismissButton && columnsElement?.contains(dismissButton)) {
+            event.preventDefault()
+            event.stopPropagation?.()
+            event.stopImmediatePropagation?.()
+            const feedItem = dismissButton.closest('.feed__item')
+            if (!feedItem) {
+                return
+            }
+            dismissFeedItem(feedItem)
+            return
+        }
+
+        const feedItemLink = event.target.closest('[data-feed-link="true"]')
+        const feedItem = feedItemLink?.closest('.feed__item')
         if (feedItem && columnsElement?.contains(feedItem)) {
-            if (feedItem.dataset.noLink === 'true') {
+            if (feedItemLink.dataset.noLink === 'true') {
                 event.preventDefault()
             }
             markFeedItemsVisited([feedItem])
             registerClickedFeedItem(feedItem)
             return
         }
+
         const actionButton = event.target.closest('[data-action="mark-column-read"]')
         if (actionButton && columnsElement?.contains(actionButton)) {
             event.preventDefault()
@@ -37,6 +56,7 @@ export function createColumnInteractions({
             markColumnFeedItemsVisited(column)
             return
         }
+
         const header = event.target.closest('.columns__header')
         if (!header || !columnsElement?.contains(header)) {
             return
@@ -54,26 +74,50 @@ export function createColumnInteractions({
     }
 
     function registerClickedFeedItem(feedItem) {
-        if (!feedItem || feedItem.dataset.noLink === 'true') {
+        const feedItemLink = feedItem?.querySelector('[data-feed-link="true"]')
+        if (!feedItem || feedItemLink?.dataset.noLink === 'true') {
             return
         }
-        const clickPayload = {
-            itemKey: String(feedItem.dataset.itemKey || '').trim(),
-            source: String(feedItem.dataset.itemSource || '').trim(),
-            title: String(feedItem.dataset.itemTitle || '').trim(),
-            link: String(feedItem.dataset.itemLink || '').trim(),
-        }
-        if (!clickPayload.itemKey) {
+        const clickPayload = resolveFeedItemPayload(feedItem)
+        if (!clickPayload?.itemKey) {
             return
         }
-        registerFeedItemClick(clickPayload)
+        if (registerFeedItemClick(clickPayload)) {
+            syncAppView({preserveColumnScroll: true})
+        }
+    }
+
+    function dismissFeedItem(feedItem) {
+        const dismissPayload = resolveFeedItemPayload(feedItem)
+        if (!dismissPayload?.itemKey) {
+            return
+        }
+        if (registerFeedItemDismiss(dismissPayload)) {
+            applyDismissedFeedItemState(feedItem)
+        }
+    }
+
+    function applyDismissedFeedItemState(feedItem) {
+        if (!feedItem) {
+            return
+        }
+        feedItem.classList.add('feed__item--dismissed')
+        const dismissButton = feedItem.querySelector(
+            '[data-action="dismiss-feed-item"]',
+        )
+        if (!dismissButton) {
+            return
+        }
+        dismissButton.classList.add('feed__item-dismiss--active')
+        dismissButton.setAttribute('aria-pressed', 'true')
     }
 
     function handleColumnAuxClick(event) {
         if (event.button !== 1) {
             return
         }
-        const feedItem = event.target.closest('.feed__item')
+        const feedItemLink = event.target.closest('[data-feed-link="true"]')
+        const feedItem = feedItemLink?.closest('.feed__item')
         if (!feedItem || !columnsElement?.contains(feedItem)) {
             return
         }
@@ -216,5 +260,19 @@ export function createColumnInteractions({
         if (visitedItemKeys.length) {
             markItemsVisited(visitedItemKeys)
         }
+    }
+}
+
+function resolveFeedItemPayload(feedItem) {
+    if (!feedItem) {
+        return null
+    }
+    return {
+        itemKey: String(feedItem.dataset.itemKey || '').trim(),
+        feedId: String(feedItem.dataset.feedId || '').trim(),
+        source: String(feedItem.dataset.itemSource || '').trim(),
+        title: String(feedItem.dataset.itemTitle || '').trim(),
+        link: String(feedItem.dataset.itemLink || '').trim(),
+        publishedAt: String(feedItem.dataset.itemPublishedAt || '').trim(),
     }
 }

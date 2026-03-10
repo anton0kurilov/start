@@ -1,17 +1,18 @@
 import {
     addFeed,
     createFolder,
+    exportDebugState,
     exportState,
     getState,
     importState,
     markItemsVisited,
     refreshAll,
     registerFeedItemClick,
+    registerFeedItemDismiss,
     removeFeed,
     removeFolder,
     resetState,
     setAutoMarkReadOnScroll,
-    setUseClickModelV2,
     shouldAutoMarkReadOnScroll,
     unmarkItemsVisited,
     updateFeed,
@@ -31,9 +32,17 @@ import {createColumnInteractions} from './column-interactions.js'
 
 let editingFeed = null
 
-function syncAppView({state = null, withLastUpdated = false} = {}) {
+function syncAppView({
+    state = null,
+    withLastUpdated = false,
+    preserveColumnScroll = false,
+} = {}) {
     const nextState = state || getState()
+    const scrollState = preserveColumnScroll ? captureColumnScrollState() : null
     render(nextState, {editingFeed})
+    if (scrollState) {
+        restoreColumnScrollState(scrollState)
+    }
     if (withLastUpdated) {
         updateLastUpdated(nextState.lastUpdated)
     }
@@ -45,16 +54,50 @@ function syncAppAndRefreshFeeds() {
     return refreshAllFeeds()
 }
 
+function captureColumnScrollState() {
+    return {
+        columnsScrollLeft: elements.columns?.scrollLeft || 0,
+        itemScrollTops: Array.from(
+            elements.columns?.querySelectorAll('.columns__item') || [],
+        ).map((column) => column.scrollTop || 0),
+        contentScrollTops: Array.from(
+            elements.columns?.querySelectorAll('.columns__content') || [],
+        ).map((content) => content.scrollTop || 0),
+    }
+}
+
+function restoreColumnScrollState(scrollState) {
+    if (!scrollState || !elements.columns) {
+        return
+    }
+    elements.columns.scrollLeft = scrollState.columnsScrollLeft || 0
+    const columnItems = Array.from(
+        elements.columns.querySelectorAll('.columns__item'),
+    )
+    columnItems.forEach((column, index) => {
+        column.scrollTop = scrollState.itemScrollTops?.[index] || 0
+    })
+    const columnContents = Array.from(
+        elements.columns.querySelectorAll('.columns__content'),
+    )
+    columnContents.forEach((content, index) => {
+        content.scrollTop = scrollState.contentScrollTops?.[index] || 0
+    })
+}
+
 const columnInteractions = createColumnInteractions({
     columnsElement: elements.columns,
     markItemsVisited,
     registerFeedItemClick,
+    registerFeedItemDismiss,
     shouldAutoMarkReadOnScroll,
+    syncAppView,
     unmarkItemsVisited,
 })
 
 const appActions = createAppActions({
     elements,
+    exportDebugState,
     exportState,
     getState,
     importState,
@@ -76,6 +119,10 @@ function refreshAllFeeds() {
 
 function handleExportJson() {
     return appActions.handleExportJson()
+}
+
+function handleExportDebugJson() {
+    return appActions.handleExportDebugJson()
 }
 
 function handleImportJson(event) {
@@ -148,6 +195,9 @@ function bindEvents() {
     if (elements.exportJson) {
         elements.exportJson.addEventListener('click', handleExportJson)
     }
+    if (elements.exportDebugJson) {
+        elements.exportDebugJson.addEventListener('click', handleExportDebugJson)
+    }
     if (elements.importForm) {
         elements.importForm.addEventListener('submit', handleImportJson)
     }
@@ -174,12 +224,6 @@ function bindEvents() {
         elements.autoMarkReadOnScroll.addEventListener(
             'change',
             handleAutoMarkReadOnScrollChange,
-        )
-    }
-    if (elements.useClickModelV2) {
-        elements.useClickModelV2.addEventListener(
-            'change',
-            handleUseClickModelV2Change,
         )
     }
     if (elements.statusClose) {
@@ -412,15 +456,6 @@ function handleAutoMarkReadOnScrollChange(event) {
     if (shouldAutoMarkReadOnScroll()) {
         columnInteractions.markHiddenFeedItemsInAllColumns()
     }
-}
-
-function handleUseClickModelV2Change(event) {
-    const target = event.currentTarget
-    if (!target) {
-        return
-    }
-    setUseClickModelV2(Boolean(target.checked))
-    syncAppView()
 }
 
 function handleDismissStatus() {
