@@ -372,6 +372,52 @@ test('getFeedItemUsefulness keeps using the last published calibration', async (
     assert.equal(usefulness.percentage, 59)
 })
 
+test('getFeedItemUsefulness falls back to approximate percentages for large datasets', async () => {
+    const {domain} = await loadFreshDomainModule()
+    Object.assign(domain.getState().modelState, {
+        modelArtifacts: {
+            trainedAt: null,
+            totalLabeledSamples: 420,
+            trainingSize: 336,
+            holdoutSize: 84,
+            positiveSamples: 140,
+            explicitNegativeSamples: 180,
+            weakNegativeSamples: 100,
+            baselineCtr: 0.33,
+            bias: 0.35,
+            weights: {},
+            topFeatures: [],
+        },
+        calibrationArtifacts: {
+            ready: true,
+            trainedAt: null,
+            slope: 1,
+            intercept: 0,
+            holdoutSize: 84,
+            metrics: {
+                prAuc: 0.5,
+                logLoss: 0.6,
+                brier: 0.2,
+                ece: 0.12,
+                baselineCtr: 0.33,
+                bucketCtrs: [],
+            },
+        },
+        publishedModelArtifacts: {},
+        publishedCalibrationArtifacts: {},
+    })
+
+    const usefulness = domain.getFeedItemUsefulness({
+        source: 'Approx source',
+        link: 'https://example.com/approx',
+        title: 'Approx headline',
+    })
+
+    assert.equal(usefulness.tone, 'high')
+    assert.equal(usefulness.label, '~59%')
+    assert.equal(usefulness.percentage, 59)
+})
+
 test('retraining is deterministic for the same interaction log', async () => {
     const now = Date.parse('2026-03-09T12:00:00.000Z')
     const events = []

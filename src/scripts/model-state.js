@@ -4,11 +4,13 @@ import {
     MAX_MODEL_FEATURES_PER_ITEM,
     MODEL_CALIBRATION_EPOCHS,
     MODEL_CALIBRATION_LEARNING_RATE,
+    MODEL_MAX_APPROXIMATE_ECE,
     MODEL_EXPLICIT_NEGATIVE_WEIGHT,
     MODEL_IMPRESSION_NEGATIVE_DELAY_MS,
     MODEL_MAX_ACCEPTABLE_ECE,
     MODEL_MAX_ABS_WEIGHT,
     MODEL_MIN_HOLDOUT_SAMPLES,
+    MODEL_MIN_SAMPLES_FOR_APPROXIMATE_PERCENT,
     MODEL_MIN_SAMPLES_FOR_PERCENT,
     MODEL_POSITIVE_WEIGHT,
     MODEL_RANKER_EPOCHS,
@@ -219,6 +221,21 @@ export function isCalibrationReadyForDisplay(
     }
     const ece = Number(calibrationArtifacts?.metrics?.ece)
     return Number.isFinite(ece) && ece <= MODEL_MAX_ACCEPTABLE_ECE
+}
+
+export function isCalibrationReadyForApproximateDisplay(
+    modelArtifacts,
+    calibrationArtifacts,
+) {
+    const totalSamples = Number(modelArtifacts?.totalLabeledSamples || 0)
+    if (totalSamples < MODEL_MIN_SAMPLES_FOR_APPROXIMATE_PERCENT) {
+        return false
+    }
+    if (!calibrationArtifacts?.ready) {
+        return false
+    }
+    const ece = Number(calibrationArtifacts?.metrics?.ece)
+    return Number.isFinite(ece) && ece <= MODEL_MAX_APPROXIMATE_ECE
 }
 
 function normalizeEvent(rawEvent) {

@@ -8,6 +8,7 @@ import {
     appendModelEvent,
     buildModelItemSnapshot,
     hasPendingWeakNegativeTransitions,
+    isCalibrationReadyForApproximateDisplay,
     isCalibrationReadyForDisplay,
     predictModelProbability,
     rebuildModelState,
@@ -390,19 +391,31 @@ export function getFeedItemUsefulness(item) {
         publishedModelArtifacts,
         publishedCalibrationArtifacts,
     )
+    const latestCalibrationArtifacts = state.modelState?.calibrationArtifacts
+    const canUseApproximateLatestCalibration =
+        isCalibrationReadyForApproximateDisplay(
+            latestModelArtifacts,
+            latestCalibrationArtifacts,
+        )
 
     if (!hasPublishedCalibration && !latestTotalSamples) {
         return createLearningUsefulness(0)
     }
 
-    if (!hasPublishedCalibration) {
+    if (!hasPublishedCalibration && !canUseApproximateLatestCalibration) {
         return createLearningUsefulness(latestTotalSamples)
     }
 
+    const displayModelArtifacts = hasPublishedCalibration
+        ? publishedModelArtifacts
+        : latestModelArtifacts
+    const displayCalibrationArtifacts = hasPublishedCalibration
+        ? publishedCalibrationArtifacts
+        : latestCalibrationArtifacts
     const prediction = predictModelProbability(
         {
-            modelArtifacts: publishedModelArtifacts,
-            calibrationArtifacts: publishedCalibrationArtifacts,
+            modelArtifacts: displayModelArtifacts,
+            calibrationArtifacts: displayCalibrationArtifacts,
         },
         item,
     )
@@ -411,8 +424,8 @@ export function getFeedItemUsefulness(item) {
     }
 
     const score = clamp(prediction.probability, 0.03, 0.97)
-    const publishedTotalSamples = Number(
-        publishedModelArtifacts?.totalLabeledSamples || latestTotalSamples,
+    const displayTotalSamples = Number(
+        displayModelArtifacts?.totalLabeledSamples || latestTotalSamples,
     )
     const percentage = Math.round(score * 100)
     let tone = 'low'
@@ -426,8 +439,10 @@ export function getFeedItemUsefulness(item) {
         tone,
         score,
         percentage,
-        label: `${percentage}%`,
-        title: `Вероятность клика на основе ${publishedTotalSamples} размеченных публикаций`,
+        label: hasPublishedCalibration ? `${percentage}%` : `~${percentage}%`,
+        title: hasPublishedCalibration
+            ? `Вероятность клика на основе ${displayTotalSamples} размеченных публикаций`
+            : `Ориентировочная вероятность клика: калибровка ещё нестабильна (${displayTotalSamples} размеченных публикаций)`,
     }
 }
 
