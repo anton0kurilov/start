@@ -138,27 +138,6 @@ export function resetState() {
 }
 
 export function exportState() {
-    return {
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        folders: state.folders.map((folder) => ({
-            id: folder.id,
-            name: folder.name,
-            feeds: folder.feeds.map((feed) => ({
-                id: feed.id,
-                name: feed.name,
-                url: feed.url,
-            })),
-        })),
-        lastUpdated: state.lastUpdated,
-        settings: {
-            ...DEFAULT_SETTINGS,
-            ...(state.settings || {}),
-        },
-    }
-}
-
-export function exportDebugState() {
     synchronizeModelStateIfNeeded(true)
     return {
         version: 1,

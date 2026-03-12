@@ -29,7 +29,6 @@ export const elements = {
     ),
     lastUpdated: document.querySelector('[data-last-updated]'),
     exportJson: document.querySelector('[data-action="export-json"]'),
-    exportDebugJson: document.querySelector('[data-action="export-debug-json"]'),
     importForm: document.querySelector('[data-action="import-json"]'),
     importFile: document.querySelector('[data-import-file]'),
     importFileTrigger: document.querySelector(

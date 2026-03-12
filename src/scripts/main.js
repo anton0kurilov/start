@@ -1,7 +1,6 @@
 import {
     addFeed,
     createFolder,
-    exportDebugState,
     exportState,
     getState,
     importState,
@@ -97,7 +96,6 @@ const columnInteractions = createColumnInteractions({
 
 const appActions = createAppActions({
     elements,
-    exportDebugState,
     exportState,
     getState,
     importState,
@@ -119,10 +117,6 @@ function refreshAllFeeds() {
 
 function handleExportJson() {
     return appActions.handleExportJson()
-}
-
-function handleExportDebugJson() {
-    return appActions.handleExportDebugJson()
 }
 
 function handleImportJson(event) {
@@ -194,9 +188,6 @@ function bindEvents() {
     }
     if (elements.exportJson) {
         elements.exportJson.addEventListener('click', handleExportJson)
-    }
-    if (elements.exportDebugJson) {
-        elements.exportDebugJson.addEventListener('click', handleExportDebugJson)
     }
     if (elements.importForm) {
         elements.importForm.addEventListener('submit', handleImportJson)

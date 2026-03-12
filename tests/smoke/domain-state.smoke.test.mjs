@@ -467,7 +467,7 @@ test('retraining is deterministic for the same interaction log', async () => {
     assert.deepEqual(first.calibrationArtifacts, second.calibrationArtifacts)
 })
 
-test('exportState keeps user payload small while exportDebugState includes model data', async () => {
+test('exportState includes model data and synchronizes artifacts before export', async () => {
     const now = Date.parse('2026-03-09T12:00:00.000Z')
     const initialState = createBaseState({
         modelState: {
@@ -490,12 +490,12 @@ test('exportState keeps user payload small while exportDebugState includes model
     })
 
     const exported = domain.exportState()
-    const debugExport = domain.exportDebugState()
 
-    assert.equal(exported.modelState, undefined)
-    assert.equal(Array.isArray(debugExport.modelState.interactionLog), true)
-    assert.equal(debugExport.modelState.interactionLog.length, 1)
-    assert.equal(debugExport.modelState.modelArtifacts.totalLabeledSamples, 1)
+    assert.equal(Array.isArray(exported.modelState.interactionLog), true)
+    assert.equal(exported.modelState.interactionLog.length, 1)
+    assert.equal(exported.modelState.modelArtifacts.totalLabeledSamples, 1)
+    assert.deepEqual(exported.clickedItemKeys, [])
+    assert.deepEqual(exported.dismissedItemKeys, [])
 })
 
 test('importState and exportState preserve folder and settings contract', async () => {
