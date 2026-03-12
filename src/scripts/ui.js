@@ -131,6 +131,7 @@ function renderFoldersList(state, editingFeed) {
         header.className = 'settings__folder-header'
 
         const info = document.createElement('div')
+        info.className = 'settings__folder-info'
         const name = document.createElement('div')
         name.className = 'settings__folder-name'
         name.textContent = folder.name
@@ -307,13 +308,6 @@ function renderColumns(state) {
         const items = getFolderItems(folder)
         const visibleItems = items.slice(0, MAX_ITEMS_PER_FOLDER)
         markReadButton.disabled = !visibleItems.length
-        const feedsLabel = formatCountLabel(
-            folder.feeds.length,
-            FEED_LABEL_FORMS,
-        )
-        const meta = document.createElement('div')
-        meta.className = 'columns__meta'
-        meta.textContent = feedsLabel
 
         markReadButton.innerHTML = `
             <svg
@@ -328,7 +322,7 @@ function renderColumns(state) {
             </svg>
         `
 
-        headerText.append(title, meta)
+        headerText.append(title)
         header.append(headerText, markReadButton)
 
         const content = document.createElement('div')

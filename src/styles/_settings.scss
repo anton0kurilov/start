@@ -413,6 +413,12 @@
         gap: 10px;
     }
 
+    &__folder-info {
+        min-width: 0;
+        display: grid;
+        gap: 2px;
+    }
+
     &__folder-name {
         font-weight: 600;
         font-size: 0.95rem;

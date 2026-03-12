@@ -37,6 +37,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 10px;
+        min-height: 35px;
         margin: calc(var(--padding) * 0.7) var(--padding)
             calc(var(--padding) * 0.15);
         cursor: pointer;
@@ -46,12 +47,13 @@
     &__header-text {
         flex: 1;
         display: grid;
+        align-content: center;
         gap: 2px;
         min-width: 0;
     }
 
     &__title {
-        font-size: 1rem;
+        font-size: 1.1rem;
         line-height: 1.2;
         letter-spacing: -0.02em;
         margin: 0;
@@ -74,12 +76,6 @@
         height: 17px;
         display: block;
         fill: currentColor;
-    }
-
-    &__meta {
-        font-size: 0.72rem;
-        line-height: 1.2;
-        color: var(--colorMuted);
     }
 
     &__content {
