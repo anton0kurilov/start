@@ -57,6 +57,34 @@ test('createDefaultState returns complete base shape', () => {
                 bucketCtrs: [],
             },
         },
+        publishedModelArtifacts: {
+            trainedAt: null,
+            totalLabeledSamples: 0,
+            trainingSize: 0,
+            holdoutSize: 0,
+            positiveSamples: 0,
+            explicitNegativeSamples: 0,
+            weakNegativeSamples: 0,
+            baselineCtr: null,
+            bias: 0,
+            weights: {},
+            topFeatures: [],
+        },
+        publishedCalibrationArtifacts: {
+            ready: false,
+            trainedAt: null,
+            slope: 1,
+            intercept: 0,
+            holdoutSize: 0,
+            metrics: {
+                prAuc: null,
+                logLoss: null,
+                brier: null,
+                ece: null,
+                baselineCtr: null,
+                bucketCtrs: [],
+            },
+        },
     })
 })
 
@@ -131,6 +159,20 @@ test('normalizeModelState sanitizes interaction log and ignores invalid schema',
                 ece: 9,
             },
         },
+        publishedModelArtifacts: {
+            bias: -12,
+            weights: {
+                stable: 0.75,
+            },
+        },
+        publishedCalibrationArtifacts: {
+            ready: true,
+            slope: 12,
+            intercept: -12,
+            metrics: {
+                ece: 0.03,
+            },
+        },
     })
 
     assert.equal(normalized.schemaVersion, MODEL_STATE_SCHEMA_VERSION)
@@ -142,6 +184,12 @@ test('normalizeModelState sanitizes interaction log and ignores invalid schema',
     assert.equal(normalized.calibrationArtifacts.slope, 4)
     assert.equal(normalized.calibrationArtifacts.intercept, -8)
     assert.equal(normalized.calibrationArtifacts.metrics.ece, 1)
+    assert.equal(normalized.publishedModelArtifacts.bias, -6)
+    assert.equal(normalized.publishedModelArtifacts.weights.stable, 0.75)
+    assert.equal(normalized.publishedCalibrationArtifacts.ready, true)
+    assert.equal(normalized.publishedCalibrationArtifacts.slope, 4)
+    assert.equal(normalized.publishedCalibrationArtifacts.intercept, -8)
+    assert.equal(normalized.publishedCalibrationArtifacts.metrics.ece, 0.03)
 })
 
 test('normalizeStatePayload sanitizes malformed payload and drops legacy scorer fields', () => {

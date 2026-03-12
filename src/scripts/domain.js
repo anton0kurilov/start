@@ -2,14 +2,13 @@ import {
     CORS_PROXY,
     DEFAULT_SETTINGS,
     FETCH_TIMEOUT,
-    MODEL_MAX_ACCEPTABLE_ECE,
-    MODEL_MIN_SAMPLES_FOR_PERCENT,
     MODEL_SYNC_INTERVAL_MS,
 } from './constants.js'
 import {
     appendModelEvent,
     buildModelItemSnapshot,
     hasPendingWeakNegativeTransitions,
+    isCalibrationReadyForDisplay,
     predictModelProbability,
     rebuildModelState,
 } from './model-state.js'
@@ -380,29 +379,41 @@ export function getFeedItemUsefulness(item) {
         return createClickedUsefulness()
     }
 
-    const modelArtifacts = state.modelState?.modelArtifacts
-    const calibrationArtifacts = state.modelState?.calibrationArtifacts
-    const totalSamples = Number(modelArtifacts?.totalLabeledSamples || 0)
+    const latestModelArtifacts = state.modelState?.modelArtifacts
+    const publishedModelArtifacts = state.modelState?.publishedModelArtifacts
+    const publishedCalibrationArtifacts =
+        state.modelState?.publishedCalibrationArtifacts
+    const latestTotalSamples = Number(
+        latestModelArtifacts?.totalLabeledSamples || 0,
+    )
+    const hasPublishedCalibration = isCalibrationReadyForDisplay(
+        publishedModelArtifacts,
+        publishedCalibrationArtifacts,
+    )
 
-    if (!totalSamples) {
+    if (!hasPublishedCalibration && !latestTotalSamples) {
         return createLearningUsefulness(0)
     }
 
-    if (
-        totalSamples < MODEL_MIN_SAMPLES_FOR_PERCENT ||
-        !calibrationArtifacts?.ready ||
-        !Number.isFinite(calibrationArtifacts?.metrics?.ece) ||
-        calibrationArtifacts.metrics.ece > MODEL_MAX_ACCEPTABLE_ECE
-    ) {
-        return createLearningUsefulness(totalSamples)
+    if (!hasPublishedCalibration) {
+        return createLearningUsefulness(latestTotalSamples)
     }
 
-    const prediction = predictModelProbability(state.modelState, item)
+    const prediction = predictModelProbability(
+        {
+            modelArtifacts: publishedModelArtifacts,
+            calibrationArtifacts: publishedCalibrationArtifacts,
+        },
+        item,
+    )
     if (!Number.isFinite(prediction?.probability)) {
-        return createLearningUsefulness(totalSamples)
+        return createLearningUsefulness(latestTotalSamples)
     }
 
     const score = clamp(prediction.probability, 0.03, 0.97)
+    const publishedTotalSamples = Number(
+        publishedModelArtifacts?.totalLabeledSamples || latestTotalSamples,
+    )
     const percentage = Math.round(score * 100)
     let tone = 'low'
     if (score >= USEFULNESS_HIGH_THRESHOLD) {
@@ -416,7 +427,7 @@ export function getFeedItemUsefulness(item) {
         score,
         percentage,
         label: `${percentage}%`,
-        title: `Вероятность клика на основе ${totalSamples} размеченных публикаций`,
+        title: `Вероятность клика на основе ${publishedTotalSamples} размеченных публикаций`,
     }
 }
 

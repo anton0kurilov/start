@@ -6,8 +6,10 @@ import {
     MODEL_CALIBRATION_LEARNING_RATE,
     MODEL_EXPLICIT_NEGATIVE_WEIGHT,
     MODEL_IMPRESSION_NEGATIVE_DELAY_MS,
+    MODEL_MAX_ACCEPTABLE_ECE,
     MODEL_MAX_ABS_WEIGHT,
     MODEL_MIN_HOLDOUT_SAMPLES,
+    MODEL_MIN_SAMPLES_FOR_PERCENT,
     MODEL_POSITIVE_WEIGHT,
     MODEL_RANKER_EPOCHS,
     MODEL_RANKER_LEARNING_RATE,
@@ -65,6 +67,8 @@ export function createDefaultModelState() {
         interactionLog: [],
         modelArtifacts: createDefaultModelArtifacts(),
         calibrationArtifacts: createDefaultCalibrationArtifacts(),
+        publishedModelArtifacts: createDefaultModelArtifacts(),
+        publishedCalibrationArtifacts: createDefaultCalibrationArtifacts(),
     }
 }
 
@@ -136,6 +140,12 @@ export function rebuildModelState(modelState, now = Date.now()) {
     if (!modelState || typeof modelState !== 'object') {
         return createDefaultModelState()
     }
+    const previousPublishedModelArtifacts = cloneModelArtifacts(
+        modelState.publishedModelArtifacts,
+    )
+    const previousPublishedCalibrationArtifacts = cloneCalibrationArtifacts(
+        modelState.publishedCalibrationArtifacts,
+    )
     const labeledSamples = buildLabeledSamples(modelState.interactionLog, now)
     const sampleSplit = splitLabeledSamples(labeledSamples)
     const modelArtifacts = trainRanker(sampleSplit.training, sampleSplit.summary, now)
@@ -149,6 +159,16 @@ export function rebuildModelState(modelState, now = Date.now()) {
     modelState.modelVersion = MODEL_VERSION
     modelState.modelArtifacts = modelArtifacts
     modelState.calibrationArtifacts = calibrationArtifacts
+    if (isCalibrationReadyForDisplay(modelArtifacts, calibrationArtifacts)) {
+        modelState.publishedModelArtifacts = cloneModelArtifacts(modelArtifacts)
+        modelState.publishedCalibrationArtifacts = cloneCalibrationArtifacts(
+            calibrationArtifacts,
+        )
+    } else {
+        modelState.publishedModelArtifacts = previousPublishedModelArtifacts
+        modelState.publishedCalibrationArtifacts =
+            previousPublishedCalibrationArtifacts
+    }
     return modelState
 }
 
@@ -184,6 +204,21 @@ export function hasPendingWeakNegativeTransitions(modelState, now = Date.now()) 
             entry.lastImpressionAt + MODEL_IMPRESSION_NEGATIVE_DELAY_MS
         return weakNegativeAt <= now && (!trainedAt || weakNegativeAt > trainedAt)
     })
+}
+
+export function isCalibrationReadyForDisplay(
+    modelArtifacts,
+    calibrationArtifacts,
+) {
+    const totalSamples = Number(modelArtifacts?.totalLabeledSamples || 0)
+    if (totalSamples < MODEL_MIN_SAMPLES_FOR_PERCENT) {
+        return false
+    }
+    if (!calibrationArtifacts?.ready) {
+        return false
+    }
+    const ece = Number(calibrationArtifacts?.metrics?.ece)
+    return Number.isFinite(ece) && ece <= MODEL_MAX_ACCEPTABLE_ECE
 }
 
 function normalizeEvent(rawEvent) {
@@ -590,6 +625,40 @@ function mergeSnapshots(primarySnapshot, secondarySnapshot) {
         title: nextSnapshot.title || baseSnapshot.title,
         link: nextSnapshot.link || baseSnapshot.link,
         publishedAt: nextSnapshot.publishedAt || baseSnapshot.publishedAt,
+    }
+}
+
+function cloneModelArtifacts(modelArtifacts) {
+    const base = createDefaultModelArtifacts()
+    const next = modelArtifacts && typeof modelArtifacts === 'object'
+        ? modelArtifacts
+        : {}
+    return {
+        ...base,
+        ...next,
+        weights: {...(next.weights || {})},
+        topFeatures: Array.isArray(next.topFeatures)
+            ? next.topFeatures.map((feature) => ({...feature}))
+            : [],
+    }
+}
+
+function cloneCalibrationArtifacts(calibrationArtifacts) {
+    const base = createDefaultCalibrationArtifacts()
+    const next =
+        calibrationArtifacts && typeof calibrationArtifacts === 'object'
+            ? calibrationArtifacts
+            : {}
+    return {
+        ...base,
+        ...next,
+        metrics: {
+            ...base.metrics,
+            ...(next.metrics || {}),
+            bucketCtrs: Array.isArray(next.metrics?.bucketCtrs)
+                ? next.metrics.bucketCtrs.map((bucket) => ({...bucket}))
+                : [],
+        },
     }
 }
 

@@ -111,6 +111,12 @@ export function normalizeModelState(rawModelState) {
         calibrationArtifacts: normalizeCalibrationArtifacts(
             rawModelState.calibrationArtifacts,
         ),
+        publishedModelArtifacts: normalizeModelArtifacts(
+            rawModelState.publishedModelArtifacts,
+        ),
+        publishedCalibrationArtifacts: normalizeCalibrationArtifacts(
+            rawModelState.publishedCalibrationArtifacts,
+        ),
     }
 }
 

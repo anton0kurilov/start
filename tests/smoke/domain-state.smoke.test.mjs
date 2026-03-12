@@ -324,6 +324,54 @@ test('getFeedItemUsefulness keeps learning mode without calibrated scorer data',
     assert.equal(usefulness.percentage, null)
 })
 
+test('getFeedItemUsefulness keeps using the last published calibration', async () => {
+    const {domain} = await loadFreshDomainModule(
+        createBaseState({
+            modelState: {
+                schemaVersion: MODEL_STATE_SCHEMA_VERSION,
+                modelVersion: 1,
+                interactionLog: [],
+                modelArtifacts: {
+                    totalLabeledSamples: 48,
+                    bias: -0.3,
+                    weights: {},
+                },
+                calibrationArtifacts: {
+                    ready: false,
+                    slope: 1,
+                    intercept: 0,
+                    metrics: {
+                        ece: 0.4,
+                    },
+                },
+                publishedModelArtifacts: {
+                    totalLabeledSamples: 42,
+                    bias: 0.35,
+                    weights: {},
+                },
+                publishedCalibrationArtifacts: {
+                    ready: true,
+                    slope: 1,
+                    intercept: 0,
+                    metrics: {
+                        ece: 0.04,
+                    },
+                },
+            },
+        }),
+    )
+
+    const usefulness = domain.getFeedItemUsefulness({
+        source: 'Stable source',
+        link: 'https://example.com/stable',
+        title: 'Stable headline',
+    })
+
+    assert.equal(usefulness.tone, 'high')
+    assert.equal(usefulness.label, '59%')
+    assert.equal(usefulness.percentage, 59)
+})
+
 test('retraining is deterministic for the same interaction log', async () => {
     const now = Date.parse('2026-03-09T12:00:00.000Z')
     const events = []
