@@ -14,6 +14,7 @@ import {
     setAutoMarkReadOnScroll,
     shouldAutoMarkReadOnScroll,
     unmarkItemsVisited,
+    updateFolder,
     updateFeed,
 } from './domain.js'
 import {
@@ -30,6 +31,7 @@ import {createAppActions} from './app-actions.js'
 import {createColumnInteractions} from './column-interactions.js'
 
 let editingFeed = null
+let editingFolderId = null
 
 function syncAppView({
     state = null,
@@ -38,7 +40,7 @@ function syncAppView({
 } = {}) {
     const nextState = state || getState()
     const scrollState = preserveColumnScroll ? captureColumnScrollState() : null
-    render(nextState, {editingFeed})
+    render(nextState, {editingFeed, editingFolderId})
     if (scrollState) {
         restoreColumnScrollState(scrollState)
     }
@@ -314,6 +316,18 @@ function handleListActions(event) {
         handleRemoveFolderAction(button)
         return
     }
+    if (action === 'edit-folder') {
+        handleEditFolderAction(button)
+        return
+    }
+    if (action === 'cancel-edit-folder') {
+        handleCancelEditFolderAction()
+        return
+    }
+    if (action === 'save-folder') {
+        handleSaveFolderAction(button)
+        return
+    }
     if (action === 'edit-feed') {
         handleEditFeedAction(button)
         return
@@ -337,11 +351,56 @@ function handleRemoveFolderAction(button) {
         return
     }
     const folderId = wrapper.dataset.folderId
+    if (editingFolderId === folderId) {
+        editingFolderId = null
+    }
     if (editingFeed?.folderId === folderId) {
         editingFeed = null
     }
     removeFolder(folderId)
     syncAppAndRefreshFeeds()
+}
+
+function handleEditFolderAction(button) {
+    const folderId = resolveFolderId(button)
+    if (!folderId) {
+        return
+    }
+    editingFeed = null
+    editingFolderId = folderId
+    syncAppView()
+    focusEditingFolderNameInput(folderId)
+}
+
+function handleCancelEditFolderAction() {
+    if (!editingFolderId) {
+        return
+    }
+    editingFolderId = null
+    syncAppView()
+}
+
+function handleSaveFolderAction(button) {
+    const folderId = resolveFolderId(button)
+    if (!folderId) {
+        return
+    }
+
+    const wrapper = button.closest('[data-folder-id]')
+    const nameInput = wrapper?.querySelector('[data-folder-field="name"]')
+    const name = String(nameInput?.value || '').trim()
+    if (!name) {
+        nameInput?.focus()
+        return
+    }
+
+    const result = updateFolder({folderId, name})
+    if (!result.ok) {
+        return
+    }
+
+    editingFolderId = null
+    syncAppView()
 }
 
 function handleRemoveFeedAction(button) {
@@ -364,6 +423,7 @@ function handleEditFeedAction(button) {
     if (!context) {
         return
     }
+    editingFolderId = null
     editingFeed = context
     syncAppView()
     focusEditingFeedNameInput(context.feedId)
@@ -454,9 +514,10 @@ function handleDismissStatus() {
 }
 
 function closeSettings() {
-    const hadEditingFeed = Boolean(editingFeed)
+    const hadEditingState = Boolean(editingFeed || editingFolderId)
     editingFeed = null
-    if (hadEditingFeed) {
+    editingFolderId = null
+    if (hadEditingState) {
         syncAppView()
     }
     applySettingsOpen(false)
@@ -488,10 +549,28 @@ function resolveFeedContext(element) {
     }
 }
 
+function resolveFolderId(element) {
+    const wrapper = element.closest('[data-folder-id]')
+    return wrapper?.dataset.folderId || null
+}
+
 function isEditingFeed(folderId, feedId) {
     return (
         editingFeed?.folderId === folderId && editingFeed?.feedId === feedId
     )
+}
+
+function focusEditingFolderNameInput(folderId) {
+    const nameInput = elements.foldersList?.querySelector(
+        `[data-folder-id="${folderId}"] [data-folder-field="name"]`,
+    )
+    if (!nameInput || typeof nameInput.focus !== 'function') {
+        return
+    }
+    nameInput.focus()
+    if (typeof nameInput.select === 'function') {
+        nameInput.select()
+    }
 }
 
 function focusEditingFeedNameInput(feedId) {

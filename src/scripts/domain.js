@@ -46,6 +46,26 @@ export function createFolder(name) {
     saveState(state)
 }
 
+export function updateFolder({folderId, name}) {
+    const folder = state.folders.find((item) => item.id === folderId)
+    if (!folder) {
+        return {ok: false}
+    }
+
+    const nextName = String(name || '').trim()
+    if (!nextName) {
+        return {ok: false}
+    }
+
+    if (folder.name === nextName) {
+        return {ok: true}
+    }
+
+    folder.name = nextName
+    saveState(state)
+    return {ok: true}
+}
+
 export function addFeed({folderId, name, url}) {
     const folder = state.folders.find((item) => item.id === folderId)
     if (!folder) {

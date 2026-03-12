@@ -175,6 +175,30 @@ test('updateFeed updates stored feed name and normalizes url', async () => {
     )
 })
 
+test('updateFolder trims and persists renamed column', async () => {
+    const initialState = createBaseState({
+        folders: [
+            {
+                id: 'folder-1',
+                name: 'Tech',
+                feeds: [],
+            },
+        ],
+    })
+    const {domain, localStorage} = await loadFreshDomainModule(initialState)
+
+    const result = domain.updateFolder({
+        folderId: 'folder-1',
+        name: '  Product  ',
+    })
+
+    assert.deepEqual(result, {ok: true})
+    assert.equal(domain.getState().folders[0].name, 'Product')
+
+    const persistedState = getStoredState(localStorage)
+    assert.equal(persistedState.folders[0].name, 'Product')
+})
+
 test('markItemsVisited and unmarkItemsVisited keep unique visited keys', async () => {
     const {domain} = await loadFreshDomainModule()
 

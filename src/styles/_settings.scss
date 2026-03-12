@@ -413,10 +413,27 @@
         gap: 10px;
     }
 
+    &__folder-header--editing {
+        display: grid;
+        grid-template-columns: 1fr;
+        align-items: stretch;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid var(--colorBorder);
+        background: rgba(255, 255, 255, 0.02);
+    }
+
     &__folder-info {
         min-width: 0;
         display: grid;
         gap: 2px;
+    }
+
+    &__folder-editor {
+        min-width: 0;
+        display: grid;
+        gap: 8px;
     }
 
     &__folder-name {
@@ -432,7 +449,12 @@
 
     &__folder-actions {
         display: flex;
+        flex-wrap: wrap;
         gap: 8px;
+    }
+
+    &__folder-header--editing &__folder-actions {
+        justify-content: flex-end;
     }
 
     &__feed {
@@ -474,6 +496,7 @@
         gap: 8px;
     }
 
+    &__folder-btn,
     &__feed-btn {
         padding: 6px 12px;
         font-size: 0.78rem;
@@ -613,7 +636,9 @@ body.settings-is-open {
             justify-content: flex-start;
         }
 
+        &__folder-actions .icon-btn,
         &__feed-actions .icon-btn,
+        &__folder-btn,
         &__feed-btn {
             flex: 0 1 auto;
             justify-content: center;

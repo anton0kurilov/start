@@ -53,10 +53,10 @@ let activeSettingsTab = null
 let feedItemImpressionObserver = null
 const feedItemImpressionTimers = new Map()
 
-export function render(state, {editingFeed = null} = {}) {
+export function render(state, {editingFeed = null, editingFolderId = null} = {}) {
     renderSettings(state)
     renderFolderSelect(state)
-    renderFoldersList(state, editingFeed)
+    renderFoldersList(state, editingFeed, editingFolderId)
     renderColumns(state)
 }
 
@@ -109,7 +109,7 @@ function renderFolderSelect(state) {
     })
 }
 
-function renderFoldersList(state, editingFeed) {
+function renderFoldersList(state, editingFeed, editingFolderId) {
     if (!elements.foldersList) {
         return
     }
@@ -130,29 +130,73 @@ function renderFoldersList(state, editingFeed) {
         const header = document.createElement('div')
         header.className = 'settings__folder-header'
 
-        const info = document.createElement('div')
-        info.className = 'settings__folder-info'
-        const name = document.createElement('div')
-        name.className = 'settings__folder-name'
-        name.textContent = folder.name
-        const meta = document.createElement('div')
-        meta.className = 'settings__folder-meta'
-        meta.textContent = formatCountLabel(
+        const actions = document.createElement('div')
+        actions.className = 'settings__folder-actions'
+        const feedsLabel = formatCountLabel(
             folder.feeds.length,
             FEED_LABEL_FORMS,
         )
-        info.append(name, meta)
+        if (editingFolderId === folder.id) {
+            header.classList.add('settings__folder-header--editing')
 
-        const actions = document.createElement('div')
-        actions.className = 'settings__folder-actions'
-        const removeButton = document.createElement('button')
-        removeButton.className = 'icon-btn icon-btn--danger'
-        removeButton.type = 'button'
-        removeButton.dataset.action = 'remove-folder'
-        removeButton.textContent = 'Удалить'
-        actions.appendChild(removeButton)
+            const editor = document.createElement('div')
+            editor.className = 'settings__folder-editor'
 
-        header.append(info, actions)
+            const nameInput = document.createElement('input')
+            nameInput.className = 'control'
+            nameInput.type = 'text'
+            nameInput.value = folder.name
+            nameInput.required = true
+            nameInput.placeholder = 'Название колонки'
+            nameInput.setAttribute('aria-label', 'Название колонки')
+            nameInput.dataset.folderField = 'name'
+
+            const meta = document.createElement('div')
+            meta.className = 'settings__folder-meta'
+            meta.textContent = feedsLabel
+
+            editor.append(nameInput, meta)
+
+            const saveButton = document.createElement('button')
+            saveButton.className = 'btn btn--primary settings__folder-btn'
+            saveButton.type = 'button'
+            saveButton.dataset.action = 'save-folder'
+            saveButton.textContent = 'Сохранить'
+
+            const cancelButton = document.createElement('button')
+            cancelButton.className = 'btn btn--ghost settings__folder-btn'
+            cancelButton.type = 'button'
+            cancelButton.dataset.action = 'cancel-edit-folder'
+            cancelButton.textContent = 'Отмена'
+
+            actions.append(saveButton, cancelButton)
+            header.append(editor, actions)
+        } else {
+            const info = document.createElement('div')
+            info.className = 'settings__folder-info'
+            const name = document.createElement('div')
+            name.className = 'settings__folder-name'
+            name.textContent = folder.name
+            const meta = document.createElement('div')
+            meta.className = 'settings__folder-meta'
+            meta.textContent = feedsLabel
+            info.append(name, meta)
+
+            const editButton = document.createElement('button')
+            editButton.className = 'icon-btn'
+            editButton.type = 'button'
+            editButton.dataset.action = 'edit-folder'
+            editButton.textContent = 'Изменить'
+
+            const removeButton = document.createElement('button')
+            removeButton.className = 'icon-btn icon-btn--danger'
+            removeButton.type = 'button'
+            removeButton.dataset.action = 'remove-folder'
+            removeButton.textContent = 'Удалить'
+
+            actions.append(editButton, removeButton)
+            header.append(info, actions)
+        }
 
         const feeds = document.createElement('div')
         feeds.className = 'settings__feeds'
