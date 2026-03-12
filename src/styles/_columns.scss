@@ -175,27 +175,27 @@
         }
 
         &--high {
-            color: #86efac;
-            border-color: rgba(134, 239, 172, 0.5);
-            background: rgba(34, 197, 94, 0.08);
+            color: var(--colorSignalHigh);
+            border-color: var(--colorSignalHighBorder);
+            background: var(--colorSignalHighBg);
         }
 
         &--medium {
-            color: #fde68a;
-            border-color: rgba(253, 230, 138, 0.45);
-            background: rgba(250, 204, 21, 0.1);
+            color: var(--colorSignalMedium);
+            border-color: var(--colorSignalMediumBorder);
+            background: var(--colorSignalMediumBg);
         }
 
         &--low {
-            color: #fca5a5;
-            border-color: rgba(252, 165, 165, 0.42);
-            background: rgba(239, 68, 68, 0.1);
+            color: var(--colorSignalLow);
+            border-color: var(--colorSignalLowBorder);
+            background: var(--colorSignalLowBg);
         }
 
         &--learning {
             color: var(--colorAccent);
             border-color: var(--colorBorder);
-            background: rgba(145, 145, 145, 0.1);
+            background: var(--colorSignalLearningBg);
         }
     }
 
@@ -227,15 +227,16 @@
         border-color: var(--colorBorder);
 
         &:hover {
-            color: var(--colorDanger);
-            border-color: rgba(249, 115, 115, 0.35);
+            color: var(--colorSignalLow);
+            border-color: var(--colorSignalLowBorder);
+            background: var(--colorSignalLowBg);
         }
 
         &--active,
         &[aria-pressed='true'] {
-            color: var(--colorDanger);
-            border-color: rgba(249, 115, 115, 0.35);
-            background: rgba(249, 115, 115, 0.08);
+            color: var(--colorSignalLow);
+            border-color: var(--colorSignalLowBorder);
+            background: var(--colorSignalLowBg);
         }
     }
 
