@@ -183,13 +183,13 @@ function renderFoldersList(state, editingFeed, editingFolderId) {
             info.append(name, meta)
 
             const editButton = document.createElement('button')
-            editButton.className = 'icon-btn'
+            editButton.className = 'btn btn--ghost btn--compact'
             editButton.type = 'button'
             editButton.dataset.action = 'edit-folder'
             editButton.textContent = 'Изменить'
 
             const removeButton = document.createElement('button')
-            removeButton.className = 'icon-btn icon-btn--danger'
+            removeButton.className = 'btn btn--danger btn--compact'
             removeButton.type = 'button'
             removeButton.dataset.action = 'remove-folder'
             removeButton.textContent = 'Удалить'
@@ -295,13 +295,13 @@ function createFeedRow({feed, isEditing}) {
     actions.className = 'settings__feed-actions'
 
     const feedEdit = document.createElement('button')
-    feedEdit.className = 'icon-btn'
+    feedEdit.className = 'btn btn--ghost btn--compact'
     feedEdit.type = 'button'
     feedEdit.dataset.action = 'edit-feed'
     feedEdit.textContent = 'Изменить'
 
     const feedRemove = document.createElement('button')
-    feedRemove.className = 'icon-btn icon-btn--danger'
+    feedRemove.className = 'btn btn--danger btn--compact'
     feedRemove.type = 'button'
     feedRemove.dataset.action = 'remove-feed'
     feedRemove.textContent = 'Удалить'
@@ -645,7 +645,7 @@ function createFeedItemUtilityIcon() {
 
 function createFeedItemDismissButton(isDismissed = false) {
     const button = document.createElement('button')
-    button.className = 'icon-btn feed__item-dismiss'
+    button.className = 'btn btn--ghost feed__item-dismiss'
     button.type = 'button'
     button.dataset.action = 'dismiss-feed-item'
     button.setAttribute('aria-label', 'Показывать меньше похожих публикаций')

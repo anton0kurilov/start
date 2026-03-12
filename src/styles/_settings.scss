@@ -636,8 +636,8 @@ body.settings-is-open {
             justify-content: flex-start;
         }
 
-        &__folder-actions .icon-btn,
-        &__feed-actions .icon-btn,
+        &__folder-actions .btn--compact,
+        &__feed-actions .btn--compact,
         &__folder-btn,
         &__feed-btn {
             flex: 0 1 auto;
