@@ -319,7 +319,11 @@ export function registerFeedItemClick(itemMeta) {
     const normalizedItemKey = stateNormalizers.normalizeItemKey(
         itemMeta?.itemKey,
     )
-    if (!normalizedItemKey || clickedItemKeysSet.has(normalizedItemKey)) {
+    if (
+        !normalizedItemKey ||
+        clickedItemKeysSet.has(normalizedItemKey) ||
+        dismissedItemKeysSet.has(normalizedItemKey)
+    ) {
         return false
     }
 
@@ -347,11 +351,7 @@ export function registerFeedItemDismiss(itemMeta) {
     const normalizedItemKey = stateNormalizers.normalizeItemKey(
         itemMeta?.itemKey,
     )
-    if (
-        !normalizedItemKey ||
-        clickedItemKeysSet.has(normalizedItemKey) ||
-        dismissedItemKeysSet.has(normalizedItemKey)
-    ) {
+    if (!normalizedItemKey || dismissedItemKeysSet.has(normalizedItemKey)) {
         return false
     }
 
@@ -365,6 +365,15 @@ export function registerFeedItemDismiss(itemMeta) {
         return false
     }
 
+    if (clickedItemKeysSet.has(normalizedItemKey)) {
+        clickedItemKeysSet.delete(normalizedItemKey)
+        const normalizedClickedKeys = stateNormalizers.normalizeClickedItemKeys(
+            Array.from(clickedItemKeysSet),
+        )
+        clickedItemKeysSet = new Set(normalizedClickedKeys)
+        state.clickedItemKeys = normalizedClickedKeys
+    }
+
     dismissedItemKeysSet.add(normalizedItemKey)
     synchronizeModelState(true)
     refreshModelInteractionIndexes()
@@ -374,6 +383,10 @@ export function registerFeedItemDismiss(itemMeta) {
 
 export function getFeedItemUsefulness(item) {
     synchronizeModelStateIfNeeded()
+
+    if (isKnownDismissedItem(item)) {
+        return createDismissedUsefulness()
+    }
 
     if (isKnownClickedItem(item)) {
         return createClickedUsefulness()
@@ -714,12 +727,30 @@ function createClickedUsefulness() {
     }
 }
 
+function createDismissedUsefulness() {
+    return {
+        tone: 'low',
+        score: 0,
+        percentage: 0,
+        label: 'скрыл',
+        title: 'Вы уже скрыли эту публикацию',
+    }
+}
+
 function isKnownClickedItem(item) {
     const itemKey = resolveFeedItemKey(item)
     if (!itemKey) {
         return false
     }
     return clickedItemKeysSet.has(itemKey)
+}
+
+function isKnownDismissedItem(item) {
+    const itemKey = resolveFeedItemKey(item)
+    if (!itemKey) {
+        return false
+    }
+    return dismissedItemKeysSet.has(itemKey)
 }
 
 function resolveFeedItemKey(item) {

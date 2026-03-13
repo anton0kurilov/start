@@ -261,6 +261,7 @@ export function createColumnInteractions({
             markItemsVisited(visitedItemKeys)
         }
     }
+
 }
 
 function resolveFeedItemPayload(feedItem) {

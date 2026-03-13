@@ -277,6 +277,36 @@ test('registerFeedItemDismiss stores an explicit negative event', async () => {
     assert.equal(domain.isItemDismissed('article-2'), true)
 })
 
+test('registerFeedItemDismiss overrides a prior click for the same item', async () => {
+    const {domain} = await loadFreshDomainModule()
+
+    const clickResult = domain.registerFeedItemClick({
+        itemKey: 'article-3',
+        feedId: 'feed-1',
+        source: 'Tech Daily',
+        title: 'Accidental click example',
+        link: 'https://example.com/article-3',
+    })
+    const dismissResult = domain.registerFeedItemDismiss({
+        itemKey: 'article-3',
+        feedId: 'feed-1',
+        source: 'Tech Daily',
+        title: 'Accidental click example',
+        link: 'https://example.com/article-3',
+    })
+
+    assert.equal(clickResult, true)
+    assert.equal(dismissResult, true)
+    assert.deepEqual(domain.getState().clickedItemKeys, [])
+    assert.equal(domain.isItemDismissed('article-3'), true)
+    assert.equal(domain.getState().modelState.modelArtifacts.positiveSamples, 0)
+    assert.equal(
+        domain.getState().modelState.modelArtifacts.explicitNegativeSamples,
+        1,
+    )
+    assert.equal(domain.getState().modelState.interactionLog.at(-1).type, 'dismiss')
+})
+
 test('module init upgrades stale impressions into weak negatives', async () => {
     const now = Date.parse('2026-03-09T10:00:00.000Z')
     const oldImpressionAt = now - MODEL_IMPRESSION_NEGATIVE_DELAY_MS - 1000
@@ -322,6 +352,36 @@ test('getFeedItemUsefulness marks previously clicked item as clicked', async () 
     assert.equal(usefulness.label, 'посетил')
     assert.equal(usefulness.tone, 'high')
     assert.ok(usefulness.percentage >= 90)
+})
+
+test('getFeedItemUsefulness prioritizes dismiss over a prior click', async () => {
+    const {domain} = await loadFreshDomainModule()
+
+    domain.registerFeedItemClick({
+        itemKey: 'https://example.com/conflict',
+        feedId: 'feed-1',
+        source: 'Any source',
+        title: 'Any headline',
+        link: 'https://example.com/conflict',
+    })
+    domain.registerFeedItemDismiss({
+        itemKey: 'https://example.com/conflict',
+        feedId: 'feed-1',
+        source: 'Any source',
+        title: 'Any headline',
+        link: 'https://example.com/conflict',
+    })
+
+    const usefulness = domain.getFeedItemUsefulness({
+        id: 'id-2',
+        source: 'Any source',
+        title: 'Any headline',
+        link: 'https://example.com/conflict',
+    })
+
+    assert.equal(usefulness.label, 'скрыл')
+    assert.equal(usefulness.tone, 'low')
+    assert.equal(usefulness.percentage, 0)
 })
 
 test('getFeedItemUsefulness keeps learning mode without calibrated scorer data', async () => {
