@@ -121,6 +121,46 @@ test('refreshAllFeeds restores button state after failed refresh', async () => {
     assert.ok(syncEvents.some((payload) => payload.withLastUpdated === true))
 })
 
+test('auto refresh runs without loading and success statuses', async () => {
+    const statusEvents = []
+    const syncEvents = []
+
+    const actions = createActions({
+        syncAppView: (payload) => {
+            syncEvents.push(payload || {})
+        },
+        updateStatus: (text, tone) => {
+            statusEvents.push({text, tone})
+        },
+    })
+
+    await actions.refreshAllFeeds({source: 'auto'})
+
+    assert.deepEqual(statusEvents, [])
+    assert.deepEqual(syncEvents, [{withLastUpdated: true}])
+})
+
+test('auto refresh skips empty-state status noise', async () => {
+    const statusEvents = []
+    let refreshCalls = 0
+
+    const actions = createActions({
+        getState: () => ({folders: []}),
+        refreshAll: async () => {
+            refreshCalls += 1
+            return {errorsCount: 0, errors: []}
+        },
+        updateStatus: (text, tone) => {
+            statusEvents.push({text, tone})
+        },
+    })
+
+    await actions.refreshAllFeeds({source: 'auto'})
+
+    assert.equal(refreshCalls, 0)
+    assert.deepEqual(statusEvents, [])
+})
+
 test('handleFeedUpdated refreshes only when url changes', async () => {
     const syncEvents = []
     let refreshCalls = 0

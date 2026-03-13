@@ -1,6 +1,7 @@
 export const STORAGE_KEY = 'start:rss:v1'
 export const CORS_PROXY = 'https://cors.kurilov.workers.dev/?url='
 export const FETCH_TIMEOUT = 12000
+export const AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000
 export const MAX_ITEMS_PER_FOLDER = 40
 export const MAX_VISITED_ITEMS = 4000
 export const MAX_CLICKED_ITEMS = 4000
@@ -28,4 +29,5 @@ export const MODEL_MAX_APPROXIMATE_ECE = 0.2
 export const MODEL_SYNC_INTERVAL_MS = 60000
 export const DEFAULT_SETTINGS = {
     autoMarkReadOnScroll: false,
+    autoRefreshFeeds: false,
 }

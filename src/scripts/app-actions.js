@@ -20,11 +20,11 @@ export function createAppActions({
         handleImportJson,
     }
 
-    async function refreshAllFeeds() {
+    async function refreshAllFeeds(options = {}) {
         if (refreshAllFeedsPromise) {
             return refreshAllFeedsPromise
         }
-        refreshAllFeedsPromise = refreshAllFeedsInternal()
+        refreshAllFeedsPromise = refreshAllFeedsInternal(options)
         try {
             return await refreshAllFeedsPromise
         } finally {
@@ -32,23 +32,31 @@ export function createAppActions({
         }
     }
 
-    async function refreshAllFeedsInternal() {
+    async function refreshAllFeedsInternal(options = {}) {
+        const source = options?.source === 'auto' ? 'auto' : 'manual'
+        const isAutoRefresh = source === 'auto'
         const currentState = getState()
         const feeds = currentState.folders.flatMap((folder) => folder.feeds)
         if (!feeds.length) {
-            updateStatus('Добавьте потоки для обновления')
-            syncAppView({state: currentState, withLastUpdated: true})
+            if (!isAutoRefresh) {
+                updateStatus('Добавьте потоки для обновления')
+                syncAppView({state: currentState, withLastUpdated: true})
+            }
             return
         }
 
-        updateStatus('Обновляю ленты...', 'loading')
-        if (typeof setLastUpdatedInProgress === 'function') {
+        if (!isAutoRefresh) {
+            updateStatus('Обновляю ленты...', 'loading')
+        }
+        if (!isAutoRefresh && typeof setLastUpdatedInProgress === 'function') {
             setLastUpdatedInProgress()
         }
         if (elements.refresh) {
             elements.refresh.disabled = true
         }
-        syncAppView({state: currentState})
+        if (!isAutoRefresh) {
+            syncAppView({state: currentState})
+        }
 
         try {
             const result = await refreshAll()
@@ -61,11 +69,18 @@ export function createAppActions({
                     `Обновлено с ошибками: ${result.errorsCount}${firstErrorText}`,
                     'error',
                 )
-            } else {
+            } else if (!isAutoRefresh) {
                 updateStatus('Ленты обновлены')
             }
         } catch (error) {
-            updateStatus('Не удалось обновить ленты', 'error')
+            if (!isAutoRefresh) {
+                updateStatus('Не удалось обновить ленты', 'error')
+            } else if (
+                typeof document === 'undefined' ||
+                !document.hidden
+            ) {
+                updateStatus('Не удалось обновить ленты', 'error')
+            }
         } finally {
             syncAppView({withLastUpdated: true})
             if (shouldAutoMarkReadOnScroll()) {

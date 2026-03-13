@@ -203,6 +203,10 @@ export function shouldAutoMarkReadOnScroll() {
     return Boolean(state.settings?.autoMarkReadOnScroll)
 }
 
+export function shouldAutoRefreshFeeds() {
+    return Boolean(state.settings?.autoRefreshFeeds)
+}
+
 export function setAutoMarkReadOnScroll(isEnabled) {
     const nextValue = Boolean(isEnabled)
     const currentValue = Boolean(state.settings?.autoMarkReadOnScroll)
@@ -213,6 +217,20 @@ export function setAutoMarkReadOnScroll(isEnabled) {
         ...DEFAULT_SETTINGS,
         ...(state.settings || {}),
         autoMarkReadOnScroll: nextValue,
+    }
+    saveState(state)
+}
+
+export function setAutoRefreshFeeds(isEnabled) {
+    const nextValue = Boolean(isEnabled)
+    const currentValue = Boolean(state.settings?.autoRefreshFeeds)
+    if (currentValue === nextValue) {
+        return
+    }
+    state.settings = {
+        ...DEFAULT_SETTINGS,
+        ...(state.settings || {}),
+        autoRefreshFeeds: nextValue,
     }
     saveState(state)
 }

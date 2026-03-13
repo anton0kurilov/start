@@ -53,6 +53,7 @@ function createBaseState(overrides = {}) {
         lastUpdated: null,
         settings: {
             autoMarkReadOnScroll: false,
+            autoRefreshFeeds: false,
         },
         visitedItemKeys: [],
         clickedItemKeys: [],
@@ -602,6 +603,7 @@ test('importState and exportState preserve folder and settings contract', async 
         ],
         settings: {
             autoMarkReadOnScroll: true,
+            autoRefreshFeeds: true,
         },
     })
 
@@ -612,6 +614,16 @@ test('importState and exportState preserve folder and settings contract', async 
     assert.equal(exported.folders[0].feeds.length, 1)
     assert.equal(exported.folders[0].feeds[0].url, 'https://example.com/rss')
     assert.equal(exported.settings.autoMarkReadOnScroll, true)
+    assert.equal(exported.settings.autoRefreshFeeds, true)
+})
+
+test('setAutoRefreshFeeds persists auto refresh preference', async () => {
+    const {domain, localStorage} = await loadFreshDomainModule()
+
+    domain.setAutoRefreshFeeds(true)
+
+    assert.equal(domain.shouldAutoRefreshFeeds(), true)
+    assert.equal(getStoredState(localStorage).settings.autoRefreshFeeds, true)
 })
 
 test('resetState restores defaults from storage', async () => {

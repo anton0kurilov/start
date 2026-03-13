@@ -38,6 +38,7 @@ export const elements = {
     autoMarkReadOnScroll: document.querySelector(
         '[name="autoMarkReadOnScroll"]',
     ),
+    autoRefreshFeeds: document.querySelector('[name="autoRefreshFeeds"]'),
 }
 
 let lastUpdatedTimerId = null
@@ -64,6 +65,11 @@ function renderSettings(state) {
     if (elements.autoMarkReadOnScroll) {
         elements.autoMarkReadOnScroll.checked = Boolean(
             state.settings?.autoMarkReadOnScroll,
+        )
+    }
+    if (elements.autoRefreshFeeds) {
+        elements.autoRefreshFeeds.checked = Boolean(
+            state.settings?.autoRefreshFeeds,
         )
     }
 }

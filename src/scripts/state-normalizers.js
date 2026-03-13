@@ -51,6 +51,7 @@ export function normalizeSettings(rawSettings) {
     return {
         ...DEFAULT_SETTINGS,
         autoMarkReadOnScroll: Boolean(rawSettings.autoMarkReadOnScroll),
+        autoRefreshFeeds: Boolean(rawSettings.autoRefreshFeeds),
     }
 }
 

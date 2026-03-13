@@ -1,3 +1,4 @@
+import {AUTO_REFRESH_INTERVAL_MS} from './constants.js'
 import {
     addFeed,
     createFolder,
@@ -12,7 +13,9 @@ import {
     removeFolder,
     resetState,
     setAutoMarkReadOnScroll,
+    setAutoRefreshFeeds,
     shouldAutoMarkReadOnScroll,
+    shouldAutoRefreshFeeds,
     unmarkItemsVisited,
     updateFolder,
     updateFeed,
@@ -32,6 +35,7 @@ import {createColumnInteractions} from './column-interactions.js'
 
 let editingFeed = null
 let editingFolderId = null
+let autoRefreshTimerId = null
 
 function syncAppView({
     state = null,
@@ -47,6 +51,7 @@ function syncAppView({
     if (withLastUpdated) {
         updateLastUpdated(nextState.lastUpdated)
     }
+    syncAutoRefreshSchedule()
     return nextState
 }
 
@@ -113,8 +118,12 @@ const appActions = createAppActions({
 
 init()
 
-function refreshAllFeeds() {
-    return appActions.refreshAllFeeds()
+async function refreshAllFeeds(options = {}) {
+    try {
+        return await appActions.refreshAllFeeds(options)
+    } finally {
+        syncAutoRefreshSchedule()
+    }
 }
 
 function handleExportJson() {
@@ -219,9 +228,19 @@ function bindEvents() {
             handleAutoMarkReadOnScrollChange,
         )
     }
+    if (elements.autoRefreshFeeds) {
+        elements.autoRefreshFeeds.addEventListener(
+            'change',
+            handleAutoRefreshFeedsChange,
+        )
+    }
     if (elements.statusClose) {
         elements.statusClose.addEventListener('click', handleDismissStatus)
     }
+    window.addEventListener('focus', handleAutoRefreshWakeup)
+    window.addEventListener('online', handleAutoRefreshWakeup)
+    window.addEventListener('pageshow', handleAutoRefreshWakeup)
+    document.addEventListener('visibilitychange', handleAutoRefreshWakeup)
     document.addEventListener('keydown', handleGlobalKeydown)
 }
 
@@ -509,6 +528,18 @@ function handleAutoMarkReadOnScrollChange(event) {
     }
 }
 
+function handleAutoRefreshFeedsChange(event) {
+    const target = event.currentTarget
+    if (!target) {
+        return
+    }
+    setAutoRefreshFeeds(Boolean(target.checked))
+    syncAutoRefreshSchedule()
+    if (shouldAutoRefreshFeeds()) {
+        void maybeRunAutoRefresh()
+    }
+}
+
 function handleDismissStatus() {
     dismissStatus()
 }
@@ -558,6 +589,83 @@ function isEditingFeed(folderId, feedId) {
     return (
         editingFeed?.folderId === folderId && editingFeed?.feedId === feedId
     )
+}
+
+function handleAutoRefreshWakeup() {
+    if (!shouldAutoRefreshFeeds()) {
+        clearScheduledAutoRefresh()
+        return
+    }
+    if (getTimeUntilNextAutoRefresh() > 0) {
+        syncAutoRefreshSchedule()
+        return
+    }
+    void maybeRunAutoRefresh()
+}
+
+async function maybeRunAutoRefresh() {
+    if (
+        !shouldAutoRefreshFeeds() ||
+        !hasConfiguredFeeds() ||
+        getTimeUntilNextAutoRefresh() > 0 ||
+        !canRunAutoRefreshNow()
+    ) {
+        syncAutoRefreshSchedule()
+        return false
+    }
+    await refreshAllFeeds({source: 'auto'})
+    return true
+}
+
+function syncAutoRefreshSchedule() {
+    clearScheduledAutoRefresh()
+    if (!shouldAutoRefreshFeeds() || !hasConfiguredFeeds()) {
+        return
+    }
+    const delay = Math.max(0, getTimeUntilNextAutoRefresh())
+    if (delay === 0 && !canRunAutoRefreshNow()) {
+        return
+    }
+    autoRefreshTimerId = window.setTimeout(() => {
+        autoRefreshTimerId = null
+        void maybeRunAutoRefresh()
+    }, delay)
+}
+
+function clearScheduledAutoRefresh() {
+    if (autoRefreshTimerId === null) {
+        return
+    }
+    window.clearTimeout(autoRefreshTimerId)
+    autoRefreshTimerId = null
+}
+
+function getTimeUntilNextAutoRefresh(now = Date.now()) {
+    const lastUpdatedAt = Date.parse(getState().lastUpdated || '')
+    if (!Number.isFinite(lastUpdatedAt) || lastUpdatedAt <= 0) {
+        return AUTO_REFRESH_INTERVAL_MS
+    }
+    return Math.max(0, lastUpdatedAt + AUTO_REFRESH_INTERVAL_MS - now)
+}
+
+function hasConfiguredFeeds() {
+    const folders = getState().folders || []
+    return folders.some(
+        (folder) => Array.isArray(folder.feeds) && folder.feeds.length,
+    )
+}
+
+function canRunAutoRefreshNow() {
+    if (
+        typeof document !== 'undefined' &&
+        document.visibilityState === 'hidden'
+    ) {
+        return false
+    }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        return false
+    }
+    return true
 }
 
 function focusEditingFolderNameInput(folderId) {
