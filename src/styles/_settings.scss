@@ -672,11 +672,22 @@ body.settings-is-open {
     }
 
     .settings {
-        padding: var(--padding);
+        align-items: start;
+        padding:
+            calc(var(--padding) + var(--safeAreaTop))
+            var(--padding)
+            calc(var(--padding) + var(--safeAreaBottom));
 
         &__panel {
             width: 100%;
-            max-height: calc(100vh - var(--padding) * 2);
+            max-height: calc(
+                100vh - var(--safeAreaTop) - var(--safeAreaBottom) -
+                    var(--padding) * 2
+            );
+            max-height: calc(
+                100svh - var(--safeAreaTop) - var(--safeAreaBottom) -
+                    var(--padding) * 2
+            );
             border-radius: calc(var(--borderRadius) + 4px);
         }
 
