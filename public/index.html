@@ -107,6 +107,10 @@
                         <div class="settings__header">
                             <div class="settings__heading">
                                 <div class="settings__brand">Настройки</div>
+                                <p class="settings__lede">
+                                    Колонки, подписки и локальные данные
+                                    приложения.
+                                </p>
                             </div>
                             <button
                                 class="btn btn--ghost settings__close"
@@ -152,7 +156,7 @@
                                 aria-controls="settings-panel-manage"
                                 data-settings-tab="manage"
                             >
-                                Контент
+                                Управление
                             </button>
                             <button
                                 class="settings__tab"
@@ -163,7 +167,7 @@
                                 aria-controls="settings-panel-transfer"
                                 data-settings-tab="transfer"
                             >
-                                Импорт и экспорт
+                                Данные
                             </button>
                         </div>
                     </div>
@@ -175,76 +179,101 @@
                             aria-labelledby="settings-tab-add"
                             data-settings-panel="add"
                         >
-                            <div class="settings__forms">
-                                <div class="settings__card settings__block">
-                                    <h4 class="settings__subtitle">
-                                        Новая колонка
-                                    </h4>
-                                    <form
-                                        class="form form--folder settings__form"
-                                        data-action="create-folder"
-                                    >
-                                        <label class="form__field">
-                                            <input
-                                                class="control"
-                                                type="text"
-                                                name="folderName"
-                                                placeholder="Название колонки"
-                                                required
-                                            />
-                                        </label>
-                                        <div class="settings__actions-row">
-                                            <button
-                                                class="btn btn--primary settings__submit"
-                                                type="submit"
-                                            >
-                                                Создать колонку
-                                            </button>
-                                        </div>
-                                    </form>
+                            <div class="settings__section-shell">
+                                <div class="settings__section-head">
+                                    <h3 class="settings__title">Добавление</h3>
                                 </div>
-                                <div class="settings__card settings__block">
-                                    <h4 class="settings__subtitle">
-                                        Новая подписка
-                                    </h4>
-                                    <form
-                                        class="form form--feed settings__form"
-                                        data-action="add-feed"
+                                <div
+                                    class="settings__forms settings__forms--split"
+                                >
+                                    <div
+                                        class="settings__card settings__block settings__action-card"
                                     >
-                                        <label class="form__field">
-                                            <input
-                                                class="control"
-                                                type="text"
-                                                name="feedName"
-                                                placeholder="Название подписки"
-                                                required
-                                            />
-                                        </label>
-                                        <label class="form__field">
-                                            <input
-                                                class="control"
-                                                type="url"
-                                                name="feedUrl"
-                                                placeholder="URL-адрес потока (RSS)"
-                                                required
-                                            />
-                                        </label>
-                                        <label class="form__field">
-                                            <select
-                                                class="control"
-                                                name="folderId"
-                                                required
-                                            ></select>
-                                        </label>
-                                        <div class="settings__actions-row">
-                                            <button
-                                                class="btn btn--primary settings__submit"
-                                                type="submit"
-                                            >
-                                                Подписаться
-                                            </button>
+                                        <div class="settings__card-head">
+                                            <h4 class="settings__subtitle">
+                                                Новая колонка
+                                            </h4>
+                                            <p class="settings__note">
+                                                Отдельная колонка помогает
+                                                развести темы и источники.
+                                            </p>
                                         </div>
-                                    </form>
+                                        <form
+                                            class="form form--folder settings__form"
+                                            data-action="create-folder"
+                                        >
+                                            <label class="form__field">
+                                                <span>Название колонки</span>
+                                                <input
+                                                    class="control"
+                                                    type="text"
+                                                    name="folderName"
+                                                    placeholder="Например, Дизайн"
+                                                    required
+                                                />
+                                            </label>
+                                            <div class="settings__actions-row">
+                                                <button
+                                                    class="btn btn--primary settings__submit"
+                                                    type="submit"
+                                                >
+                                                    Создать колонку
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="settings__card settings__block">
+                                        <div class="settings__card-head">
+                                            <h4 class="settings__subtitle">
+                                                Новая подписка
+                                            </h4>
+                                            <p class="settings__note">
+                                                Поток будет добавлен в выбранную
+                                                колонку.
+                                            </p>
+                                        </div>
+                                        <form
+                                            class="form form--feed settings__form"
+                                            data-action="add-feed"
+                                        >
+                                            <label class="form__field">
+                                                <span>Название подписки</span>
+                                                <input
+                                                    class="control"
+                                                    type="text"
+                                                    name="feedName"
+                                                    placeholder="Например, Smashing Magazine"
+                                                    required
+                                                />
+                                            </label>
+                                            <label class="form__field">
+                                                <span>RSS URL</span>
+                                                <input
+                                                    class="control"
+                                                    type="url"
+                                                    name="feedUrl"
+                                                    placeholder="https://example.com/feed.xml"
+                                                    required
+                                                />
+                                            </label>
+                                            <label class="form__field">
+                                                <span>Колонка</span>
+                                                <select
+                                                    class="control"
+                                                    name="folderId"
+                                                    required
+                                                ></select>
+                                            </label>
+                                            <div class="settings__actions-row">
+                                                <button
+                                                    class="btn btn--primary settings__submit"
+                                                    type="submit"
+                                                >
+                                                    Подписаться
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                         </section>
@@ -256,50 +285,91 @@
                             data-settings-panel="manage"
                             hidden
                         >
-                            <div class="settings__stack">
-                                <div class="settings__card settings__block">
-                                    <h4 class="settings__subtitle">
-                                        Поведение ленты
-                                    </h4>
-                                    <div class="settings__options">
-                                        <label class="settings__option">
-                                            <input
-                                                type="checkbox"
-                                                name="autoMarkReadOnScroll"
-                                            />
-                                            <span class="settings__option-copy">
-                                                <span
-                                                    class="settings__option-title"
-                                                >
-                                                    Отмечать как прочитанное при
-                                                    прокрутке
-                                                </span>
-                                            </span>
-                                        </label>
-                                        <label class="settings__option">
-                                            <input
-                                                type="checkbox"
-                                                name="autoRefreshFeeds"
-                                            />
-                                            <span class="settings__option-copy">
-                                                <span
-                                                    class="settings__option-title"
-                                                >
-                                                    Автообновление каждые 5
-                                                    минут
-                                                </span>
-                                            </span>
-                                        </label>
-                                    </div>
+                            <div class="settings__section-shell">
+                                <div class="settings__section-head">
+                                    <h3 class="settings__title">
+                                        Управление лентой
+                                    </h3>
                                 </div>
-                                <div class="settings__card settings__block">
-                                    <h4 class="settings__subtitle">
-                                        Колонки и подписки
-                                    </h4>
-                                    <div
-                                        class="settings__list"
-                                        data-folders
-                                    ></div>
+                                <div class="settings__manage-grid">
+                                    <div class="settings__card settings__block">
+                                        <div class="settings__card-head">
+                                            <h4 class="settings__subtitle">
+                                                Поведение чтения
+                                            </h4>
+                                            <p class="settings__note">
+                                                Эти параметры влияют на то, как
+                                                лента ведёт себя во время
+                                                просмотра.
+                                            </p>
+                                        </div>
+                                        <div class="settings__options">
+                                            <label class="settings__option">
+                                                <input
+                                                    type="checkbox"
+                                                    name="autoMarkReadOnScroll"
+                                                />
+                                                <span
+                                                    class="settings__option-copy"
+                                                >
+                                                    <span
+                                                        class="settings__option-title"
+                                                    >
+                                                        Отмечать как прочитанное
+                                                        при прокрутке
+                                                    </span>
+                                                    <span
+                                                        class="settings__option-note"
+                                                    >
+                                                        Подходит для быстрого
+                                                        просмотра, когда не
+                                                        нужно подтверждать
+                                                        прочтение вручную.
+                                                    </span>
+                                                </span>
+                                            </label>
+                                            <label class="settings__option">
+                                                <input
+                                                    type="checkbox"
+                                                    name="autoRefreshFeeds"
+                                                />
+                                                <span
+                                                    class="settings__option-copy"
+                                                >
+                                                    <span
+                                                        class="settings__option-title"
+                                                    >
+                                                        Автообновление каждые 5
+                                                        минут
+                                                    </span>
+                                                    <span
+                                                        class="settings__option-note"
+                                                    >
+                                                        Работает в открытом
+                                                        приложении и
+                                                        поддерживает ленту в
+                                                        актуальном состоянии.
+                                                    </span>
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="settings__card settings__block">
+                                        <div class="settings__card-head">
+                                            <h4 class="settings__subtitle">
+                                                Колонки и подписки
+                                            </h4>
+                                            <p class="settings__note">
+                                                Переименовывайте колонки,
+                                                обновляйте адреса потоков и
+                                                удаляйте лишние источники.
+                                            </p>
+                                        </div>
+                                        <div
+                                            class="settings__list"
+                                            data-folders
+                                        ></div>
+                                    </div>
                                 </div>
                             </div>
                         </section>
@@ -311,78 +381,89 @@
                             data-settings-panel="transfer"
                             hidden
                         >
-                            <div class="settings__transfer-grid">
-                                <div class="settings__card settings__block">
-                                    <h4 class="settings__subtitle">Экспорт</h4>
-                                    <div class="settings__actions-row">
-                                        <button
-                                            class="btn btn--primary settings__submit"
-                                            type="button"
-                                            data-action="export-json"
-                                        >
-                                            Экспортировать в JSON
-                                        </button>
-                                    </div>
+                            <div class="settings__section-shell">
+                                <div class="settings__section-head">
+                                    <h3 class="settings__title">Данные</h3>
                                 </div>
-                                <div class="settings__card settings__block">
-                                    <h4 class="settings__subtitle">Импорт</h4>
-                                    <form
-                                        class="form form--import settings__form"
-                                        data-action="import-json"
-                                    >
-                                        <div
-                                            class="form__field form__field--file"
-                                        >
-                                            <span>JSON-файл для импорта</span>
-                                            <div class="form__file">
-                                                <input
-                                                    class="form__file-input"
-                                                    type="file"
-                                                    id="importFile"
-                                                    name="importFile"
-                                                    data-import-file
-                                                    accept="application/json,.json,text/json,text/plain"
-                                                    required
-                                                />
-                                                <button
-                                                    class="btn btn--ghost form__file-button"
-                                                    type="button"
-                                                    data-action="trigger-import-file"
-                                                >
-                                                    Выбрать файл
-                                                </button>
-                                            </div>
-                                            <span
-                                                class="form__file-name"
-                                                data-import-filename
-                                            >
-                                                Файл не выбран
-                                            </span>
+                                <div class="settings__transfer-grid">
+                                    <div class="settings__card settings__block">
+                                        <div class="settings__card-head">
+                                            <h4 class="settings__subtitle">
+                                                Экспорт
+                                            </h4>
+                                            <p class="settings__note">
+                                                Сохраняет колонки, подписки и
+                                                локальные настройки в один файл.
+                                            </p>
                                         </div>
                                         <div class="settings__actions-row">
                                             <button
                                                 class="btn btn--primary settings__submit"
-                                                type="submit"
+                                                type="button"
+                                                data-action="export-json"
+                                            >
+                                                Экспортировать в JSON
+                                            </button>
+                                        </div>
+                                        <div class="settings__note">
+                                            Файл будет скачан сразу после
+                                            нажатия.
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="settings__card settings__block settings__action-card"
+                                    >
+                                        <div class="settings__card-head">
+                                            <h4 class="settings__subtitle">
+                                                Импорт
+                                            </h4>
+                                            <p class="settings__note">
+                                                Выберите подготовленный
+                                                JSON-файл из этого приложения.
+                                            </p>
+                                        </div>
+                                        <input
+                                            class="form__file-input"
+                                            type="file"
+                                            id="importFile"
+                                            name="importFile"
+                                            data-import-file
+                                            accept="application/json,.json,text/json,text/plain"
+                                        />
+                                        <div class="settings__actions-row">
+                                            <button
+                                                class="btn btn--primary settings__submit"
+                                                type="button"
+                                                data-action="trigger-import-file"
                                             >
                                                 Импортировать JSON
                                             </button>
                                         </div>
-                                    </form>
-                                    <div class="settings__note">
-                                        Импорт заменит текущие колонки и потоки.
+                                        <div class="settings__note">
+                                            После выбора файла импорт начнётся
+                                            сразу.
+                                        </div>
                                     </div>
+                                </div>
+                                <div class="settings__danger">
+                                    <div class="settings__danger-copy">
+                                        <h4 class="settings__subtitle">
+                                            Сброс
+                                        </h4>
+                                        <p class="settings__footer-note">
+                                            Полностью удалит все колонки, потоки
+                                            и локальные настройки.
+                                        </p>
+                                    </div>
+                                    <button
+                                        class="btn btn--danger"
+                                        data-action="reset"
+                                    >
+                                        Сбросить настройки
+                                    </button>
                                 </div>
                             </div>
                         </section>
-                    </div>
-                    <div class="settings__footer">
-                        <p class="settings__footer-note">
-                            Сброс удалит все колонки, потоки и локальные
-                            настройки.
-                        </p>
-                        <button class="btn btn--danger" data-action="reset">
-                            Сбросить настройки
-                        </button>
                     </div>
                 </div>
             </div>

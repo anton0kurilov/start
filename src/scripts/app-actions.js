@@ -4,7 +4,6 @@ export function createAppActions({
     getState,
     importState,
     markHiddenFeedItemsInAllColumns,
-    onImportFileReset,
     refreshAll,
     shouldAutoMarkReadOnScroll,
     syncAppView,
@@ -18,6 +17,7 @@ export function createAppActions({
         handleFeedUpdated,
         handleExportJson,
         handleImportJson,
+        handleImportFileSelected,
     }
 
     async function refreshAllFeeds(options = {}) {
@@ -121,18 +121,23 @@ export function createAppActions({
 
     async function handleImportJson(event) {
         event.preventDefault()
+        if (elements.importFile) {
+            elements.importFile.click()
+            return
+        }
+        updateStatus('Выберите JSON-файл для импорта', 'error')
+    }
+
+    async function handleImportFileSelected() {
         const file = elements.importFile?.files?.[0]
         if (!file) {
-            if (elements.importFile) {
-                elements.importFile.click()
-            }
-            updateStatus('Выберите JSON-файл для импорта', 'error')
             return
         }
         const confirmed = window.confirm(
             'Импорт заменит текущие колонки и потоки. Продолжить?',
         )
         if (!confirmed) {
+            clearImportFileSelection()
             return
         }
 
@@ -141,24 +146,27 @@ export function createAppActions({
             parsed = JSON.parse(await file.text())
         } catch (error) {
             updateStatus('Файл импорта содержит неверный JSON', 'error')
+            clearImportFileSelection()
             return
         }
 
         const result = importState(parsed)
         if (!result.ok) {
             updateStatus('Не удалось импортировать данные', 'error')
+            clearImportFileSelection()
             return
         }
 
-        const form = event.currentTarget
-        if (form && typeof form.reset === 'function') {
-            form.reset()
-        }
-        if (typeof onImportFileReset === 'function') {
-            onImportFileReset()
-        }
+        clearImportFileSelection()
         syncAppView({withLastUpdated: true})
         await refreshAllFeeds()
+    }
+}
+
+function clearImportFileSelection() {
+    const importFile = document.querySelector('[data-import-file]')
+    if (importFile) {
+        importFile.value = ''
     }
 }
 

@@ -108,7 +108,6 @@ const appActions = createAppActions({
     importState,
     markHiddenFeedItemsInAllColumns:
         columnInteractions.markHiddenFeedItemsInAllColumns,
-    onImportFileReset: handleImportFileChange,
     refreshAll,
     setLastUpdatedInProgress,
     shouldAutoMarkReadOnScroll,
@@ -132,6 +131,10 @@ function handleExportJson() {
 
 function handleImportJson(event) {
     return appActions.handleImportJson(event)
+}
+
+function handleImportFileSelected() {
+    return appActions.handleImportFileSelected()
 }
 
 function handleColumnHeaderClick(event) {
@@ -210,7 +213,7 @@ function bindEvents() {
         )
     }
     if (elements.importFile) {
-        elements.importFile.addEventListener('change', handleImportFileChange)
+        elements.importFile.addEventListener('change', handleImportFileSelected)
     }
     if (elements.toggleSettings.length) {
         elements.toggleSettings.forEach((toggle) => {
@@ -558,14 +561,6 @@ function handleTriggerImportFile() {
     if (elements.importFile) {
         elements.importFile.click()
     }
-}
-
-function handleImportFileChange() {
-    if (!elements.importFileName) {
-        return
-    }
-    const file = elements.importFile?.files?.[0]
-    elements.importFileName.textContent = file ? file.name : 'Файл не выбран'
 }
 
 function resolveFeedContext(element) {
