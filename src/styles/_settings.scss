@@ -523,12 +523,31 @@
 
     &__folder-actions {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 8px;
+        flex: 0 0 auto;
     }
 
     &__folder-header--editing &__folder-actions {
         justify-content: flex-end;
+    }
+
+    &__icon-btn {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+        padding: 0;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+    }
+
+    &__action-icon {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
     }
 
     &__feed {
@@ -566,9 +585,10 @@
 
     &__feed-actions {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: flex-end;
         gap: 8px;
+        flex: 0 0 auto;
     }
 
     &__folder-btn,
@@ -673,20 +693,22 @@ body.settings-is-open {
 
     .settings {
         align-items: start;
-        padding:
-            calc(var(--padding) + var(--safeAreaTop))
-            var(--padding)
+        padding: calc(var(--padding) + var(--safeAreaTop)) var(--padding)
             calc(var(--padding) + var(--safeAreaBottom));
 
         &__panel {
             width: 100%;
             max-height: calc(
-                100vh - var(--safeAreaTop) - var(--safeAreaBottom) -
-                    var(--padding) * 2
+                100vh - var(--safeAreaTop) - var(--safeAreaBottom) - var(
+                        --padding
+                    ) *
+                    2
             );
             max-height: calc(
-                100svh - var(--safeAreaTop) - var(--safeAreaBottom) -
-                    var(--padding) * 2
+                100svh - var(--safeAreaTop) - var(--safeAreaBottom) - var(
+                        --padding
+                    ) *
+                    2
             );
             border-radius: calc(var(--borderRadius) + 4px);
         }
@@ -709,11 +731,10 @@ body.settings-is-open {
         }
 
         &__feed {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 1fr) auto;
         }
 
         &__folder-header {
-            flex-direction: column;
             align-items: flex-start;
         }
 
@@ -721,12 +742,18 @@ body.settings-is-open {
             grid-template-columns: 1fr;
         }
 
-        &__feed-actions {
-            justify-content: flex-start;
+        &__folder-name,
+        &__feed-name,
+        &__feed-url {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        &__folder-actions .btn--compact,
-        &__feed-actions .btn--compact,
+        &__feed-actions {
+            justify-content: flex-end;
+        }
+
         &__folder-btn,
         &__feed-btn,
         &__danger .btn {

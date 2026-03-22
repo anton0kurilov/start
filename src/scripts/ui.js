@@ -50,6 +50,16 @@ const STATUS_AUTO_DISMISS_MS = 15000
 const FEED_LABEL_FORMS = ['поток', 'потока', 'потоков']
 const FEED_ITEM_IMPRESSION_DWELL_MS = 1200
 const FEED_ITEM_IMPRESSION_MIN_RATIO = 0.6
+const SETTINGS_EDIT_ICON = `
+    <svg class="settings__action-icon" viewBox="0 -960 960 960" aria-hidden="true" focusable="false">
+        <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
+    </svg>
+`
+const SETTINGS_DELETE_ICON = `
+    <svg class="settings__action-icon" viewBox="0 -960 960 960" aria-hidden="true" focusable="false">
+        <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+    </svg>
+`
 let activeSettingsTab = null
 let feedItemImpressionObserver = null
 const feedItemImpressionTimers = new Map()
@@ -72,6 +82,17 @@ function renderSettings(state) {
             state.settings?.autoRefreshFeeds,
         )
     }
+}
+
+function createSettingsIconButton({action, label, variant = 'ghost', icon}) {
+    const button = document.createElement('button')
+    button.className = `btn btn--${variant} settings__icon-btn`
+    button.type = 'button'
+    button.dataset.action = action
+    button.setAttribute('aria-label', label)
+    button.title = label
+    button.innerHTML = icon
+    return button
 }
 
 function setFeedFormDisabled(isDisabled) {
@@ -183,22 +204,24 @@ function renderFoldersList(state, editingFeed, editingFolderId) {
             const name = document.createElement('div')
             name.className = 'settings__folder-name'
             name.textContent = folder.name
+            name.title = folder.name
             const meta = document.createElement('div')
             meta.className = 'settings__folder-meta'
             meta.textContent = feedsLabel
             info.append(name, meta)
 
-            const editButton = document.createElement('button')
-            editButton.className = 'btn btn--ghost btn--compact'
-            editButton.type = 'button'
-            editButton.dataset.action = 'edit-folder'
-            editButton.textContent = 'Изменить'
+            const editButton = createSettingsIconButton({
+                action: 'edit-folder',
+                label: 'Изменить колонку',
+                icon: SETTINGS_EDIT_ICON,
+            })
 
-            const removeButton = document.createElement('button')
-            removeButton.className = 'btn btn--danger btn--compact'
-            removeButton.type = 'button'
-            removeButton.dataset.action = 'remove-folder'
-            removeButton.textContent = 'Удалить'
+            const removeButton = createSettingsIconButton({
+                action: 'remove-folder',
+                label: 'Удалить колонку',
+                variant: 'danger',
+                icon: SETTINGS_DELETE_ICON,
+            })
 
             actions.append(editButton, removeButton)
             header.append(info, actions)
@@ -290,27 +313,30 @@ function createFeedRow({feed, isEditing}) {
     const feedName = document.createElement('div')
     feedName.className = 'settings__feed-name'
     feedName.textContent = feed.name
+    feedName.title = feed.name
 
     const feedUrl = document.createElement('div')
     feedUrl.className = 'settings__feed-url'
     feedUrl.textContent = getHostname(feed.url)
+    feedUrl.title = feed.url
 
     feedInfo.append(feedName, feedUrl)
 
     const actions = document.createElement('div')
     actions.className = 'settings__feed-actions'
 
-    const feedEdit = document.createElement('button')
-    feedEdit.className = 'btn btn--ghost btn--compact'
-    feedEdit.type = 'button'
-    feedEdit.dataset.action = 'edit-feed'
-    feedEdit.textContent = 'Изменить'
+    const feedEdit = createSettingsIconButton({
+        action: 'edit-feed',
+        label: 'Изменить подписку',
+        icon: SETTINGS_EDIT_ICON,
+    })
 
-    const feedRemove = document.createElement('button')
-    feedRemove.className = 'btn btn--danger btn--compact'
-    feedRemove.type = 'button'
-    feedRemove.dataset.action = 'remove-feed'
-    feedRemove.textContent = 'Удалить'
+    const feedRemove = createSettingsIconButton({
+        action: 'remove-feed',
+        label: 'Удалить подписку',
+        variant: 'danger',
+        icon: SETTINGS_DELETE_ICON,
+    })
 
     actions.append(feedEdit, feedRemove)
     feedRow.append(feedInfo, actions)
