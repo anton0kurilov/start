@@ -93,6 +93,21 @@
         color: var(--colorMuted);
         text-align: center;
         padding: 30px 10px;
+
+        &--error {
+            color: var(--colorText);
+        }
+    }
+
+    &__notice {
+        margin: 0 var(--padding);
+        border: 1px solid rgba(249, 115, 115, 0.36);
+        border-radius: var(--borderRadius);
+        padding: 10px 12px;
+        background: rgba(249, 115, 115, 0.08);
+        color: var(--colorText);
+        font-size: 0.82rem;
+        line-height: 1.35;
     }
 }
 

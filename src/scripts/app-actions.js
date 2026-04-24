@@ -1,3 +1,7 @@
+import {formatCountLabel} from './utils.js'
+
+const FEED_LABEL_FORMS = ['поток', 'потока', 'потоков']
+
 export function createAppActions({
     elements,
     exportState,
@@ -61,12 +65,16 @@ export function createAppActions({
         try {
             const result = await refreshAll()
             if (result.errorsCount) {
-                const firstError = result.errors?.[0]
-                const firstErrorText = firstError
-                    ? `. ${firstError.feedName || 'Фид'}: ${firstError.message}`
-                    : ''
+                const failedFeedsLabel = formatCountLabel(
+                    result.errorsCount,
+                    FEED_LABEL_FORMS,
+                )
+                const failedText =
+                    result.errorsCount === 1
+                        ? `${failedFeedsLabel} не обновился`
+                        : `${failedFeedsLabel} не обновились`
                 updateStatus(
-                    `Обновлено с ошибками: ${result.errorsCount}${firstErrorText}`,
+                    `Обновлено с ошибками: ${failedText}`,
                     'error',
                 )
             } else if (!isAutoRefresh) {

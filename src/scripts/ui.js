@@ -1,5 +1,6 @@
 import {MAX_ITEMS_PER_FOLDER} from './constants.js'
 import {
+    getFeedError,
     getFeedItemUsefulness,
     getFolderItems,
     isItemDismissed,
@@ -383,6 +384,11 @@ function renderColumns(state) {
 
         const items = getFolderItems(folder)
         const visibleItems = items.slice(0, MAX_ITEMS_PER_FOLDER)
+        const failedFeeds = folder.feeds.filter((feed) => getFeedError(feed.id))
+        const hasFeedErrors = failedFeeds.length > 0
+        const haveAllFeedsFailed =
+            Boolean(folder.feeds.length) &&
+            failedFeeds.length === folder.feeds.length
         markReadButton.disabled = !visibleItems.length
 
         markReadButton.innerHTML = `
@@ -411,12 +417,28 @@ function renderColumns(state) {
             content.appendChild(empty)
         } else if (!items.length) {
             const empty = document.createElement('div')
-            empty.className = 'columns__empty'
-            empty.textContent = isRefreshing
-                ? 'Лента обновляется...'
-                : 'Здесь пока нет публикаций.'
+            empty.className = hasFeedErrors
+                ? 'columns__empty columns__empty--error'
+                : 'columns__empty'
+            if (isRefreshing) {
+                empty.textContent = 'Лента обновляется...'
+            } else if (hasFeedErrors) {
+                empty.textContent =
+                    'Не удалось загрузить новости. Попробуйте обновить позже.'
+            } else {
+                empty.textContent = 'Здесь пока нет публикаций.'
+            }
             content.appendChild(empty)
         } else {
+            if (hasFeedErrors) {
+                content.appendChild(
+                    createColumnRefreshNotice({
+                        failedFeedsCount: failedFeeds.length,
+                        totalFeedsCount: folder.feeds.length,
+                        isStale: haveAllFeedsFailed,
+                    }),
+                )
+            }
             visibleItems.forEach((item) => {
                 const card = document.createElement('article')
                 card.className = 'feed__item'
@@ -481,6 +503,30 @@ function renderColumns(state) {
 
     observeFeedItemsForImpressions()
     ensureFeedItemTimesUpdates()
+}
+
+function createColumnRefreshNotice({
+    failedFeedsCount,
+    totalFeedsCount,
+    isStale,
+}) {
+    const notice = document.createElement('div')
+    notice.className = 'columns__notice'
+    const failedFeedsLabel = formatCountLabel(
+        failedFeedsCount,
+        FEED_LABEL_FORMS,
+    )
+    const failedText =
+        failedFeedsCount === 1
+            ? `${failedFeedsLabel} не обновился`
+            : `${failedFeedsLabel} не обновились`
+    const suffix =
+        isStale || failedFeedsCount === totalFeedsCount
+            ? 'Показаны новости с прошлого обновления.'
+            : 'Показаны доступные новости.'
+
+    notice.textContent = `${failedText}. ${suffix}`
+    return notice
 }
 
 function observeFeedItemsForImpressions() {

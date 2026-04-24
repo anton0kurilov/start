@@ -121,6 +121,37 @@ test('refreshAllFeeds restores button state after failed refresh', async () => {
     assert.ok(syncEvents.some((payload) => payload.withLastUpdated === true))
 })
 
+test('refreshAllFeeds summarizes feed errors without technical details', async () => {
+    const statusEvents = []
+    const actions = createActions({
+        refreshAll: async () => ({
+            errorsCount: 2,
+            errors: [
+                {
+                    feedId: 'feed-1',
+                    feedName: 'Tech',
+                    message: 'прокси недоступен (CORS)',
+                },
+            ],
+        }),
+        updateStatus: (text, tone) => {
+            statusEvents.push({text, tone})
+        },
+    })
+
+    await actions.refreshAllFeeds()
+
+    assert.ok(
+        statusEvents.some(
+            (event) =>
+                event.text ===
+                    'Обновлено с ошибками: 2 потока не обновились' &&
+                event.tone === 'error',
+        ),
+    )
+    assert.ok(!statusEvents.some((event) => event.text.includes('CORS')))
+})
+
 test('auto refresh runs without loading and success statuses', async () => {
     const statusEvents = []
     const syncEvents = []

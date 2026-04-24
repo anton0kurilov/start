@@ -505,7 +505,6 @@ export async function refreshAll() {
     if (!proxyCheck.ok) {
         const errorMessage = formatFeedError(proxyCheck.error)
         const errors = feeds.map((feed) => {
-            feedItems.set(feed.id, [])
             feedErrors.set(feed.id, errorMessage)
             return {
                 feedId: feed.id,
@@ -552,7 +551,6 @@ async function loadFeed(feed) {
         return {ok: true, count: items.length}
     } catch (error) {
         const errorMessage = formatFeedError(error)
-        feedItems.set(feed.id, [])
         feedErrors.set(feed.id, errorMessage)
         return {
             ok: false,
