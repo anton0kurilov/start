@@ -455,6 +455,7 @@ test('getFeedItemUsefulness keeps using the last published calibration', async (
     assert.equal(usefulness.tone, 'high')
     assert.equal(usefulness.label, '59%')
     assert.equal(usefulness.percentage, 59)
+    assert.match(usefulness.title, /Вероятность клика: 59%/)
 })
 
 test('getFeedItemUsefulness falls back to approximate percentages for large datasets', async () => {
@@ -501,6 +502,7 @@ test('getFeedItemUsefulness falls back to approximate percentages for large data
     assert.equal(usefulness.tone, 'high')
     assert.equal(usefulness.label, '~59%')
     assert.equal(usefulness.percentage, 59)
+    assert.match(usefulness.title, /Ориентировочная вероятность клика: ~59%/)
 })
 
 test('retraining is deterministic for the same interaction log', async () => {

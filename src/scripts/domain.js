@@ -471,8 +471,8 @@ export function getFeedItemUsefulness(item) {
         percentage,
         label: hasPublishedCalibration ? `${percentage}%` : `~${percentage}%`,
         title: hasPublishedCalibration
-            ? `Вероятность клика на основе ${displayTotalSamples} размеченных публикаций`
-            : `Ориентировочная вероятность клика: калибровка ещё нестабильна (${displayTotalSamples} размеченных публикаций)`,
+            ? `Вероятность клика: ${percentage}%. На основе ${displayTotalSamples} размеченных публикаций`
+            : `Ориентировочная вероятность клика: ~${percentage}%. Калибровка ещё нестабильна (${displayTotalSamples} размеченных публикаций)`,
     }
 }
 

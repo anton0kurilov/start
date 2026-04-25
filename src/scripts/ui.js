@@ -698,12 +698,19 @@ function createFeedItemUtility(item) {
     if (usefulness.tone !== 'learning') {
         utility.appendChild(createFeedItemUtilityIcon())
     }
-    const text = document.createElement('span')
-    text.className = 'feed__item-utility-text'
-    text.textContent = usefulness.label
-    utility.appendChild(text)
+    if (!isProbabilityUsefulnessLabel(usefulness.label)) {
+        const text = document.createElement('span')
+        text.className = 'feed__item-utility-text'
+        text.textContent = usefulness.label
+        utility.appendChild(text)
+    }
     utility.title = usefulness.title
+    utility.setAttribute('aria-label', usefulness.title)
     return utility
+}
+
+function isProbabilityUsefulnessLabel(label) {
+    return /%/.test(String(label || ''))
 }
 
 function createFeedItemUtilityIcon() {
