@@ -52,7 +52,7 @@ export function createAppActions({
         if (!isAutoRefresh) {
             updateStatus('Обновляю ленты...', 'loading')
         }
-        if (!isAutoRefresh && typeof setLastUpdatedInProgress === 'function') {
+        if (typeof setLastUpdatedInProgress === 'function') {
             setLastUpdatedInProgress()
         }
         if (elements.refresh) {

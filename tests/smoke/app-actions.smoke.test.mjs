@@ -6,6 +6,7 @@ import {createAppActions} from '../../src/scripts/app-actions.js'
 function createActions({
     getState = () => ({folders: [{feeds: [{id: 'feed-1'}]}]}),
     refreshAll = async () => ({errorsCount: 0, errors: []}),
+    setLastUpdatedInProgress = () => {},
     shouldAutoMarkReadOnScroll = () => false,
     syncAppView = () => {},
     updateStatus = () => {},
@@ -24,6 +25,7 @@ function createActions({
         markHiddenFeedItemsInAllColumns,
         onImportFileReset: () => {},
         refreshAll,
+        setLastUpdatedInProgress,
         shouldAutoMarkReadOnScroll,
         syncAppView,
         updateStatus,
@@ -155,8 +157,12 @@ test('refreshAllFeeds summarizes feed errors without technical details', async (
 test('auto refresh runs without loading and success statuses', async () => {
     const statusEvents = []
     const syncEvents = []
+    let inProgressCalls = 0
 
     const actions = createActions({
+        setLastUpdatedInProgress: () => {
+            inProgressCalls += 1
+        },
         syncAppView: (payload) => {
             syncEvents.push(payload || {})
         },
@@ -168,6 +174,7 @@ test('auto refresh runs without loading and success statuses', async () => {
     await actions.refreshAllFeeds({source: 'auto'})
 
     assert.deepEqual(statusEvents, [])
+    assert.equal(inProgressCalls, 1)
     assert.deepEqual(syncEvents, [{withLastUpdated: true}])
 })
 
