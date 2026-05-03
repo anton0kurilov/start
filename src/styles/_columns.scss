@@ -208,6 +208,12 @@
             border-color: var(--colorBorder);
             background: var(--colorSignalLearningBg);
         }
+
+        &--icon-only {
+            width: 25px;
+            padding: 0;
+            justify-content: center;
+        }
     }
 
     &-source {

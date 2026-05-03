@@ -691,14 +691,18 @@ function buildFeedItemKey(item) {
 function createFeedItemUtility(item) {
     const utility = document.createElement('span')
     const usefulness = getFeedItemUsefulness(item)
+    const showsText = !isProbabilityUsefulnessLabel(usefulness.label)
     utility.className = 'feed__item-utility'
     utility.classList.add(
         `feed__item-utility--${usefulness.tone || 'learning'}`,
     )
+    if (!showsText) {
+        utility.classList.add('feed__item-utility--icon-only')
+    }
     if (usefulness.tone !== 'learning') {
         utility.appendChild(createFeedItemUtilityIcon())
     }
-    if (!isProbabilityUsefulnessLabel(usefulness.label)) {
+    if (showsText) {
         const text = document.createElement('span')
         text.className = 'feed__item-utility-text'
         text.textContent = usefulness.label
