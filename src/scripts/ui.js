@@ -60,6 +60,7 @@ const SETTINGS_DELETE_ICON = `
 let activeSettingsTab = null
 let feedItemImpressionObserver = null
 const feedItemImpressionTimers = new Map()
+const dismissedColumnRefreshNoticeKeys = new Set()
 
 export function render(state, {editingFeed = null, editingFolderId = null} = {}) {
     renderSettings(state)
@@ -349,6 +350,7 @@ function renderColumns(state) {
     if (!elements.columns) {
         return
     }
+    pruneDismissedColumnRefreshNoticeKeys(state)
     teardownFeedItemImpressionTracking()
     elements.columns.innerHTML = ''
     elements.columns.classList.toggle('columns--empty', !state.folders.length)
@@ -422,6 +424,9 @@ function createFeedItemsColumn({
     column.className = ['columns__item', modifierClass]
         .filter(Boolean)
         .join(' ')
+    const refreshNoticeKey = failedFeeds.length
+        ? getColumnRefreshNoticeKey(failedFeeds)
+        : ''
 
     const header = document.createElement('div')
     header.className = 'columns__header'
@@ -469,8 +474,13 @@ function createFeedItemsColumn({
         empty.textContent = emptyText
         content.appendChild(empty)
     } else {
-        if (failedFeeds.length) {
-            content.appendChild(createColumnRefreshNotice({failedFeeds}))
+        if (
+            failedFeeds.length &&
+            !dismissedColumnRefreshNoticeKeys.has(refreshNoticeKey)
+        ) {
+            content.appendChild(
+                createColumnRefreshNotice({failedFeeds, refreshNoticeKey}),
+            )
         }
         visibleItems.forEach((item) => {
             content.appendChild(createFeedItemCard(item))
@@ -567,17 +577,77 @@ function getFeedItemTimestamp(item) {
         : 0
 }
 
-function createColumnRefreshNotice({failedFeeds}) {
+function createColumnRefreshNotice({failedFeeds, refreshNoticeKey}) {
     const notice = document.createElement('div')
     notice.className = 'columns__notice'
+    notice.dataset.refreshNoticeKey =
+        refreshNoticeKey || getColumnRefreshNoticeKey(failedFeeds)
     const failedFeedNames =
         failedFeeds
             .map((feed) => String(feed.name || '').trim())
             .filter(Boolean)
             .join(', ') || 'поток'
 
-    notice.textContent = `Ошибка обновления: ${failedFeedNames}`
+    const text = document.createElement('div')
+    text.className = 'columns__notice-text'
+    text.textContent = `Ошибка обновления: ${failedFeedNames}`
+
+    const closeButton = document.createElement('button')
+    closeButton.className = 'btn btn--ghost columns__notice-close'
+    closeButton.type = 'button'
+    closeButton.dataset.action = 'dismiss-refresh-notice'
+    closeButton.setAttribute('aria-label', 'Скрыть ошибку обновления')
+    closeButton.innerHTML = `
+        <svg
+            class="columns__notice-close-icon"
+            viewBox="0 -960 960 960"
+            aria-hidden="true"
+            focusable="false"
+        >
+            <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" />
+        </svg>
+    `
+    closeButton.addEventListener('click', () => {
+        dismissedColumnRefreshNoticeKeys.add(notice.dataset.refreshNoticeKey)
+        notice.remove()
+    })
+
+    notice.append(text, closeButton)
     return notice
+}
+
+function pruneDismissedColumnRefreshNoticeKeys(state) {
+    if (!dismissedColumnRefreshNoticeKeys.size) {
+        return
+    }
+    const activeKeys = new Set(getColumnRefreshNoticeKeys(state))
+    dismissedColumnRefreshNoticeKeys.forEach((key) => {
+        if (!activeKeys.has(key)) {
+            dismissedColumnRefreshNoticeKeys.delete(key)
+        }
+    })
+}
+
+function getColumnRefreshNoticeKeys(state) {
+    return (state.folders || [])
+        .map((folder) =>
+            getColumnRefreshNoticeKey(
+                (folder.feeds || []).filter((feed) => getFeedError(feed.id)),
+            ),
+        )
+        .filter(Boolean)
+}
+
+function getColumnRefreshNoticeKey(failedFeeds) {
+    return failedFeeds
+        .map((feed) => {
+            const feedId = String(feed.id || '').trim()
+            const feedName = String(feed.name || '').trim()
+            const feedError = String(getFeedError(feed.id) || '').trim()
+            return `${feedId}:${feedName}:${feedError}`
+        })
+        .sort()
+        .join('|')
 }
 
 function observeFeedItemsForImpressions() {

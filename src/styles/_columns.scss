@@ -101,13 +101,47 @@
 
     &__notice {
         margin: 0 var(--padding);
-        border: 1px solid rgba(249, 115, 115, 0.36);
+        border: 1px solid var(--colorSignalLowBorder);
         border-radius: var(--borderRadius);
-        padding: 10px 12px;
-        background: rgba(249, 115, 115, 0.08);
-        color: var(--colorText);
+        padding: 10px 10px 10px 12px;
+        background: var(--colorSignalLowBg);
+        color: var(--colorSignalLow);
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
         font-size: 0.82rem;
         line-height: 1.35;
+
+        &-text {
+            min-width: 0;
+            flex: 1;
+        }
+
+        &-close {
+            width: 24px;
+            height: 24px;
+            padding: 5px !important;
+            border-radius: 8px;
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--colorSignalLow);
+            border-color: transparent;
+
+            &:hover {
+                color: var(--colorText);
+                border-color: var(--colorSignalLowBorder);
+                background: rgba(252, 165, 165, 0.12);
+            }
+        }
+
+        &-close-icon {
+            width: 13px;
+            height: 13px;
+            display: block;
+            fill: currentColor;
+        }
     }
 }
 
