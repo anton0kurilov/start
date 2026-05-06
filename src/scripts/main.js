@@ -23,12 +23,10 @@ import {
 import {
     applySettingsOpen,
     applySettingsTab,
-    dismissStatus,
     elements,
     render,
     setLastUpdatedInProgress,
     updateLastUpdated,
-    updateStatus,
 } from './ui.js'
 import {createAppActions} from './app-actions.js'
 import {createColumnInteractions} from './column-interactions.js'
@@ -112,7 +110,6 @@ const appActions = createAppActions({
     setLastUpdatedInProgress,
     shouldAutoMarkReadOnScroll,
     syncAppView,
-    updateStatus,
 })
 
 init()
@@ -236,9 +233,6 @@ function bindEvents() {
             'change',
             handleAutoRefreshFeedsChange,
         )
-    }
-    if (elements.statusClose) {
-        elements.statusClose.addEventListener('click', handleDismissStatus)
     }
     window.addEventListener('focus', handleAutoRefreshWakeup)
     window.addEventListener('online', handleAutoRefreshWakeup)
@@ -541,10 +535,6 @@ function handleAutoRefreshFeedsChange(event) {
     if (shouldAutoRefreshFeeds()) {
         void maybeRunAutoRefresh()
     }
-}
-
-function handleDismissStatus() {
-    dismissStatus()
 }
 
 function closeSettings() {

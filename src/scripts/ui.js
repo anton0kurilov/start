@@ -14,9 +14,6 @@ export const elements = {
     feedForm: document.querySelector('[data-action="add-feed"]'),
     foldersList: document.querySelector('[data-folders]'),
     columns: document.querySelector('[data-columns]'),
-    status: document.querySelector('[data-status]'),
-    statusText: document.querySelector('[data-status-text]'),
-    statusClose: document.querySelector('[data-action="dismiss-status"]'),
     refresh: document.querySelector('[data-action="refresh"]'),
     reset: document.querySelector('[data-action="reset"]'),
     folderSelect: document.querySelector('select[name="folderId"]'),
@@ -44,10 +41,8 @@ export const elements = {
 
 let lastUpdatedTimerId = null
 let feedItemTimesTimerId = null
-let statusDismissTimerId = null
 const RECENT_ITEM_WINDOW_MS = 30 * 60 * 1000
 const RELATIVE_TIME_UPDATE_INTERVAL_MS = 60000
-const STATUS_AUTO_DISMISS_MS = 15000
 const FEED_LABEL_FORMS = ['поток', 'потока', 'потоков']
 const FEED_ITEM_IMPRESSION_DWELL_MS = 1200
 const FEED_ITEM_IMPRESSION_MIN_RATIO = 0.6
@@ -351,8 +346,6 @@ function renderColumns(state) {
     teardownFeedItemImpressionTracking()
     elements.columns.innerHTML = ''
     elements.columns.classList.toggle('columns--empty', !state.folders.length)
-    const isRefreshing =
-        elements.status?.classList.contains('fab__status--loading') || false
 
     if (!state.folders.length) {
         const empty = document.createElement('div')
@@ -386,9 +379,6 @@ function renderColumns(state) {
         const visibleItems = items.slice(0, MAX_ITEMS_PER_FOLDER)
         const failedFeeds = folder.feeds.filter((feed) => getFeedError(feed.id))
         const hasFeedErrors = failedFeeds.length > 0
-        const haveAllFeedsFailed =
-            Boolean(folder.feeds.length) &&
-            failedFeeds.length === folder.feeds.length
         markReadButton.disabled = !visibleItems.length
 
         markReadButton.innerHTML = `
@@ -420,9 +410,7 @@ function renderColumns(state) {
             empty.className = hasFeedErrors
                 ? 'columns__empty columns__empty--error'
                 : 'columns__empty'
-            if (isRefreshing) {
-                empty.textContent = 'Лента обновляется...'
-            } else if (hasFeedErrors) {
+            if (hasFeedErrors) {
                 empty.textContent =
                     'Не удалось загрузить новости. Попробуйте обновить позже.'
             } else {
@@ -433,9 +421,7 @@ function renderColumns(state) {
             if (hasFeedErrors) {
                 content.appendChild(
                     createColumnRefreshNotice({
-                        failedFeedsCount: failedFeeds.length,
-                        totalFeedsCount: folder.feeds.length,
-                        isStale: haveAllFeedsFailed,
+                        failedFeeds,
                     }),
                 )
             }
@@ -505,27 +491,16 @@ function renderColumns(state) {
     ensureFeedItemTimesUpdates()
 }
 
-function createColumnRefreshNotice({
-    failedFeedsCount,
-    totalFeedsCount,
-    isStale,
-}) {
+function createColumnRefreshNotice({failedFeeds}) {
     const notice = document.createElement('div')
     notice.className = 'columns__notice'
-    const failedFeedsLabel = formatCountLabel(
-        failedFeedsCount,
-        FEED_LABEL_FORMS,
-    )
-    const failedText =
-        failedFeedsCount === 1
-            ? `${failedFeedsLabel} не обновился`
-            : `${failedFeedsLabel} не обновились`
-    const suffix =
-        isStale || failedFeedsCount === totalFeedsCount
-            ? 'Показаны новости с прошлого обновления.'
-            : 'Показаны доступные новости.'
+    const failedFeedNames =
+        failedFeeds
+            .map((feed) => String(feed.name || '').trim())
+            .filter(Boolean)
+            .join(', ') || 'поток'
 
-    notice.textContent = `${failedText}. ${suffix}`
+    notice.textContent = `Ошибка обновления: ${failedFeedNames}`
     return notice
 }
 
@@ -851,58 +826,6 @@ function isRecentItem(date) {
     }
     const diff = Date.now() - date.getTime()
     return diff >= 0 && diff <= RECENT_ITEM_WINDOW_MS
-}
-
-export function updateStatus(text, tone = 'ready') {
-    if (!elements.status || !elements.statusText) {
-        clearStatusDismissTimer()
-        return
-    }
-    clearStatusDismissTimer()
-    elements.statusText.textContent = text
-    elements.status.classList.remove(
-        'fab__status--loading',
-        'fab__status--error',
-    )
-    const isError = tone === 'error'
-    if (elements.statusClose) {
-        elements.statusClose.disabled = !isError
-    }
-    if (tone === 'loading') {
-        elements.status.classList.add('fab__status--loading')
-    }
-    if (isError) {
-        elements.status.classList.add('fab__status--error')
-        elements.status.hidden = false
-        statusDismissTimerId = setTimeout(() => {
-            dismissStatus()
-        }, STATUS_AUTO_DISMISS_MS)
-        return
-    }
-    elements.status.hidden = true
-}
-
-export function dismissStatus() {
-    clearStatusDismissTimer()
-    if (!elements.status) {
-        return
-    }
-    elements.status.hidden = true
-    elements.status.classList.remove(
-        'fab__status--error',
-        'fab__status--loading',
-    )
-    if (elements.statusClose) {
-        elements.statusClose.disabled = true
-    }
-}
-
-function clearStatusDismissTimer() {
-    if (!statusDismissTimerId) {
-        return
-    }
-    clearTimeout(statusDismissTimerId)
-    statusDismissTimerId = null
 }
 
 function clearLastUpdatedTimer() {

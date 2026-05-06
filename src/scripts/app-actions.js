@@ -1,7 +1,3 @@
-import {formatCountLabel} from './utils.js'
-
-const FEED_LABEL_FORMS = ['поток', 'потока', 'потоков']
-
 export function createAppActions({
     elements,
     exportState,
@@ -12,7 +8,6 @@ export function createAppActions({
     shouldAutoMarkReadOnScroll,
     syncAppView,
     setLastUpdatedInProgress,
-    updateStatus,
 }) {
     let refreshAllFeedsPromise = null
 
@@ -43,15 +38,11 @@ export function createAppActions({
         const feeds = currentState.folders.flatMap((folder) => folder.feeds)
         if (!feeds.length) {
             if (!isAutoRefresh) {
-                updateStatus('Добавьте потоки для обновления')
                 syncAppView({state: currentState, withLastUpdated: true})
             }
             return
         }
 
-        if (!isAutoRefresh) {
-            updateStatus('Обновляю ленты...', 'loading')
-        }
         if (typeof setLastUpdatedInProgress === 'function') {
             setLastUpdatedInProgress()
         }
@@ -63,32 +54,9 @@ export function createAppActions({
         }
 
         try {
-            const result = await refreshAll()
-            if (result.errorsCount) {
-                const failedFeedsLabel = formatCountLabel(
-                    result.errorsCount,
-                    FEED_LABEL_FORMS,
-                )
-                const failedText =
-                    result.errorsCount === 1
-                        ? `${failedFeedsLabel} не обновился`
-                        : `${failedFeedsLabel} не обновились`
-                updateStatus(
-                    `Обновлено с ошибками: ${failedText}`,
-                    'error',
-                )
-            } else if (!isAutoRefresh) {
-                updateStatus('Ленты обновлены')
-            }
+            await refreshAll()
         } catch (error) {
-            if (!isAutoRefresh) {
-                updateStatus('Не удалось обновить ленты', 'error')
-            } else if (
-                typeof document === 'undefined' ||
-                !document.hidden
-            ) {
-                updateStatus('Не удалось обновить ленты', 'error')
-            }
+            void error
         } finally {
             syncAppView({withLastUpdated: true})
             if (shouldAutoMarkReadOnScroll()) {
@@ -124,7 +92,6 @@ export function createAppActions({
         link.click()
         link.remove()
         URL.revokeObjectURL(url)
-        updateStatus('Экспортировано в JSON')
     }
 
     async function handleImportJson(event) {
@@ -133,7 +100,6 @@ export function createAppActions({
             elements.importFile.click()
             return
         }
-        updateStatus('Выберите JSON-файл для импорта', 'error')
     }
 
     async function handleImportFileSelected() {
@@ -153,14 +119,12 @@ export function createAppActions({
         try {
             parsed = JSON.parse(await file.text())
         } catch (error) {
-            updateStatus('Файл импорта содержит неверный JSON', 'error')
             clearImportFileSelection()
             return
         }
 
         const result = importState(parsed)
         if (!result.ok) {
-            updateStatus('Не удалось импортировать данные', 'error')
             clearImportFileSelection()
             return
         }

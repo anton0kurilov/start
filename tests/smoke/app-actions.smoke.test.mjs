@@ -9,7 +9,6 @@ function createActions({
     setLastUpdatedInProgress = () => {},
     shouldAutoMarkReadOnScroll = () => false,
     syncAppView = () => {},
-    updateStatus = () => {},
     markHiddenFeedItemsInAllColumns = () => {},
 } = {}) {
     return createAppActions({
@@ -28,7 +27,6 @@ function createActions({
         setLastUpdatedInProgress,
         shouldAutoMarkReadOnScroll,
         syncAppView,
-        updateStatus,
     })
 }
 
@@ -62,7 +60,7 @@ test('refreshAllFeeds de-duplicates concurrent refresh calls', async () => {
 })
 
 test('refreshAllFeeds in empty state does not call refreshAll', async () => {
-    const statusEvents = []
+    const syncEvents = []
     let refreshCalls = 0
 
     const actions = createActions({
@@ -71,20 +69,20 @@ test('refreshAllFeeds in empty state does not call refreshAll', async () => {
             refreshCalls += 1
             return {errorsCount: 0, errors: []}
         },
-        updateStatus: (text, tone) => {
-            statusEvents.push({text, tone})
+        syncAppView: (payload) => {
+            syncEvents.push(payload || {})
         },
     })
 
     await actions.refreshAllFeeds()
 
     assert.equal(refreshCalls, 0)
-    assert.equal(statusEvents.length, 1)
-    assert.equal(statusEvents[0].text, 'Добавьте потоки для обновления')
+    assert.deepEqual(syncEvents, [
+        {state: {folders: []}, withLastUpdated: true},
+    ])
 })
 
 test('refreshAllFeeds restores button state after failed refresh', async () => {
-    const statusEvents = []
     const syncEvents = []
     const refreshButton = {disabled: false}
 
@@ -105,26 +103,16 @@ test('refreshAllFeeds restores button state after failed refresh', async () => {
         syncAppView: (payload) => {
             syncEvents.push(payload || {})
         },
-        updateStatus: (text, tone) => {
-            statusEvents.push({text, tone})
-        },
     })
 
     await actions.refreshAllFeeds()
 
     assert.equal(refreshButton.disabled, false)
-    assert.ok(
-        statusEvents.some(
-            (event) =>
-                event.text === 'Не удалось обновить ленты' &&
-                event.tone === 'error',
-        ),
-    )
     assert.ok(syncEvents.some((payload) => payload.withLastUpdated === true))
 })
 
-test('refreshAllFeeds summarizes feed errors without technical details', async () => {
-    const statusEvents = []
+test('refreshAllFeeds lets column notices handle feed errors', async () => {
+    const syncEvents = []
     const actions = createActions({
         refreshAll: async () => ({
             errorsCount: 2,
@@ -136,26 +124,17 @@ test('refreshAllFeeds summarizes feed errors without technical details', async (
                 },
             ],
         }),
-        updateStatus: (text, tone) => {
-            statusEvents.push({text, tone})
+        syncAppView: (payload) => {
+            syncEvents.push(payload || {})
         },
     })
 
     await actions.refreshAllFeeds()
 
-    assert.ok(
-        statusEvents.some(
-            (event) =>
-                event.text ===
-                    'Обновлено с ошибками: 2 потока не обновились' &&
-                event.tone === 'error',
-        ),
-    )
-    assert.ok(!statusEvents.some((event) => event.text.includes('CORS')))
+    assert.ok(syncEvents.some((payload) => payload.withLastUpdated === true))
 })
 
 test('auto refresh runs without loading and success statuses', async () => {
-    const statusEvents = []
     const syncEvents = []
     let inProgressCalls = 0
 
@@ -166,20 +145,15 @@ test('auto refresh runs without loading and success statuses', async () => {
         syncAppView: (payload) => {
             syncEvents.push(payload || {})
         },
-        updateStatus: (text, tone) => {
-            statusEvents.push({text, tone})
-        },
     })
 
     await actions.refreshAllFeeds({source: 'auto'})
 
-    assert.deepEqual(statusEvents, [])
     assert.equal(inProgressCalls, 1)
     assert.deepEqual(syncEvents, [{withLastUpdated: true}])
 })
 
 test('auto refresh skips empty-state status noise', async () => {
-    const statusEvents = []
     let refreshCalls = 0
 
     const actions = createActions({
@@ -188,15 +162,11 @@ test('auto refresh skips empty-state status noise', async () => {
             refreshCalls += 1
             return {errorsCount: 0, errors: []}
         },
-        updateStatus: (text, tone) => {
-            statusEvents.push({text, tone})
-        },
     })
 
     await actions.refreshAllFeeds({source: 'auto'})
 
     assert.equal(refreshCalls, 0)
-    assert.deepEqual(statusEvents, [])
 })
 
 test('handleFeedUpdated refreshes only when url changes', async () => {
