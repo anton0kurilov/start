@@ -23,6 +23,7 @@ test('createDefaultState returns complete base shape', () => {
     assert.deepEqual(state.settings, {
         autoMarkReadOnScroll: false,
         autoRefreshFeeds: false,
+        showFavoritesColumn: false,
     })
     assert.deepEqual(state.visitedItemKeys, [])
     assert.deepEqual(state.clickedItemKeys, [])
@@ -209,6 +210,7 @@ test('normalizeStatePayload sanitizes malformed payload and drops legacy scorer 
         settings: {
             autoMarkReadOnScroll: 'yes',
             autoRefreshFeeds: 1,
+            showFavoritesColumn: 'enabled',
             useClickModelV2: true,
         },
         visitedItemKeys: ['a', 'a', 'b'],
@@ -227,6 +229,7 @@ test('normalizeStatePayload sanitizes malformed payload and drops legacy scorer 
     assert.deepEqual(normalized.settings, {
         autoMarkReadOnScroll: true,
         autoRefreshFeeds: true,
+        showFavoritesColumn: true,
     })
     assert.deepEqual(normalized.visitedItemKeys, ['a', 'b'])
     assert.deepEqual(normalized.clickedItemKeys, ['x', 'y'])

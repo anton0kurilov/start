@@ -207,6 +207,10 @@ export function shouldAutoRefreshFeeds() {
     return Boolean(state.settings?.autoRefreshFeeds)
 }
 
+export function shouldShowFavoritesColumn() {
+    return Boolean(state.settings?.showFavoritesColumn)
+}
+
 export function setAutoMarkReadOnScroll(isEnabled) {
     const nextValue = Boolean(isEnabled)
     const currentValue = Boolean(state.settings?.autoMarkReadOnScroll)
@@ -231,6 +235,20 @@ export function setAutoRefreshFeeds(isEnabled) {
         ...DEFAULT_SETTINGS,
         ...(state.settings || {}),
         autoRefreshFeeds: nextValue,
+    }
+    saveState(state)
+}
+
+export function setShowFavoritesColumn(isEnabled) {
+    const nextValue = Boolean(isEnabled)
+    const currentValue = Boolean(state.settings?.showFavoritesColumn)
+    if (currentValue === nextValue) {
+        return
+    }
+    state.settings = {
+        ...DEFAULT_SETTINGS,
+        ...(state.settings || {}),
+        showFavoritesColumn: nextValue,
     }
     saveState(state)
 }

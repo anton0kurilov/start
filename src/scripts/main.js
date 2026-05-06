@@ -14,6 +14,7 @@ import {
     resetState,
     setAutoMarkReadOnScroll,
     setAutoRefreshFeeds,
+    setShowFavoritesColumn,
     shouldAutoMarkReadOnScroll,
     shouldAutoRefreshFeeds,
     unmarkItemsVisited,
@@ -232,6 +233,12 @@ function bindEvents() {
         elements.autoRefreshFeeds.addEventListener(
             'change',
             handleAutoRefreshFeedsChange,
+        )
+    }
+    if (elements.showFavoritesColumn) {
+        elements.showFavoritesColumn.addEventListener(
+            'change',
+            handleShowFavoritesColumnChange,
         )
     }
     window.addEventListener('focus', handleAutoRefreshWakeup)
@@ -535,6 +542,15 @@ function handleAutoRefreshFeedsChange(event) {
     if (shouldAutoRefreshFeeds()) {
         void maybeRunAutoRefresh()
     }
+}
+
+function handleShowFavoritesColumnChange(event) {
+    const target = event.currentTarget
+    if (!target) {
+        return
+    }
+    setShowFavoritesColumn(Boolean(target.checked))
+    syncAppView({preserveColumnScroll: true})
 }
 
 function closeSettings() {

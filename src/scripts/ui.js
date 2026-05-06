@@ -37,6 +37,7 @@ export const elements = {
         '[name="autoMarkReadOnScroll"]',
     ),
     autoRefreshFeeds: document.querySelector('[name="autoRefreshFeeds"]'),
+    showFavoritesColumn: document.querySelector('[name="showFavoritesColumn"]'),
 }
 
 let lastUpdatedTimerId = null
@@ -76,6 +77,11 @@ function renderSettings(state) {
     if (elements.autoRefreshFeeds) {
         elements.autoRefreshFeeds.checked = Boolean(
             state.settings?.autoRefreshFeeds,
+        )
+    }
+    if (elements.showFavoritesColumn) {
+        elements.showFavoritesColumn.checked = Boolean(
+            state.settings?.showFavoritesColumn,
         )
     }
 }
@@ -357,138 +363,208 @@ function renderColumns(state) {
         return
     }
 
+    if (state.settings?.showFavoritesColumn) {
+        elements.columns.appendChild(createFavoritesColumn(state))
+    }
+
     state.folders.forEach((folder) => {
-        const column = document.createElement('article')
-        column.className = 'columns__item'
-
-        const header = document.createElement('div')
-        header.className = 'columns__header'
-        const headerText = document.createElement('div')
-        headerText.className = 'columns__header-text'
-        const title = document.createElement('h2')
-        title.className = 'columns__title'
-        title.textContent = folder.name
-        const markReadButton = document.createElement('button')
-        markReadButton.className = 'btn btn--ghost columns__mark-read'
-        markReadButton.type = 'button'
-        markReadButton.dataset.action = 'mark-column-read'
-        markReadButton.title = 'Отметить как прочитанное'
-        markReadButton.setAttribute('aria-label', 'Отметить как прочитанное')
-
-        const items = getFolderItems(folder)
-        const visibleItems = items.slice(0, MAX_ITEMS_PER_FOLDER)
-        const failedFeeds = folder.feeds.filter((feed) => getFeedError(feed.id))
-        const hasFeedErrors = failedFeeds.length > 0
-        markReadButton.disabled = !visibleItems.length
-
-        markReadButton.innerHTML = `
-            <svg
-                class="columns__mark-read-icon"
-                viewBox="0 -960 960 960"
-                aria-hidden="true"
-                focusable="false"
-            >
-                <path
-                    d="M268-240 42-466l57-56 170 170 56 56-57 56Zm226 0L268-466l56-57 170 170 368-368 56 57-424 424Zm0-226-57-56 198-198 57 56-198 198Z"
-                />
-            </svg>
-        `
-
-        headerText.append(title)
-        header.append(headerText, markReadButton)
-
-        const content = document.createElement('div')
-        content.className = 'columns__content'
-
-        if (!folder.feeds.length) {
-            const empty = document.createElement('div')
-            empty.className = 'columns__empty'
-            empty.textContent = 'Добавьте потоки в эту колонку.'
-            content.appendChild(empty)
-        } else if (!items.length) {
-            const empty = document.createElement('div')
-            empty.className = hasFeedErrors
-                ? 'columns__empty columns__empty--error'
-                : 'columns__empty'
-            if (hasFeedErrors) {
-                empty.textContent =
-                    'Не удалось загрузить новости. Попробуйте обновить позже.'
-            } else {
-                empty.textContent = 'Здесь пока нет публикаций.'
-            }
-            content.appendChild(empty)
-        } else {
-            if (hasFeedErrors) {
-                content.appendChild(
-                    createColumnRefreshNotice({
-                        failedFeeds,
-                    }),
-                )
-            }
-            visibleItems.forEach((item) => {
-                const card = document.createElement('article')
-                card.className = 'feed__item'
-                const itemKey = buildFeedItemKey(item)
-                const isDismissed = itemKey ? isItemDismissed(itemKey) : false
-                if (itemKey) {
-                    card.dataset.itemKey = itemKey
-                    card.classList.toggle(
-                        'feed__item--visited',
-                        isItemVisited(itemKey),
-                    )
-                }
-                card.classList.toggle('feed__item--dismissed', isDismissed)
-                card.dataset.feedId = String(item.feedId || '').trim()
-                card.dataset.itemSource = String(item.source || '').trim()
-                card.dataset.itemTitle = String(item.title || '').trim()
-                card.dataset.itemLink = String(item.link || '').trim()
-                card.dataset.itemPublishedAt =
-                    item.date instanceof Date && !Number.isNaN(item.date.getTime())
-                        ? item.date.toISOString()
-                        : ''
-
-                const link = document.createElement('a')
-                link.className = 'feed__item-link'
-                link.dataset.feedLink = 'true'
-                applyFeedItemLink(link, item.link)
-
-                const source = document.createElement('div')
-                source.className = 'feed__item-source'
-                source.textContent = item.source || 'Источник'
-
-                const headline = document.createElement('div')
-                headline.className = 'feed__item-title'
-                headline.textContent = item.title || 'Без заголовка'
-
-                const time = document.createElement('div')
-                time.className = 'feed__item-time'
-                setFeedItemTime(time, item.date)
-
-                const utility = createFeedItemUtility(item)
-                const meta = document.createElement('div')
-                meta.className = 'feed__item-meta'
-                const metaControls = document.createElement('div')
-                metaControls.className = 'feed__item-meta-controls'
-
-                const actions = document.createElement('div')
-                actions.className = 'feed__item-actions'
-                actions.append(utility, createFeedItemDismissButton(isDismissed))
-
-                metaControls.appendChild(actions)
-                meta.append(time, metaControls)
-
-                link.append(source, headline)
-                card.append(link, meta)
-                content.appendChild(card)
-            })
-        }
-
-        column.append(header, content)
-        elements.columns.appendChild(column)
+        elements.columns.appendChild(createFolderColumn(folder))
     })
 
     observeFeedItemsForImpressions()
     ensureFeedItemTimesUpdates()
+}
+
+function createFavoritesColumn(state) {
+    const hasFeeds = state.folders.some((folder) => folder.feeds?.length)
+    const items = getFavoriteFeedItems(state)
+    return createFeedItemsColumn({
+        title: '⭐ Избранное',
+        items,
+        hasFeeds,
+        emptyText: hasFeeds
+            ? 'Избранных материалов пока нет.'
+            : 'Добавьте потоки, чтобы собрать избранное.',
+        modifierClass: 'columns__item--favorites',
+    })
+}
+
+function createFolderColumn(folder) {
+    const items = getFolderItems(folder)
+    const failedFeeds = folder.feeds.filter((feed) => getFeedError(feed.id))
+    const hasFeedErrors = failedFeeds.length > 0
+    return createFeedItemsColumn({
+        title: folder.name,
+        items,
+        hasFeeds: Boolean(folder.feeds.length),
+        emptyText: hasFeedErrors
+            ? 'Не удалось загрузить новости. Попробуйте обновить позже.'
+            : 'Здесь пока нет публикаций.',
+        noFeedsText: 'Добавьте потоки в эту колонку.',
+        emptyClassName: hasFeedErrors
+            ? 'columns__empty columns__empty--error'
+            : 'columns__empty',
+        failedFeeds,
+    })
+}
+
+function createFeedItemsColumn({
+    title,
+    items,
+    hasFeeds,
+    emptyText,
+    noFeedsText = emptyText,
+    emptyClassName = 'columns__empty',
+    failedFeeds = [],
+    modifierClass = '',
+}) {
+    const column = document.createElement('article')
+    column.className = ['columns__item', modifierClass]
+        .filter(Boolean)
+        .join(' ')
+
+    const header = document.createElement('div')
+    header.className = 'columns__header'
+    const headerText = document.createElement('div')
+    headerText.className = 'columns__header-text'
+    const titleElement = document.createElement('h2')
+    titleElement.className = 'columns__title'
+    titleElement.textContent = title
+    const markReadButton = document.createElement('button')
+    markReadButton.className = 'btn btn--ghost columns__mark-read'
+    markReadButton.type = 'button'
+    markReadButton.dataset.action = 'mark-column-read'
+    markReadButton.title = 'Отметить как прочитанное'
+    markReadButton.setAttribute('aria-label', 'Отметить как прочитанное')
+
+    const visibleItems = items.slice(0, MAX_ITEMS_PER_FOLDER)
+    markReadButton.disabled = !visibleItems.length
+    markReadButton.innerHTML = `
+        <svg
+            class="columns__mark-read-icon"
+            viewBox="0 -960 960 960"
+            aria-hidden="true"
+            focusable="false"
+        >
+            <path
+                d="M268-240 42-466l57-56 170 170 56 56-57 56Zm226 0L268-466l56-57 170 170 368-368 56 57-424 424Zm0-226-57-56 198-198 57 56-198 198Z"
+            />
+        </svg>
+    `
+
+    headerText.append(titleElement)
+    header.append(headerText, markReadButton)
+
+    const content = document.createElement('div')
+    content.className = 'columns__content'
+
+    if (!hasFeeds) {
+        const empty = document.createElement('div')
+        empty.className = 'columns__empty'
+        empty.textContent = noFeedsText
+        content.appendChild(empty)
+    } else if (!items.length) {
+        const empty = document.createElement('div')
+        empty.className = emptyClassName
+        empty.textContent = emptyText
+        content.appendChild(empty)
+    } else {
+        if (failedFeeds.length) {
+            content.appendChild(createColumnRefreshNotice({failedFeeds}))
+        }
+        visibleItems.forEach((item) => {
+            content.appendChild(createFeedItemCard(item))
+        })
+    }
+
+    column.append(header, content)
+    return column
+}
+
+function getFavoriteFeedItems(state) {
+    return state.folders
+        .flatMap((folder) => getFolderItems(folder))
+        .filter((item) => !isItemVisited(buildFeedItemKey(item)))
+        .map((item) => ({
+            item,
+            usefulness: getFeedItemUsefulness(item),
+        }))
+        .filter(({usefulness}) => usefulness.tone === 'high')
+        .sort((left, right) => {
+            const scoreDelta =
+                (right.usefulness.score || 0) - (left.usefulness.score || 0)
+            if (scoreDelta !== 0) {
+                return scoreDelta
+            }
+            return (
+                getFeedItemTimestamp(right.item) -
+                getFeedItemTimestamp(left.item)
+            )
+        })
+        .map(({item}) => item)
+}
+
+function createFeedItemCard(item) {
+    const card = document.createElement('article')
+    card.className = 'feed__item'
+    const itemKey = buildFeedItemKey(item)
+    const isDismissed = itemKey ? isItemDismissed(itemKey) : false
+    if (itemKey) {
+        card.dataset.itemKey = itemKey
+        card.classList.toggle('feed__item--visited', isItemVisited(itemKey))
+    }
+    card.classList.toggle('feed__item--dismissed', isDismissed)
+    card.dataset.feedId = String(item.feedId || '').trim()
+    card.dataset.itemSource = String(item.source || '').trim()
+    card.dataset.itemTitle = String(item.title || '').trim()
+    card.dataset.itemLink = String(item.link || '').trim()
+    card.dataset.itemPublishedAt = getFeedItemPublishedAt(item)
+
+    const link = document.createElement('a')
+    link.className = 'feed__item-link'
+    link.dataset.feedLink = 'true'
+    applyFeedItemLink(link, item.link)
+
+    const source = document.createElement('div')
+    source.className = 'feed__item-source'
+    source.textContent = item.source || 'Источник'
+
+    const headline = document.createElement('div')
+    headline.className = 'feed__item-title'
+    headline.textContent = item.title || 'Без заголовка'
+
+    const time = document.createElement('div')
+    time.className = 'feed__item-time'
+    setFeedItemTime(time, item.date)
+
+    const utility = createFeedItemUtility(item)
+    const meta = document.createElement('div')
+    meta.className = 'feed__item-meta'
+    const metaControls = document.createElement('div')
+    metaControls.className = 'feed__item-meta-controls'
+
+    const actions = document.createElement('div')
+    actions.className = 'feed__item-actions'
+    actions.append(utility, createFeedItemDismissButton(isDismissed))
+
+    metaControls.appendChild(actions)
+    meta.append(time, metaControls)
+
+    link.append(source, headline)
+    card.append(link, meta)
+    return card
+}
+
+function getFeedItemPublishedAt(item) {
+    return item.date instanceof Date && !Number.isNaN(item.date.getTime())
+        ? item.date.toISOString()
+        : ''
+}
+
+function getFeedItemTimestamp(item) {
+    return item.date instanceof Date && !Number.isNaN(item.date.getTime())
+        ? item.date.getTime()
+        : 0
 }
 
 function createColumnRefreshNotice({failedFeeds}) {

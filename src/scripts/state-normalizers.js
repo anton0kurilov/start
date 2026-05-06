@@ -52,6 +52,7 @@ export function normalizeSettings(rawSettings) {
         ...DEFAULT_SETTINGS,
         autoMarkReadOnScroll: Boolean(rawSettings.autoMarkReadOnScroll),
         autoRefreshFeeds: Boolean(rawSettings.autoRefreshFeeds),
+        showFavoritesColumn: Boolean(rawSettings.showFavoritesColumn),
     }
 }
 

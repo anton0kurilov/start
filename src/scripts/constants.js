@@ -30,4 +30,5 @@ export const MODEL_SYNC_INTERVAL_MS = 60000
 export const DEFAULT_SETTINGS = {
     autoMarkReadOnScroll: false,
     autoRefreshFeeds: false,
+    showFavoritesColumn: false,
 }

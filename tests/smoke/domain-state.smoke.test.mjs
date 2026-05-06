@@ -54,6 +54,7 @@ function createBaseState(overrides = {}) {
         settings: {
             autoMarkReadOnScroll: false,
             autoRefreshFeeds: false,
+            showFavoritesColumn: false,
         },
         visitedItemKeys: [],
         clickedItemKeys: [],
@@ -606,6 +607,7 @@ test('importState and exportState preserve folder and settings contract', async 
         settings: {
             autoMarkReadOnScroll: true,
             autoRefreshFeeds: true,
+            showFavoritesColumn: true,
         },
     })
 
@@ -617,6 +619,7 @@ test('importState and exportState preserve folder and settings contract', async 
     assert.equal(exported.folders[0].feeds[0].url, 'https://example.com/rss')
     assert.equal(exported.settings.autoMarkReadOnScroll, true)
     assert.equal(exported.settings.autoRefreshFeeds, true)
+    assert.equal(exported.settings.showFavoritesColumn, true)
 })
 
 test('setAutoRefreshFeeds persists auto refresh preference', async () => {
@@ -626,6 +629,15 @@ test('setAutoRefreshFeeds persists auto refresh preference', async () => {
 
     assert.equal(domain.shouldAutoRefreshFeeds(), true)
     assert.equal(getStoredState(localStorage).settings.autoRefreshFeeds, true)
+})
+
+test('setShowFavoritesColumn persists favorites column preference', async () => {
+    const {domain, localStorage} = await loadFreshDomainModule()
+
+    domain.setShowFavoritesColumn(true)
+
+    assert.equal(domain.shouldShowFavoritesColumn(), true)
+    assert.equal(getStoredState(localStorage).settings.showFavoritesColumn, true)
 })
 
 test('resetState restores defaults from storage', async () => {
