@@ -25,8 +25,14 @@ let impressedItemKeysSet = new Set()
 const feedItems = new Map()
 const feedErrors = new Map()
 const PROXY_HEALTHCHECK_URL = 'https://example.com/'
-const USEFULNESS_HIGH_THRESHOLD = 0.58
-const USEFULNESS_MEDIUM_THRESHOLD = 0.36
+// Baseline-relative score: ~0.5 means normal, ~0.66 means strong lift.
+const USEFULNESS_HIGH_THRESHOLD = 0.66
+const USEFULNESS_MEDIUM_THRESHOLD = 0.42
+const USEFULNESS_DEFAULT_BASELINE = 0.12
+const USEFULNESS_MIN_BASELINE = 0.04
+const USEFULNESS_MAX_BASELINE = 0.4
+// Zones use lift over the user's baseline CTR, not absolute click probability.
+const USEFULNESS_LOG_ODDS_SCALE = 1.1
 const CLICKED_ITEM_USEFULNESS_SCORE = 0.91
 let lastModelSyncCheckAt = 0
 
@@ -471,11 +477,18 @@ export function getFeedItemUsefulness(item) {
         return createLearningUsefulness(latestTotalSamples)
     }
 
-    const score = clamp(prediction.probability, 0.03, 0.97)
+    const probability = clamp(prediction.probability, 0.03, 0.97)
+    const usefulnessScale = resolveUsefulnessScale(
+        probability,
+        displayModelArtifacts,
+        displayCalibrationArtifacts,
+    )
+    const score = usefulnessScale.score
     const displayTotalSamples = Number(
         displayModelArtifacts?.totalLabeledSamples || latestTotalSamples,
     )
-    const percentage = Math.round(score * 100)
+    const percentage = Math.round(probability * 100)
+    const baselinePercentage = Math.round(usefulnessScale.baseline * 100)
     let tone = 'low'
     if (score >= USEFULNESS_HIGH_THRESHOLD) {
         tone = 'high'
@@ -489,8 +502,8 @@ export function getFeedItemUsefulness(item) {
         percentage,
         label: hasPublishedCalibration ? `${percentage}%` : `~${percentage}%`,
         title: hasPublishedCalibration
-            ? `Вероятность клика: ${percentage}%. На основе ${displayTotalSamples} размеченных публикаций`
-            : `Ориентировочная вероятность клика: ~${percentage}%. Калибровка ещё нестабильна (${displayTotalSamples} размеченных публикаций)`,
+            ? `Вероятность клика: ${percentage}%. Средний уровень: ${baselinePercentage}%. На основе ${displayTotalSamples} размеченных публикаций`
+            : `Ориентировочная вероятность клика: ~${percentage}%. Средний уровень: ${baselinePercentage}%. Калибровка ещё нестабильна (${displayTotalSamples} размеченных публикаций)`,
     }
 }
 
@@ -736,6 +749,54 @@ function getItemTimestamp(item) {
         return 0
     }
     return time
+}
+
+function resolveUsefulnessScale(
+    probability,
+    modelArtifacts,
+    calibrationArtifacts,
+) {
+    const baseline = resolveUsefulnessBaseline(
+        modelArtifacts,
+        calibrationArtifacts,
+    )
+    const probabilityLogOdds = toLogOdds(clamp(probability, 0.01, 0.99))
+    const baselineLogOdds = toLogOdds(baseline)
+    const relativeScore = sigmoid(
+        (probabilityLogOdds - baselineLogOdds) / USEFULNESS_LOG_ODDS_SCALE,
+    )
+
+    return {
+        baseline,
+        score: clamp(relativeScore, 0.03, 0.97),
+    }
+}
+
+function resolveUsefulnessBaseline(modelArtifacts, calibrationArtifacts) {
+    const candidates = [
+        modelArtifacts?.baselineCtr,
+        calibrationArtifacts?.metrics?.baselineCtr,
+        USEFULNESS_DEFAULT_BASELINE,
+    ]
+    const baseline = candidates.find((value) => {
+        const numericValue = Number(value)
+        return Number.isFinite(numericValue) && numericValue > 0
+    })
+
+    return clamp(
+        Number(baseline || USEFULNESS_DEFAULT_BASELINE),
+        USEFULNESS_MIN_BASELINE,
+        USEFULNESS_MAX_BASELINE,
+    )
+}
+
+function toLogOdds(probability) {
+    const normalizedProbability = clamp(probability, 0.01, 0.99)
+    return Math.log(normalizedProbability / (1 - normalizedProbability))
+}
+
+function sigmoid(value) {
+    return 1 / (1 + Math.exp(-clamp(value, -16, 16)))
 }
 
 function createLearningUsefulness(totalSamples) {

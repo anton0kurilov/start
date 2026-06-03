@@ -6,6 +6,7 @@ import {pathToFileURL} from 'node:url'
 import {
     MODEL_IMPRESSION_NEGATIVE_DELAY_MS,
     MODEL_STATE_SCHEMA_VERSION,
+    MODEL_VERSION,
     STORAGE_KEY,
 } from '../../src/scripts/constants.js'
 
@@ -60,7 +61,7 @@ function createBaseState(overrides = {}) {
         clickedItemKeys: [],
         modelState: {
             schemaVersion: MODEL_STATE_SCHEMA_VERSION,
-            modelVersion: 1,
+            modelVersion: MODEL_VERSION,
             interactionLog: [],
             modelArtifacts: {},
             calibrationArtifacts: {},
@@ -91,6 +92,41 @@ function createInteractionEvent({
             publishedAt,
         },
     }
+}
+
+function createPublishedScorerState({
+    probability,
+    baselineCtr = 0.1,
+    weights = {},
+}) {
+    return createBaseState({
+        modelState: {
+            schemaVersion: MODEL_STATE_SCHEMA_VERSION,
+            modelVersion: MODEL_VERSION,
+            interactionLog: [],
+            modelArtifacts: {},
+            calibrationArtifacts: {},
+            publishedModelArtifacts: {
+                totalLabeledSamples: 240,
+                baselineCtr,
+                bias: logit(probability),
+                weights,
+            },
+            publishedCalibrationArtifacts: {
+                ready: true,
+                slope: 1,
+                intercept: 0,
+                metrics: {
+                    ece: 0.04,
+                    baselineCtr,
+                },
+            },
+        },
+    })
+}
+
+function logit(probability) {
+    return Math.log(probability / (1 - probability))
 }
 
 async function withMockedNow(now, callback) {
@@ -504,6 +540,151 @@ test('getFeedItemUsefulness falls back to approximate percentages for large data
     assert.equal(usefulness.label, '~59%')
     assert.equal(usefulness.percentage, 59)
     assert.match(usefulness.title, /Ориентировочная вероятность клика: ~59%/)
+})
+
+test('getFeedItemUsefulness maps clearly weak item to low tone', async () => {
+    const {domain} = await loadFreshDomainModule(
+        createPublishedScorerState({
+            probability: 0.04,
+            baselineCtr: 0.1,
+        }),
+    )
+
+    const usefulness = domain.getFeedItemUsefulness({
+        source: 'Cold source',
+        link: 'https://example.com/weak',
+        title: 'Weak headline',
+    })
+
+    assert.equal(usefulness.tone, 'low')
+    assert.equal(usefulness.label, '4%')
+    assert.equal(usefulness.percentage, 4)
+})
+
+test('getFeedItemUsefulness maps average baseline item to medium tone', async () => {
+    const {domain} = await loadFreshDomainModule(
+        createPublishedScorerState({
+            probability: 0.1,
+            baselineCtr: 0.1,
+        }),
+    )
+
+    const usefulness = domain.getFeedItemUsefulness({
+        source: 'Normal source',
+        link: 'https://example.com/average',
+        title: 'Average headline',
+    })
+
+    assert.equal(usefulness.tone, 'medium')
+    assert.equal(usefulness.label, '10%')
+    assert.equal(usefulness.percentage, 10)
+    assert.match(usefulness.title, /Средний уровень: 10%/)
+})
+
+test('getFeedItemUsefulness maps strong lift over baseline to high tone', async () => {
+    const {domain} = await loadFreshDomainModule(
+        createPublishedScorerState({
+            probability: 0.22,
+            baselineCtr: 0.1,
+        }),
+    )
+
+    const usefulness = domain.getFeedItemUsefulness({
+        source: 'Strong source',
+        link: 'https://example.com/strong',
+        title: 'Strong headline',
+    })
+
+    assert.equal(usefulness.tone, 'high')
+    assert.equal(usefulness.label, '22%')
+    assert.equal(usefulness.percentage, 22)
+})
+
+test('getFeedItemUsefulness handles zone boundaries predictably', async () => {
+    const {domain: belowMediumDomain} = await loadFreshDomainModule(
+        createPublishedScorerState({
+            probability: 0.07,
+            baselineCtr: 0.1,
+        }),
+    )
+    const {domain: aboveMediumDomain} = await loadFreshDomainModule(
+        createPublishedScorerState({
+            probability: 0.08,
+            baselineCtr: 0.1,
+        }),
+    )
+    const {domain: belowHighDomain} = await loadFreshDomainModule(
+        createPublishedScorerState({
+            probability: 0.18,
+            baselineCtr: 0.1,
+        }),
+    )
+    const {domain: aboveHighDomain} = await loadFreshDomainModule(
+        createPublishedScorerState({
+            probability: 0.2,
+            baselineCtr: 0.1,
+        }),
+    )
+
+    assert.equal(
+        belowMediumDomain.getFeedItemUsefulness({
+            source: 'Boundary source',
+            link: 'https://example.com/below-medium',
+            title: 'Below medium boundary',
+        }).tone,
+        'low',
+    )
+    assert.equal(
+        aboveMediumDomain.getFeedItemUsefulness({
+            source: 'Boundary source',
+            link: 'https://example.com/above-medium',
+            title: 'Above medium boundary',
+        }).tone,
+        'medium',
+    )
+    assert.equal(
+        belowHighDomain.getFeedItemUsefulness({
+            source: 'Boundary source',
+            link: 'https://example.com/below-high',
+            title: 'Below high boundary',
+        }).tone,
+        'medium',
+    )
+    assert.equal(
+        aboveHighDomain.getFeedItemUsefulness({
+            source: 'Boundary source',
+            link: 'https://example.com/above-high',
+            title: 'Above high boundary',
+        }).tone,
+        'high',
+    )
+})
+
+test('getFeedItemUsefulness caps a single negative factor impact', async () => {
+    const {domain} = await loadFreshDomainModule(
+        createPublishedScorerState({
+            probability: 0.5,
+            baselineCtr: 0.1,
+            weights: {
+                'source:trusted': -6,
+            },
+        }),
+    )
+
+    const unaffected = domain.getFeedItemUsefulness({
+        source: 'Neutral',
+        link: 'https://example.com/neutral',
+        title: 'Good headline',
+    })
+    const penalized = domain.getFeedItemUsefulness({
+        source: 'Trusted',
+        link: 'https://example.com/penalized',
+        title: 'Good headline',
+    })
+
+    assert.equal(unaffected.tone, 'high')
+    assert.equal(penalized.tone, 'medium')
+    assert.ok(penalized.percentage >= 14)
 })
 
 test('retraining is deterministic for the same interaction log', async () => {

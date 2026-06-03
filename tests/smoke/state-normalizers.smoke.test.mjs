@@ -13,6 +13,7 @@ import {
     MAX_MODEL_EVENTS,
     MAX_VISITED_ITEMS,
     MODEL_STATE_SCHEMA_VERSION,
+    MODEL_VERSION,
 } from '../../src/scripts/constants.js'
 
 test('createDefaultState returns complete base shape', () => {
@@ -29,7 +30,7 @@ test('createDefaultState returns complete base shape', () => {
     assert.deepEqual(state.clickedItemKeys, [])
     assert.deepEqual(state.modelState, {
         schemaVersion: MODEL_STATE_SCHEMA_VERSION,
-        modelVersion: 1,
+        modelVersion: MODEL_VERSION,
         interactionLog: [],
         modelArtifacts: {
             trainedAt: null,

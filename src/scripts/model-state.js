@@ -9,6 +9,7 @@ import {
     MODEL_IMPRESSION_NEGATIVE_DELAY_MS,
     MODEL_MAX_ACCEPTABLE_ECE,
     MODEL_MAX_ABS_WEIGHT,
+    MODEL_MAX_FEATURE_CONTRIBUTION,
     MODEL_MIN_HOLDOUT_SAMPLES,
     MODEL_MIN_SAMPLES_FOR_APPROXIMATE_PERCENT,
     MODEL_MIN_SAMPLES_FOR_PERCENT,
@@ -826,7 +827,11 @@ function predictRawScore(modelArtifacts, features) {
         if (!weight) {
             return
         }
-        rawScore += weight * value
+        rawScore += clamp(
+            weight * value,
+            -MODEL_MAX_FEATURE_CONTRIBUTION,
+            MODEL_MAX_FEATURE_CONTRIBUTION,
+        )
     })
     return clamp(rawScore, -12, 12)
 }

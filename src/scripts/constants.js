@@ -6,7 +6,7 @@ export const MAX_ITEMS_PER_FOLDER = 40
 export const MAX_VISITED_ITEMS = 4000
 export const MAX_CLICKED_ITEMS = 4000
 export const MODEL_STATE_SCHEMA_VERSION = 1
-export const MODEL_VERSION = 1
+export const MODEL_VERSION = 2
 export const MAX_MODEL_EVENTS = 6000
 export const MAX_MODEL_FEATURES = 2400
 export const MAX_MODEL_FEATURES_PER_ITEM = 28
@@ -18,9 +18,12 @@ export const MODEL_RANKER_REGULARIZATION = 0.0008
 export const MODEL_CALIBRATION_EPOCHS = 80
 export const MODEL_CALIBRATION_LEARNING_RATE = 0.08
 export const MODEL_MAX_ABS_WEIGHT = 6
-export const MODEL_POSITIVE_WEIGHT = 1.8
-export const MODEL_EXPLICIT_NEGATIVE_WEIGHT = 2.4
-export const MODEL_WEAK_NEGATIVE_WEIGHT = 0.35
+// A single feature can indicate preference, but should not veto the whole item.
+export const MODEL_MAX_FEATURE_CONTRIBUTION = 1.8
+// Clicks are sparse positive labels; weak stale impressions are only soft hints.
+export const MODEL_POSITIVE_WEIGHT = 2
+export const MODEL_EXPLICIT_NEGATIVE_WEIGHT = 1.6
+export const MODEL_WEAK_NEGATIVE_WEIGHT = 0.2
 export const MODEL_MIN_SAMPLES_FOR_PERCENT = 36
 export const MODEL_MIN_SAMPLES_FOR_APPROXIMATE_PERCENT = 120
 export const MODEL_MIN_HOLDOUT_SAMPLES = 10
