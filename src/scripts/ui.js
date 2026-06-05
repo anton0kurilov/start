@@ -501,15 +501,18 @@ function getFavoriteFeedItems(state) {
         }))
         .filter(({usefulness}) => usefulness.tone === 'high')
         .sort((left, right) => {
+            const timestampDelta =
+                getFeedItemTimestamp(right.item) -
+                getFeedItemTimestamp(left.item)
+            if (timestampDelta !== 0) {
+                return timestampDelta
+            }
             const scoreDelta =
                 (right.usefulness.score || 0) - (left.usefulness.score || 0)
             if (scoreDelta !== 0) {
                 return scoreDelta
             }
-            return (
-                getFeedItemTimestamp(right.item) -
-                getFeedItemTimestamp(left.item)
-            )
+            return 0
         })
         .map(({item}) => item)
 }
