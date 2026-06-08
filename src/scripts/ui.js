@@ -385,7 +385,7 @@ function createFavoritesColumn(state) {
         items,
         hasFeeds,
         emptyText: hasFeeds
-            ? 'Избранных материалов пока нет.'
+            ? 'Избранных публикаций пока нет.'
             : 'Добавьте потоки, чтобы собрать избранное.',
         modifierClass: 'columns__item--favorites',
     })
@@ -400,7 +400,7 @@ function createFolderColumn(folder) {
         items,
         hasFeeds: Boolean(folder.feeds.length),
         emptyText: hasFeedErrors
-            ? 'Не удалось загрузить новости. Попробуйте обновить позже.'
+            ? 'Не удалось загрузить публикации. Попробуйте обновить позже.'
             : 'Здесь пока нет публикаций.',
         noFeedsText: 'Добавьте потоки в эту колонку.',
         emptyClassName: hasFeedErrors
@@ -439,8 +439,11 @@ function createFeedItemsColumn({
     markReadButton.className = 'btn btn--ghost columns__mark-read'
     markReadButton.type = 'button'
     markReadButton.dataset.action = 'mark-column-read'
-    markReadButton.title = 'Отметить как прочитанное'
-    markReadButton.setAttribute('aria-label', 'Отметить как прочитанное')
+    markReadButton.title = 'Отметить публикации как прочитанные'
+    markReadButton.setAttribute(
+        'aria-label',
+        'Отметить публикации как прочитанные',
+    )
 
     const visibleItems = items.slice(0, MAX_ITEMS_PER_FOLDER)
     markReadButton.disabled = !visibleItems.length
