@@ -815,7 +815,9 @@ function buildFeedItemKey(item) {
 function createFeedItemUtility(item) {
     const utility = document.createElement('span')
     const usefulness = getFeedItemUsefulness(item)
-    const showsText = !isProbabilityUsefulnessLabel(usefulness.label)
+    const showsText =
+        !isProbabilityUsefulnessLabel(usefulness.label) &&
+        !isVisitedUsefulnessLabel(usefulness.label)
     utility.className = 'feed__item-utility'
     utility.classList.add(
         `feed__item-utility--${usefulness.tone || 'learning'}`,
@@ -824,7 +826,7 @@ function createFeedItemUtility(item) {
         utility.classList.add('feed__item-utility--icon-only')
     }
     if (usefulness.tone !== 'learning') {
-        utility.appendChild(createFeedItemUtilityIcon())
+        utility.appendChild(createFeedItemUtilityIcon(usefulness.label))
     }
     if (showsText) {
         const text = document.createElement('span')
@@ -841,7 +843,11 @@ function isProbabilityUsefulnessLabel(label) {
     return /%/.test(String(label || ''))
 }
 
-function createFeedItemUtilityIcon() {
+function isVisitedUsefulnessLabel(label) {
+    return String(label || '') === 'посетил'
+}
+
+function createFeedItemUtilityIcon(label) {
     const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
     icon.classList.add('feed__item-utility-icon')
     icon.setAttribute('viewBox', '0 -960 960 960')
@@ -850,7 +856,9 @@ function createFeedItemUtilityIcon() {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
     path.setAttribute(
         'd',
-        'M720-120H280v-520l280-280 50 50q7 7 11.5 19t4.5 23v14l-44 174h258q32 0 56 24t24 56v80q0 7-2 15t-4 15L794-168q-9 20-30 34t-44 14Zm-360-80h360l120-280v-80H480l54-220-174 174v406Zm0-406v406-406Zm-80-34v80H160v360h120v80H80v-520h200Z',
+        isVisitedUsefulnessLabel(label)
+            ? 'M607.5-372.5Q660-425 660-500t-52.5-127.5Q555-680 480-680t-127.5 52.5Q300-575 300-500t52.5 127.5Q405-320 480-320t127.5-52.5Zm-204-51Q372-455 372-500t31.5-76.5Q435-608 480-608t76.5 31.5Q588-545 588-500t-31.5 76.5Q525-392 480-392t-76.5-31.5ZM214-281.5Q94-363 40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200q-146 0-266-81.5ZM480-500Zm207.5 160.5Q782-399 832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280q113 0 207.5-59.5Z'
+            : 'M720-120H280v-520l280-280 50 50q7 7 11.5 19t4.5 23v14l-44 174h258q32 0 56 24t24 56v80q0 7-2 15t-4 15L794-168q-9 20-30 34t-44 14Zm-360-80h360l120-280v-80H480l54-220-174 174v406Zm0-406v406-406Zm-80-34v80H160v360h120v80H80v-520h200Z',
     )
     icon.appendChild(path)
     return icon
