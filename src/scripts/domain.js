@@ -14,7 +14,12 @@ import {
     rebuildModelState,
 } from './model-state.js'
 import {loadState, saveState, clearState} from './storage.js'
-import {createId, decodeHtmlEntities, normalizeUrl} from './utils.js'
+import {
+    createId,
+    decodeHtmlEntities,
+    normalizeHttpUrl,
+    normalizeUrl,
+} from './utils.js'
 import * as stateNormalizers from './state-normalizers.js'
 
 let state = loadState()
@@ -571,7 +576,7 @@ export async function refreshAll() {
 async function loadFeed(feed) {
     try {
         const xmlText = await fetchFeedText(feed.url)
-        const parsed = parseFeed(xmlText)
+        const parsed = parseFeed(xmlText, feed.url)
         const items = dedupeItems(parsed.items).map((item) => ({
             ...item,
             source: feed.name || parsed.title || item.source,
@@ -633,7 +638,7 @@ function fetchWithTimeout(url) {
     })
 }
 
-function parseFeed(xmlText) {
+function parseFeed(xmlText, feedUrl) {
     const doc = new DOMParser().parseFromString(xmlText, 'text/xml')
     const errorNode = doc.querySelector('parsererror')
     if (errorNode) {
@@ -652,7 +657,7 @@ function parseFeed(xmlText) {
 
     const items = entries.map((entry) => {
         const title = getText(entry, 'title')
-        const link = getLink(entry)
+        const link = getLink(entry, feedUrl)
         const dateText =
             getText(entry, 'pubDate') ||
             getText(entry, 'updated') ||
@@ -696,7 +701,7 @@ function getText(parent, selector) {
     return node ? decodeHtmlEntities(String(node.textContent || '')).trim() : ''
 }
 
-function getLink(entry) {
+function getLink(entry, feedUrl) {
     const linkNode =
         entry.querySelector('link[rel="alternate"]') ||
         entry.querySelector('link')
@@ -704,7 +709,10 @@ function getLink(entry) {
         return ''
     }
     const href = linkNode.getAttribute('href')
-    return href ? href.trim() : String(linkNode.textContent || '').trim()
+    const rawLink = href
+        ? href.trim()
+        : String(linkNode.textContent || '').trim()
+    return normalizeHttpUrl(rawLink, feedUrl)
 }
 
 function dedupeItems(items) {

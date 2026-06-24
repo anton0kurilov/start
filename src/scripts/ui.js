@@ -7,7 +7,12 @@ import {
     isItemVisited,
     registerFeedItemImpressions,
 } from './domain.js'
-import {formatCountLabel, formatRelativeTime, getHostname} from './utils.js'
+import {
+    formatCountLabel,
+    formatRelativeTime,
+    getHostname,
+    normalizeHttpUrl,
+} from './utils.js'
 
 export const elements = {
     folderForm: document.querySelector('[data-action="create-folder"]'),
@@ -789,7 +794,7 @@ function isFeedItemVisibleInViewport(feedItem) {
 }
 
 function applyFeedItemLink(card, rawLink) {
-    const link = String(rawLink || '').trim()
+    const link = normalizeHttpUrl(rawLink)
     if (link) {
         card.href = link
         card.target = '_blank'

@@ -16,6 +16,23 @@ export function normalizeUrl(value) {
     return `https://${trimmed}`
 }
 
+export function normalizeHttpUrl(value, baseUrl = '') {
+    const rawUrl = String(value || '').trim()
+    if (!rawUrl) {
+        return ''
+    }
+
+    try {
+        const url = baseUrl ? new URL(rawUrl, baseUrl) : new URL(rawUrl)
+        if (!['http:', 'https:'].includes(url.protocol)) {
+            return ''
+        }
+        return url.href
+    } catch (error) {
+        return ''
+    }
+}
+
 export function decodeHtmlEntities(value) {
     const input = String(value || '')
     if (!input || !input.includes('&') || typeof document === 'undefined') {
