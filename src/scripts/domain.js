@@ -600,11 +600,12 @@ async function loadFeed(feed) {
 
 async function fetchFeedText(url) {
     const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`
-    const response = await fetchWithTimeout(proxyUrl)
-    if (!response.ok) {
-        throw createHttpError(response.status)
-    }
-    return await response.text()
+    return await fetchWithTimeout(proxyUrl, async (response) => {
+        if (!response.ok) {
+            throw createHttpError(response.status)
+        }
+        return await response.text()
+    })
 }
 
 async function ensureProxyAvailable() {
@@ -630,12 +631,15 @@ function createHttpError(status) {
     return error
 }
 
-function fetchWithTimeout(url) {
+async function fetchWithTimeout(url, consumeResponse = (response) => response) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT)
-    return fetch(url, {signal: controller.signal}).finally(() => {
+    try {
+        const response = await fetch(url, {signal: controller.signal})
+        return await consumeResponse(response)
+    } finally {
         clearTimeout(timeout)
-    })
+    }
 }
 
 function parseFeed(xmlText, feedUrl) {

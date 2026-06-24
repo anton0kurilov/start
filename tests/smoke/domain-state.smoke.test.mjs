@@ -4,6 +4,7 @@ import path from 'node:path'
 import {pathToFileURL} from 'node:url'
 
 import {
+    FETCH_TIMEOUT,
     MODEL_IMPRESSION_NEGATIVE_DELAY_MS,
     MODEL_STATE_SCHEMA_VERSION,
     MODEL_VERSION,
@@ -167,6 +168,82 @@ test('domain state mutations persist folders and feeds into storage', async () =
     const feedId = state.folders[0].feeds[0].id
     domain.removeFeed(folderId, feedId)
     assert.equal(domain.getState().folders[0].feeds.length, 0)
+})
+
+test('refreshAll keeps the timeout active while reading the feed body', async (t) => {
+    const originalFetch = globalThis.fetch
+    let fetchCalls = 0
+    let bodyReadStarted = false
+
+    t.mock.timers.enable({apis: ['setTimeout']})
+    globalThis.fetch = async (url, options = {}) => {
+        void url
+        fetchCalls += 1
+        if (fetchCalls === 1) {
+            return {
+                ok: true,
+                status: 200,
+            }
+        }
+
+        return {
+            ok: true,
+            status: 200,
+            text() {
+                bodyReadStarted = true
+                return new Promise((resolve, reject) => {
+                    void resolve
+                    options.signal.addEventListener(
+                        'abort',
+                        () => {
+                            const error = new Error('aborted')
+                            error.name = 'AbortError'
+                            reject(error)
+                        },
+                        {once: true},
+                    )
+                })
+            },
+        }
+    }
+
+    try {
+        const initialState = createBaseState({
+            folders: [
+                {
+                    id: 'folder-1',
+                    name: 'Tech',
+                    feeds: [
+                        {
+                            id: 'feed-1',
+                            name: 'Example',
+                            url: 'https://example.com/feed.xml',
+                        },
+                    ],
+                },
+            ],
+        })
+        const {domain} = await loadFreshDomainModule(initialState)
+        const refreshPromise = domain.refreshAll()
+
+        for (
+            let attempt = 0;
+            attempt < 10 && !bodyReadStarted;
+            attempt += 1
+        ) {
+            await Promise.resolve()
+        }
+        assert.equal(fetchCalls, 2)
+        assert.equal(bodyReadStarted, true)
+
+        t.mock.timers.tick(FETCH_TIMEOUT)
+        const result = await refreshPromise
+
+        assert.equal(result.errorsCount, 1)
+        assert.equal(result.errors[0].message, 'таймаут запроса')
+    } finally {
+        globalThis.fetch = originalFetch
+    }
 })
 
 test('updateFeed updates stored feed name and normalizes url', async () => {
