@@ -4,16 +4,17 @@
 
 - `public/index.html` is the Parcel entry and links the app stylesheet from `src/styles/base.scss`.
 - `public/assets/icons/` stores static assets (manifest, favicon, apple touch icon, app svg).
-- `src/app.js` is the JS entry file and imports `src/scripts/main.js`.
+- `src/scripts/main.js` is the JS entry file referenced by `public/index.html`.
 - `src/scripts/` contains ES modules:
     - `main.js` bootstraps the app, binds UI events, and refreshes safe-area vars.
     - `domain.js` manages state, RSS refresh, and business rules.
     - `ui.js` renders columns/settings and handles UI state helpers.
     - `app-actions.js` encapsulates app-level handlers (refresh, import/export, status updates).
     - `column-interactions.js` handles column header/scroll interactions and auto mark-as-read behavior.
+    - `model-state.js` trains and applies the local usefulness model.
     - `state-normalizers.js` normalizes imported state.
     - `storage.js`, `utils.js`, `constants.js` provide persistence and shared helpers.
-- `src/styles/` holds SCSS: `base.scss` and partials `_columns.scss`, `_settings.scss` via `@use`.
+- `src/styles/` holds SCSS: `base.scss` and partials `_components.scss`, `_columns.scss`, `_settings.scss` via `@use`.
 - `tests/smoke/` contains smoke tests using `node:test`.
 - `dist/` is generated build output; do not edit by hand.
 
