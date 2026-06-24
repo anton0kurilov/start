@@ -47,6 +47,11 @@
         .fab__icon {
             display: block;
         }
+
+        &--refreshing .fab__icon {
+            animation: fabIconSpin 0.8s linear infinite;
+            transform-origin: center;
+        }
     }
 
     &__icon {
@@ -592,6 +597,12 @@ body.settings-is-open {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes fabIconSpin {
+    to {
+        transform: rotate(360deg);
     }
 }
 

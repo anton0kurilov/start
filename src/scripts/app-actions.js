@@ -48,6 +48,7 @@ export function createAppActions({
         }
         if (elements.refresh) {
             elements.refresh.disabled = true
+            elements.refresh.classList?.add('fab__icon-btn--refreshing')
         }
         if (!isAutoRefresh) {
             syncAppView({state: currentState})
@@ -64,6 +65,7 @@ export function createAppActions({
             }
             if (elements.refresh) {
                 elements.refresh.disabled = false
+                elements.refresh.classList?.remove('fab__icon-btn--refreshing')
             }
         }
     }

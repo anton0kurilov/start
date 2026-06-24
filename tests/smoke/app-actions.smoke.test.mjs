@@ -84,7 +84,14 @@ test('refreshAllFeeds in empty state does not call refreshAll', async () => {
 
 test('refreshAllFeeds restores button state after failed refresh', async () => {
     const syncEvents = []
-    const refreshButton = {disabled: false}
+    const classListEvents = []
+    const refreshButton = {
+        disabled: false,
+        classList: {
+            add: (className) => classListEvents.push(['add', className]),
+            remove: (className) => classListEvents.push(['remove', className]),
+        },
+    }
 
     const actions = createAppActions({
         elements: {
@@ -108,6 +115,10 @@ test('refreshAllFeeds restores button state after failed refresh', async () => {
     await actions.refreshAllFeeds()
 
     assert.equal(refreshButton.disabled, false)
+    assert.deepEqual(classListEvents, [
+        ['add', 'fab__icon-btn--refreshing'],
+        ['remove', 'fab__icon-btn--refreshing'],
+    ])
     assert.ok(syncEvents.some((payload) => payload.withLastUpdated === true))
 })
 
