@@ -786,8 +786,8 @@ function resolveUsefulnessScale(
 
 function resolveUsefulnessBaseline(modelArtifacts, calibrationArtifacts) {
     const candidates = [
-        modelArtifacts?.baselineCtr,
         calibrationArtifacts?.metrics?.baselineCtr,
+        modelArtifacts?.baselineCtr,
         USEFULNESS_DEFAULT_BASELINE,
     ]
     const baseline = candidates.find((value) => {

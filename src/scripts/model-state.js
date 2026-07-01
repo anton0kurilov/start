@@ -10,6 +10,7 @@ import {
     MODEL_MAX_ACCEPTABLE_ECE,
     MODEL_MAX_ABS_WEIGHT,
     MODEL_MAX_FEATURE_CONTRIBUTION,
+    MODEL_MIN_CALIBRATION_SLOPE,
     MODEL_MIN_HOLDOUT_SAMPLES,
     MODEL_MIN_SAMPLES_FOR_APPROXIMATE_PERCENT,
     MODEL_MIN_SAMPLES_FOR_PERCENT,
@@ -220,6 +221,9 @@ export function isCalibrationReadyForDisplay(
     if (!calibrationArtifacts?.ready) {
         return false
     }
+    if (!hasInformativeCalibrationSlope(calibrationArtifacts)) {
+        return false
+    }
     const ece = Number(calibrationArtifacts?.metrics?.ece)
     return Number.isFinite(ece) && ece <= MODEL_MAX_ACCEPTABLE_ECE
 }
@@ -235,8 +239,16 @@ export function isCalibrationReadyForApproximateDisplay(
     if (!calibrationArtifacts?.ready) {
         return false
     }
+    if (!hasInformativeCalibrationSlope(calibrationArtifacts)) {
+        return false
+    }
     const ece = Number(calibrationArtifacts?.metrics?.ece)
     return Number.isFinite(ece) && ece <= MODEL_MAX_APPROXIMATE_ECE
+}
+
+function hasInformativeCalibrationSlope(calibrationArtifacts) {
+    const slope = Number(calibrationArtifacts?.slope)
+    return Number.isFinite(slope) && slope >= MODEL_MIN_CALIBRATION_SLOPE
 }
 
 function normalizeEvent(rawEvent) {

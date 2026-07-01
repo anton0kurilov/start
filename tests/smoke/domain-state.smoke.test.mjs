@@ -619,6 +619,101 @@ test('getFeedItemUsefulness falls back to approximate percentages for large data
     assert.match(usefulness.title, /Ориентировочная вероятность клика: ~59%/)
 })
 
+test('getFeedItemUsefulness keeps learning mode for collapsed calibration', async () => {
+    const {domain} = await loadFreshDomainModule(
+        createBaseState({
+            modelState: {
+                schemaVersion: MODEL_STATE_SCHEMA_VERSION,
+                modelVersion: MODEL_VERSION,
+                interactionLog: [],
+                modelArtifacts: {
+                    totalLabeledSamples: 1144,
+                    baselineCtr: 0.26,
+                    bias: -0.9,
+                    weights: {
+                        'source:example': 0.5,
+                    },
+                },
+                calibrationArtifacts: {
+                    ready: true,
+                    slope: -0.0076,
+                    intercept: -0.315,
+                    metrics: {
+                        ece: 0.05,
+                        baselineCtr: 0.38,
+                    },
+                },
+                publishedModelArtifacts: {
+                    totalLabeledSamples: 1144,
+                    baselineCtr: 0.26,
+                    bias: -0.9,
+                    weights: {
+                        'source:example': 0.5,
+                    },
+                },
+                publishedCalibrationArtifacts: {
+                    ready: true,
+                    slope: -0.0076,
+                    intercept: -0.315,
+                    metrics: {
+                        ece: 0.05,
+                        baselineCtr: 0.38,
+                    },
+                },
+            },
+        }),
+    )
+
+    const usefulness = domain.getFeedItemUsefulness({
+        source: 'Example',
+        link: 'https://example.com/collapsed',
+        title: 'Collapsed scorer headline',
+    })
+
+    assert.equal(usefulness.tone, 'learning')
+    assert.equal(usefulness.score, null)
+    assert.equal(usefulness.percentage, null)
+})
+
+test('getFeedItemUsefulness colors against calibrated baseline first', async () => {
+    const {domain} = await loadFreshDomainModule(
+        createBaseState({
+            modelState: {
+                schemaVersion: MODEL_STATE_SCHEMA_VERSION,
+                modelVersion: MODEL_VERSION,
+                interactionLog: [],
+                modelArtifacts: {},
+                calibrationArtifacts: {},
+                publishedModelArtifacts: {
+                    totalLabeledSamples: 240,
+                    baselineCtr: 0.26,
+                    bias: logit(0.43),
+                    weights: {},
+                },
+                publishedCalibrationArtifacts: {
+                    ready: true,
+                    slope: 1,
+                    intercept: 0,
+                    metrics: {
+                        ece: 0.04,
+                        baselineCtr: 0.38,
+                    },
+                },
+            },
+        }),
+    )
+
+    const usefulness = domain.getFeedItemUsefulness({
+        source: 'Calibrated source',
+        link: 'https://example.com/calibrated-baseline',
+        title: 'Calibrated baseline headline',
+    })
+
+    assert.equal(usefulness.tone, 'medium')
+    assert.equal(usefulness.label, '43%')
+    assert.match(usefulness.title, /Средний уровень: 38%/)
+})
+
 test('getFeedItemUsefulness maps clearly weak item to low tone', async () => {
     const {domain} = await loadFreshDomainModule(
         createPublishedScorerState({
