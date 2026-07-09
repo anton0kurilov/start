@@ -30,6 +30,37 @@
         flex-direction: column;
         gap: calc(var(--padding) * 0.8);
         scroll-snap-align: start;
+
+        &--favorites {
+            border-color: rgba(250, 204, 21, 0.26);
+            background: rgba(250, 204, 21, 0.035);
+            box-shadow: inset 0 0 0 1px rgba(250, 204, 21, 0.035);
+
+            .columns__mark-read {
+                color: var(--colorSignalMedium);
+                border-color: rgba(250, 204, 21, 0.18);
+                background: rgba(250, 204, 21, 0.045);
+
+                &:hover {
+                    border-color: var(--colorSignalMediumBorder);
+                    background: var(--colorSignalMediumBg);
+                }
+            }
+
+            .feed__item {
+                border-color: rgba(250, 204, 21, 0.14);
+                background: rgba(17, 17, 17, 0.48);
+
+                &:hover,
+                &:focus-within {
+                    background-color: rgba(250, 204, 21, 0.055);
+                }
+            }
+
+            .columns__empty {
+                color: rgba(253, 230, 138, 0.82);
+            }
+        }
     }
 
     &__header {
