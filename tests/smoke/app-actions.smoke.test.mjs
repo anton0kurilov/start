@@ -59,6 +59,48 @@ test('refreshAllFeeds de-duplicates concurrent refresh calls', async () => {
     assert.deepEqual(firstResult, secondResult)
 })
 
+test('refreshAllFeeds preserves the live reading position at final render', async () => {
+    let resolveRefresh = null
+    const syncEvents = []
+    const currentState = {folders: [{feeds: [{id: 'feed-1'}]}]}
+    const refreshBarrier = new Promise((resolve) => {
+        resolveRefresh = resolve
+    })
+    const actions = createActions({
+        getState: () => currentState,
+        refreshAll: async () => {
+            await refreshBarrier
+            return {errorsCount: 0, errors: []}
+        },
+        syncAppView: (payload) => {
+            syncEvents.push(payload || {})
+        },
+    })
+
+    const refreshPromise = actions.refreshAllFeeds()
+
+    assert.deepEqual(syncEvents, [
+        {
+            state: currentState,
+            preserveColumnScroll: true,
+        },
+    ])
+
+    resolveRefresh()
+    await refreshPromise
+
+    assert.deepEqual(syncEvents, [
+        {
+            state: currentState,
+            preserveColumnScroll: true,
+        },
+        {
+            withLastUpdated: true,
+            preserveColumnScroll: true,
+        },
+    ])
+})
+
 test('refreshAllFeeds in empty state does not call refreshAll', async () => {
     const syncEvents = []
     let refreshCalls = 0
@@ -119,7 +161,18 @@ test('refreshAllFeeds restores button state after failed refresh', async () => {
         ['add', 'fab__icon-btn--refreshing'],
         ['remove', 'fab__icon-btn--refreshing'],
     ])
-    assert.ok(syncEvents.some((payload) => payload.withLastUpdated === true))
+    assert.deepEqual(syncEvents, [
+        {
+            state: {
+                folders: [{feeds: [{id: 'feed-1'}]}],
+            },
+            preserveColumnScroll: true,
+        },
+        {
+            withLastUpdated: true,
+            preserveColumnScroll: true,
+        },
+    ])
 })
 
 test('refreshAllFeeds lets column notices handle feed errors', async () => {
@@ -142,7 +195,18 @@ test('refreshAllFeeds lets column notices handle feed errors', async () => {
 
     await actions.refreshAllFeeds()
 
-    assert.ok(syncEvents.some((payload) => payload.withLastUpdated === true))
+    assert.deepEqual(syncEvents, [
+        {
+            state: {
+                folders: [{feeds: [{id: 'feed-1'}]}],
+            },
+            preserveColumnScroll: true,
+        },
+        {
+            withLastUpdated: true,
+            preserveColumnScroll: true,
+        },
+    ])
 })
 
 test('auto refresh runs without loading and success statuses', async () => {
@@ -161,7 +225,12 @@ test('auto refresh runs without loading and success statuses', async () => {
     await actions.refreshAllFeeds({source: 'auto'})
 
     assert.equal(inProgressCalls, 1)
-    assert.deepEqual(syncEvents, [{withLastUpdated: true}])
+    assert.deepEqual(syncEvents, [
+        {
+            withLastUpdated: true,
+            preserveColumnScroll: true,
+        },
+    ])
 })
 
 test('auto refresh skips empty-state status noise', async () => {
@@ -203,5 +272,16 @@ test('handleFeedUpdated refreshes only when url changes', async () => {
 
     await actions.handleFeedUpdated({ok: true, urlChanged: true})
     assert.equal(refreshCalls, 1)
-    assert.ok(syncEvents.some((payload) => payload.state))
+    assert.deepEqual(syncEvents, [
+        {
+            state: {
+                folders: [{feeds: [{id: 'feed-1'}]}],
+            },
+            preserveColumnScroll: true,
+        },
+        {
+            withLastUpdated: true,
+            preserveColumnScroll: true,
+        },
+    ])
 })

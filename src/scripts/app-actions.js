@@ -51,15 +51,20 @@ export function createAppActions({
             elements.refresh.classList?.add('fab__icon-btn--refreshing')
         }
         if (!isAutoRefresh) {
-            syncAppView({state: currentState})
+            syncAppView({
+                state: currentState,
+                preserveColumnScroll: true,
+            })
         }
-
         try {
             await refreshAll()
         } catch (error) {
             void error
         } finally {
-            syncAppView({withLastUpdated: true})
+            syncAppView({
+                withLastUpdated: true,
+                preserveColumnScroll: true,
+            })
             if (shouldAutoMarkReadOnScroll()) {
                 markHiddenFeedItemsInAllColumns()
             }

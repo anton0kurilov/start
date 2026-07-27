@@ -386,6 +386,7 @@ function createFavoritesColumn(state) {
     const hasFeeds = state.folders.some((folder) => folder.feeds?.length)
     const items = getFavoriteFeedItems(state)
     return createFeedItemsColumn({
+        columnKey: 'favorites',
         title: '⭐ Избранное',
         items,
         hasFeeds,
@@ -401,6 +402,7 @@ function createFolderColumn(folder) {
     const failedFeeds = folder.feeds.filter((feed) => getFeedError(feed.id))
     const hasFeedErrors = failedFeeds.length > 0
     return createFeedItemsColumn({
+        columnKey: `folder:${folder.id}`,
         title: folder.name,
         items,
         hasFeeds: Boolean(folder.feeds.length),
@@ -416,6 +418,7 @@ function createFolderColumn(folder) {
 }
 
 function createFeedItemsColumn({
+    columnKey,
     title,
     items,
     hasFeeds,
@@ -429,6 +432,7 @@ function createFeedItemsColumn({
     column.className = ['columns__item', modifierClass]
         .filter(Boolean)
         .join(' ')
+    column.dataset.columnKey = columnKey
     const refreshNoticeKey = failedFeeds.length
         ? getColumnRefreshNoticeKey(failedFeeds)
         : ''

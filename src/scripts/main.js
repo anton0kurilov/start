@@ -31,6 +31,10 @@ import {
 } from './ui.js'
 import {createAppActions} from './app-actions.js'
 import {createColumnInteractions} from './column-interactions.js'
+import {
+    captureColumnScrollState,
+    restoreColumnScrollState,
+} from './column-scroll-state.js'
 
 let editingFeed = null
 let editingFolderId = null
@@ -42,10 +46,12 @@ function syncAppView({
     preserveColumnScroll = false,
 } = {}) {
     const nextState = state || getState()
-    const scrollState = preserveColumnScroll ? captureColumnScrollState() : null
+    const scrollState = preserveColumnScroll
+        ? captureColumnScrollState(elements.columns)
+        : null
     render(nextState, {editingFeed, editingFolderId})
     if (scrollState) {
-        restoreColumnScrollState(scrollState)
+        restoreColumnScrollState(elements.columns, scrollState)
     }
     if (withLastUpdated) {
         updateLastUpdated(nextState.lastUpdated)
@@ -57,37 +63,6 @@ function syncAppView({
 function syncAppAndRefreshFeeds() {
     syncAppView()
     return refreshAllFeeds()
-}
-
-function captureColumnScrollState() {
-    return {
-        columnsScrollLeft: elements.columns?.scrollLeft || 0,
-        itemScrollTops: Array.from(
-            elements.columns?.querySelectorAll('.columns__item') || [],
-        ).map((column) => column.scrollTop || 0),
-        contentScrollTops: Array.from(
-            elements.columns?.querySelectorAll('.columns__content') || [],
-        ).map((content) => content.scrollTop || 0),
-    }
-}
-
-function restoreColumnScrollState(scrollState) {
-    if (!scrollState || !elements.columns) {
-        return
-    }
-    elements.columns.scrollLeft = scrollState.columnsScrollLeft || 0
-    const columnItems = Array.from(
-        elements.columns.querySelectorAll('.columns__item'),
-    )
-    columnItems.forEach((column, index) => {
-        column.scrollTop = scrollState.itemScrollTops?.[index] || 0
-    })
-    const columnContents = Array.from(
-        elements.columns.querySelectorAll('.columns__content'),
-    )
-    columnContents.forEach((content, index) => {
-        content.scrollTop = scrollState.contentScrollTops?.[index] || 0
-    })
 }
 
 const columnInteractions = createColumnInteractions({
