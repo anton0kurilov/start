@@ -23,7 +23,11 @@ function createColumn({
     contentScrollTop = 0,
     itemKeys = [],
     itemHeight = 100,
+    noticeHidden = true,
 }) {
+    const notice = {
+        hidden: noticeHidden,
+    }
     const column = {
         dataset: {columnKey},
         scrollTop: columnScrollTop,
@@ -31,7 +35,13 @@ function createColumn({
             return {top: columnTop}
         },
         querySelector(selector) {
-            return selector === '.columns__content' ? content : null
+            if (selector === '.columns__content') {
+                return content
+            }
+            if (selector === '.columns__new-items-notice') {
+                return notice
+            }
+            return null
         },
     }
     const content = {
@@ -55,7 +65,7 @@ function createColumn({
         },
     }))
 
-    return {column, content, items}
+    return {column, content, items, notice}
 }
 
 test('restores the same visible item when new items appear above it', () => {
@@ -78,6 +88,7 @@ test('restores the same visible item when new items appear above it', () => {
     assert.equal(columnsElement.scrollLeft, 48)
     assert.equal(after.content.scrollTop, 220)
     assert.equal(after.items[2].getBoundingClientRect().top, 20)
+    assert.equal(after.notice.hidden, false)
 })
 
 test('matches columns by stable key after their order changes', () => {
@@ -134,6 +145,7 @@ test('falls back to the previous scroll offsets when the anchor disappears', () 
 
     assert.equal(after.column.scrollTop, 75)
     assert.equal(after.content.scrollTop, 120)
+    assert.equal(after.notice.hidden, true)
 })
 
 test('does not apply a removed keyed column state to another column', () => {
@@ -157,4 +169,49 @@ test('does not apply a removed keyed column state to another column', () => {
 
     assert.equal(after.column.scrollTop, 0)
     assert.equal(after.content.scrollTop, 0)
+})
+
+test('does not show the notice when new items appear while already at top', () => {
+    const before = createColumn({
+        columnKey: 'folder:tech',
+        itemKeys: ['item-a', 'item-b'],
+    })
+    const scrollState = captureColumnScrollState(
+        createColumnsElement([before.column]),
+    )
+    const after = createColumn({
+        columnKey: 'folder:tech',
+        itemKeys: ['item-new', 'item-a', 'item-b'],
+    })
+
+    restoreColumnScrollState(
+        createColumnsElement([after.column]),
+        scrollState,
+    )
+
+    assert.equal(after.content.scrollTop, 0)
+    assert.equal(after.notice.hidden, true)
+})
+
+test('keeps an existing notice through a scroll-preserving rerender', () => {
+    const before = createColumn({
+        columnKey: 'folder:tech',
+        contentScrollTop: 120,
+        itemKeys: ['item-a', 'item-b', 'item-c'],
+        noticeHidden: false,
+    })
+    const scrollState = captureColumnScrollState(
+        createColumnsElement([before.column]),
+    )
+    const after = createColumn({
+        columnKey: 'folder:tech',
+        itemKeys: ['item-a', 'item-b', 'item-c'],
+    })
+
+    restoreColumnScrollState(
+        createColumnsElement([after.column]),
+        scrollState,
+    )
+
+    assert.equal(after.notice.hidden, false)
 })

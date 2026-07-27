@@ -178,9 +178,6 @@ export function createColumnInteractions({
     }
 
     function handleColumnScroll(event) {
-        if (!shouldAutoMarkReadOnScroll()) {
-            return
-        }
         const scroller = event.target
         if (
             !scroller ||
@@ -200,6 +197,10 @@ export function createColumnInteractions({
         if (!content) {
             return
         }
+        hideNewItemsNoticeAtTop(content)
+        if (!shouldAutoMarkReadOnScroll()) {
+            return
+        }
         if (pendingScrollMarkFrames.has(scroller)) {
             return
         }
@@ -211,6 +212,21 @@ export function createColumnInteractions({
             )
         })
         pendingScrollMarkFrames.set(scroller, frameId)
+    }
+
+    function hideNewItemsNoticeAtTop(content) {
+        const column = content.closest('.columns__item')
+        if (
+            !column ||
+            (column.scrollTop || 0) > 0 ||
+            (content.scrollTop || 0) > 0
+        ) {
+            return
+        }
+        const notice = column.querySelector('.columns__new-items-notice')
+        if (notice) {
+            notice.hidden = true
+        }
     }
 
     function markHiddenFeedItemsInAllColumns() {

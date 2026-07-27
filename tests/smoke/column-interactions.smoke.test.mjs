@@ -251,3 +251,41 @@ test('feed link click preserves column scroll when rerendering after click', () 
     assert.deepEqual(syncPayloads, [{preserveColumnScroll: true}])
     assert.equal(feedItem.classList.contains('feed__item--visited'), true)
 })
+
+test('scrolling back to the top hides the new items notice', () => {
+    const columns = createMockElement({classes: ['columns']})
+    const column = createMockElement({
+        classes: ['columns__item'],
+        parent: columns,
+    })
+    column.scrollTop = 0
+    const notice = createMockElement({
+        classes: ['columns__new-items-notice'],
+        parent: column,
+    })
+    notice.hidden = false
+    const content = createMockElement({
+        classes: ['columns__content'],
+        parent: column,
+    })
+    content.scrollTop = 0
+    const interactions = createColumnInteractions({
+        columnsElement: columns,
+        markItemsVisited() {},
+        registerFeedItemClick() {
+            return false
+        },
+        registerFeedItemDismiss() {
+            return false
+        },
+        shouldAutoMarkReadOnScroll() {
+            return false
+        },
+        syncAppView() {},
+        unmarkItemsVisited() {},
+    })
+
+    interactions.handleColumnScroll({target: content})
+
+    assert.equal(notice.hidden, true)
+})

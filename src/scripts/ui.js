@@ -472,6 +472,13 @@ function createFeedItemsColumn({
     headerText.append(titleElement)
     header.append(headerText, markReadButton)
 
+    const newItemsNotice = document.createElement('div')
+    newItemsNotice.className = 'columns__new-items-notice'
+    newItemsNotice.hidden = true
+    newItemsNotice.setAttribute('role', 'status')
+    newItemsNotice.setAttribute('aria-live', 'polite')
+    newItemsNotice.textContent = '↑ Новые материалы'
+
     const content = document.createElement('div')
     content.className = 'columns__content'
 
@@ -499,7 +506,7 @@ function createFeedItemsColumn({
         })
     }
 
-    column.append(header, content)
+    column.append(header, newItemsNotice, content)
     return column
 }
 

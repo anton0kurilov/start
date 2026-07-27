@@ -42,17 +42,30 @@ export function restoreColumnScrollState(columnsElement, scrollState) {
 function captureColumnState(column, columnIndex) {
     const content = column.querySelector('.columns__content')
     const anchor = content ? findFirstVisibleFeedItem(column, content) : null
+    const newItemsNotice = column.querySelector(
+        '.columns__new-items-notice',
+    )
 
     return {
         columnKey: getColumnKey(column),
         columnIndex,
         columnScrollTop: column.scrollTop || 0,
         contentScrollTop: content?.scrollTop || 0,
+        itemKeys: content
+            ? Array.from(content.querySelectorAll('.feed__item'))
+                  .map((feedItem) =>
+                      String(feedItem.dataset?.itemKey || '').trim(),
+                  )
+                  .filter(Boolean)
+            : [],
         anchorItemKey: String(anchor?.dataset?.itemKey || '').trim(),
         anchorOffset: anchor
             ? anchor.getBoundingClientRect().top -
               getColumnVisibleTop(column, content)
             : 0,
+        hadNewItemsNotice: Boolean(
+            newItemsNotice && !newItemsNotice.hidden,
+        ),
     }
 }
 
@@ -63,19 +76,42 @@ function restoreColumnState(column, columnState) {
         return
     }
     content.scrollTop = columnState.contentScrollTop || 0
-
-    const anchorItemKey = String(columnState.anchorItemKey || '').trim()
-    if (!anchorItemKey) {
+    const wasScrolled =
+        (columnState.columnScrollTop || 0) > 0 ||
+        (columnState.contentScrollTop || 0) > 0
+    if (!wasScrolled) {
+        updateNewItemsNotice(column, false)
         return
     }
-    const anchor = Array.from(content.querySelectorAll('.feed__item')).find(
+
+    const feedItems = Array.from(content.querySelectorAll('.feed__item'))
+    const anchorItemKey = String(columnState.anchorItemKey || '').trim()
+    if (!anchorItemKey) {
+        updateNewItemsNotice(
+            column,
+            isColumnScrolled(column, content) &&
+                columnState.hadNewItemsNotice,
+        )
+        return
+    }
+    const anchor = feedItems.find(
         (feedItem) =>
             String(feedItem.dataset?.itemKey || '').trim() === anchorItemKey,
     )
     if (!anchor) {
+        updateNewItemsNotice(
+            column,
+            isColumnScrolled(column, content) &&
+                columnState.hadNewItemsNotice,
+        )
         return
     }
 
+    const newItemsAboveCount = countNewItemsAbove(
+        feedItems,
+        anchor,
+        columnState.itemKeys,
+    )
     const scrollers =
         columnState.columnScrollTop > columnState.contentScrollTop
             ? [column, content]
@@ -90,6 +126,11 @@ function restoreColumnState(column, columnState) {
         }
         scroller.scrollTop += delta
     })
+    updateNewItemsNotice(
+        column,
+        isColumnScrolled(column, content) &&
+            (columnState.hadNewItemsNotice || newItemsAboveCount > 0),
+    )
 }
 
 function findFirstVisibleFeedItem(column, content) {
@@ -108,4 +149,28 @@ function getColumnVisibleTop(column, content) {
 
 function getColumnKey(column) {
     return String(column?.dataset?.columnKey || '').trim()
+}
+
+function countNewItemsAbove(feedItems, anchor, previousItemKeys) {
+    const anchorIndex = feedItems.indexOf(anchor)
+    if (anchorIndex <= 0) {
+        return 0
+    }
+    const previousKeys = new Set(previousItemKeys || [])
+    return feedItems.slice(0, anchorIndex).filter((feedItem) => {
+        const itemKey = String(feedItem.dataset?.itemKey || '').trim()
+        return itemKey && !previousKeys.has(itemKey)
+    }).length
+}
+
+function isColumnScrolled(column, content) {
+    return (column.scrollTop || 0) > 0 || (content.scrollTop || 0) > 0
+}
+
+function updateNewItemsNotice(column, isVisible) {
+    const notice = column.querySelector('.columns__new-items-notice')
+    if (!notice) {
+        return
+    }
+    notice.hidden = !isVisible
 }
