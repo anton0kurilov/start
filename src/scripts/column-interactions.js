@@ -17,6 +17,20 @@ export function createColumnInteractions({
     }
 
     function handleColumnHeaderClick(event) {
+        const newItemsButton = event.target.closest(
+            '[data-action="scroll-new-items-to-top"]',
+        )
+        if (newItemsButton && columnsElement?.contains(newItemsButton)) {
+            event.preventDefault()
+            const column = newItemsButton.closest('.columns__item')
+            if (!column) {
+                return
+            }
+            newItemsButton.hidden = true
+            scrollColumnToTop(column)
+            return
+        }
+
         const dismissButton = event.target.closest(
             '[data-action="dismiss-feed-item"]',
         )
@@ -65,6 +79,10 @@ export function createColumnInteractions({
         if (!column) {
             return
         }
+        scrollColumnToTop(column)
+    }
+
+    function scrollColumnToTop(column) {
         const reduceMotion = window.matchMedia(
             '(prefers-reduced-motion: reduce)',
         ).matches

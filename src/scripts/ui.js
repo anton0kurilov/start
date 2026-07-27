@@ -472,11 +472,17 @@ function createFeedItemsColumn({
     headerText.append(titleElement)
     header.append(headerText, markReadButton)
 
-    const newItemsNotice = document.createElement('div')
-    newItemsNotice.className = 'columns__new-items-notice'
+    const newItemsNotice = document.createElement('button')
+    newItemsNotice.className =
+        'btn btn--ghost columns__new-items-notice'
+    newItemsNotice.type = 'button'
     newItemsNotice.hidden = true
-    newItemsNotice.setAttribute('role', 'status')
+    newItemsNotice.dataset.action = 'scroll-new-items-to-top'
     newItemsNotice.setAttribute('aria-live', 'polite')
+    newItemsNotice.setAttribute(
+        'aria-label',
+        'Новые материалы сверху. Перейти к началу колонки',
+    )
     newItemsNotice.textContent = '↑ Новые материалы'
 
     const content = document.createElement('div')

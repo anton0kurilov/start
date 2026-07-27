@@ -85,6 +85,9 @@ function matchesSelector(element, selector) {
     if (selector === '[data-action="mark-column-read"]') {
         return element.dataset.action === 'mark-column-read'
     }
+    if (selector === '[data-action="scroll-new-items-to-top"]') {
+        return element.dataset.action === 'scroll-new-items-to-top'
+    }
     if (selector === '[data-feed-link="true"]') {
         return element.dataset.feedLink === 'true'
     }
@@ -288,4 +291,75 @@ test('scrolling back to the top hides the new items notice', () => {
     interactions.handleColumnScroll({target: content})
 
     assert.equal(notice.hidden, true)
+})
+
+test('new items button scrolls its column to the top', () => {
+    const previousWindow = globalThis.window
+    globalThis.window = {
+        matchMedia() {
+            return {matches: false}
+        },
+    }
+    const scrollCalls = []
+    const columns = createMockElement({classes: ['columns']})
+    const column = createMockElement({
+        classes: ['columns__item'],
+        parent: columns,
+    })
+    column.scrollTop = 800
+    column.scrollTo = (options) => {
+        scrollCalls.push(['column', options])
+        column.scrollTop = options.top
+    }
+    const newItemsButton = createMockElement({
+        classes: ['columns__new-items-notice'],
+        dataset: {
+            action: 'scroll-new-items-to-top',
+        },
+        parent: column,
+    })
+    newItemsButton.hidden = false
+    const content = createMockElement({
+        classes: ['columns__content'],
+        parent: column,
+    })
+    content.scrollTop = 800
+    content.scrollTo = (options) => {
+        scrollCalls.push(['content', options])
+        content.scrollTop = options.top
+    }
+    const interactions = createColumnInteractions({
+        columnsElement: columns,
+        markItemsVisited() {},
+        registerFeedItemClick() {
+            return false
+        },
+        registerFeedItemDismiss() {
+            return false
+        },
+        shouldAutoMarkReadOnScroll() {
+            return false
+        },
+        syncAppView() {},
+        unmarkItemsVisited() {},
+    })
+    let prevented = false
+
+    try {
+        interactions.handleColumnHeaderClick({
+            target: newItemsButton,
+            preventDefault() {
+                prevented = true
+            },
+        })
+    } finally {
+        globalThis.window = previousWindow
+    }
+
+    assert.equal(prevented, true)
+    assert.equal(newItemsButton.hidden, true)
+    assert.deepEqual(scrollCalls, [
+        ['content', {top: 0, behavior: 'smooth'}],
+        ['column', {top: 0, behavior: 'smooth'}],
+    ])
 })

@@ -127,19 +127,34 @@
         left: 50%;
         transform: translateX(-50%);
         max-width: calc(100% - var(--padding) * 2);
-        border: 1px solid rgba(145, 145, 145, 0.38);
+        border: 1px solid var(--colorBackground);
         border-radius: 999px;
         padding: 5px 10px;
-        background: rgba(17, 17, 17, 0.88);
+        background: var(--colorBorder);
         box-shadow: 0 5px 18px rgba(0, 0, 0, 0.32);
-        color: rgba(233, 233, 233, 0.82);
+        color: var(--colorText);
         font-size: 0.68rem;
         font-weight: 600;
         line-height: 1.1;
         letter-spacing: 0.025em;
         white-space: nowrap;
-        pointer-events: none;
+        cursor: pointer;
+        pointer-events: auto;
         backdrop-filter: blur(8px);
+        transition:
+            border-color 0.18s ease,
+            background-color 0.18s ease,
+            color 0.18s ease;
+
+        &:hover {
+            border-color: rgba(233, 233, 233, 0.2);
+            background: #303030;
+            color: #fff;
+        }
+
+        &:active {
+            background: #1f1f1f;
+        }
 
         &[hidden] {
             display: none;
