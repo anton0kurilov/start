@@ -3,9 +3,7 @@ export function createAppActions({
     exportState,
     getState,
     importState,
-    markHiddenFeedItemsInAllColumns,
     refreshAll,
-    shouldAutoMarkReadOnScroll,
     syncAppView,
     setLastUpdatedInProgress,
 }) {
@@ -65,9 +63,6 @@ export function createAppActions({
                 withLastUpdated: true,
                 preserveColumnScroll: true,
             })
-            if (shouldAutoMarkReadOnScroll()) {
-                markHiddenFeedItemsInAllColumns()
-            }
             if (elements.refresh) {
                 elements.refresh.disabled = false
                 elements.refresh.classList?.remove('fab__icon-btn--refreshing')

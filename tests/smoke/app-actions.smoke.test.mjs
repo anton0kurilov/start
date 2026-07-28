@@ -233,6 +233,20 @@ test('auto refresh runs without loading and success statuses', async () => {
     ])
 })
 
+test('refresh does not mark items hidden by newly inserted posts', async () => {
+    let markHiddenCalls = 0
+    const actions = createActions({
+        shouldAutoMarkReadOnScroll: () => true,
+        markHiddenFeedItemsInAllColumns: () => {
+            markHiddenCalls += 1
+        },
+    })
+
+    await actions.refreshAllFeeds()
+
+    assert.equal(markHiddenCalls, 0)
+})
+
 test('auto refresh skips empty-state status noise', async () => {
     let refreshCalls = 0
 

@@ -352,6 +352,7 @@ test('new items button scrolls its column to the top', () => {
                 prevented = true
             },
         })
+        interactions.handleColumnScroll({target: content})
     } finally {
         globalThis.window = previousWindow
     }
@@ -362,4 +363,116 @@ test('new items button scrolls its column to the top', () => {
         ['content', {top: 0, behavior: 'smooth'}],
         ['column', {top: 0, behavior: 'smooth'}],
     ])
+})
+
+test('programmatic scroll to new items does not auto-mark hidden items', () => {
+    const previousWindow = globalThis.window
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame
+    globalThis.window = {
+        matchMedia() {
+            return {matches: false}
+        },
+    }
+    let scheduledMarkFrames = 0
+    globalThis.requestAnimationFrame = () => {
+        scheduledMarkFrames += 1
+        return scheduledMarkFrames
+    }
+    const columns = createMockElement({classes: ['columns']})
+    const column = createMockElement({
+        classes: ['columns__item'],
+        parent: columns,
+    })
+    column.scrollTop = 0
+    column.scrollTo = () => {}
+    const newItemsButton = createMockElement({
+        classes: ['columns__new-items-notice'],
+        dataset: {
+            action: 'scroll-new-items-to-top',
+        },
+        parent: column,
+    })
+    newItemsButton.hidden = false
+    const content = createMockElement({
+        classes: ['columns__content'],
+        parent: column,
+    })
+    content.scrollTop = 800
+    content.scrollTo = () => {}
+    const interactions = createColumnInteractions({
+        columnsElement: columns,
+        markItemsVisited() {},
+        registerFeedItemClick() {
+            return false
+        },
+        registerFeedItemDismiss() {
+            return false
+        },
+        shouldAutoMarkReadOnScroll() {
+            return true
+        },
+        syncAppView() {},
+        unmarkItemsVisited() {},
+    })
+
+    try {
+        interactions.handleColumnHeaderClick({
+            target: newItemsButton,
+            preventDefault() {},
+        })
+        interactions.handleColumnScroll({target: content})
+
+        assert.equal(scheduledMarkFrames, 0)
+
+        content.scrollTop = 0
+        interactions.handleColumnScroll({target: content})
+    } finally {
+        globalThis.window = previousWindow
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame
+    }
+})
+
+test('restored scroll position does not trigger auto-marking', () => {
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame
+    let scheduledMarkFrames = 0
+    globalThis.requestAnimationFrame = () => {
+        scheduledMarkFrames += 1
+        return scheduledMarkFrames
+    }
+    const columns = createMockElement({classes: ['columns']})
+    const column = createMockElement({
+        classes: ['columns__item'],
+        parent: columns,
+    })
+    const content = createMockElement({
+        classes: ['columns__content'],
+        dataset: {
+            suppressAutoMarkOnScroll: 'true',
+        },
+        parent: column,
+    })
+    content.scrollTop = 800
+    const interactions = createColumnInteractions({
+        columnsElement: columns,
+        markItemsVisited() {},
+        registerFeedItemClick() {
+            return false
+        },
+        registerFeedItemDismiss() {
+            return false
+        },
+        shouldAutoMarkReadOnScroll() {
+            return true
+        },
+        syncAppView() {},
+        unmarkItemsVisited() {},
+    })
+
+    try {
+        interactions.handleColumnScroll({target: content})
+    } finally {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame
+    }
+
+    assert.equal(scheduledMarkFrames, 0)
 })

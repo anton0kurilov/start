@@ -1,3 +1,6 @@
+const autoMarkRestoreSuppressionTimers = new WeakMap()
+const autoMarkRestoreSuppressionMs = 250
+
 export function captureColumnScrollState(columnsElement) {
     if (!columnsElement) {
         return null
@@ -75,6 +78,7 @@ function restoreColumnState(column, columnState) {
     if (!content) {
         return
     }
+    suppressAutoMarkDuringScrollRestore(content)
     content.scrollTop = columnState.contentScrollTop || 0
     const wasScrolled =
         (columnState.columnScrollTop || 0) > 0 ||
@@ -173,4 +177,27 @@ function updateNewItemsNotice(column, isVisible) {
         return
     }
     notice.hidden = !isVisible
+}
+
+function suppressAutoMarkDuringScrollRestore(content) {
+    if (!content.dataset) {
+        return
+    }
+    content.dataset.suppressAutoMarkOnScroll = 'true'
+    if (
+        typeof window === 'undefined' ||
+        typeof window.setTimeout !== 'function'
+    ) {
+        delete content.dataset.suppressAutoMarkOnScroll
+        return
+    }
+    const currentTimer = autoMarkRestoreSuppressionTimers.get(content)
+    if (currentTimer !== undefined) {
+        window.clearTimeout(currentTimer)
+    }
+    const timerId = window.setTimeout(() => {
+        delete content.dataset.suppressAutoMarkOnScroll
+        autoMarkRestoreSuppressionTimers.delete(content)
+    }, autoMarkRestoreSuppressionMs)
+    autoMarkRestoreSuppressionTimers.set(content, timerId)
 }

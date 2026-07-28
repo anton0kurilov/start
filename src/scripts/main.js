@@ -80,11 +80,8 @@ const appActions = createAppActions({
     exportState,
     getState,
     importState,
-    markHiddenFeedItemsInAllColumns:
-        columnInteractions.markHiddenFeedItemsInAllColumns,
     refreshAll,
     setLastUpdatedInProgress,
-    shouldAutoMarkReadOnScroll,
     syncAppView,
 })
 

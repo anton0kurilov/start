@@ -45,6 +45,7 @@ function createColumn({
         },
     }
     const content = {
+        dataset: {},
         scrollTop: contentScrollTop,
         getBoundingClientRect() {
             return {top: contentTop}

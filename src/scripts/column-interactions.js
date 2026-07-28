@@ -8,6 +8,9 @@ export function createColumnInteractions({
     unmarkItemsVisited,
 }) {
     const pendingScrollMarkFrames = new WeakMap()
+    const suppressedAutoMarkContents = new WeakSet()
+    const autoMarkSuppressionTimers = new WeakMap()
+    const autoMarkSuppressionTimeoutMs = 1500
 
     return {
         handleColumnAuxClick,
@@ -87,8 +90,34 @@ export function createColumnInteractions({
             '(prefers-reduced-motion: reduce)',
         ).matches
         const content = column.querySelector('.columns__content')
+        suppressAutoMarkDuringProgrammaticScroll(column, content)
         scrollElementToTop(content, reduceMotion)
         scrollElementToTop(column, reduceMotion)
+    }
+
+    function suppressAutoMarkDuringProgrammaticScroll(column, content) {
+        if (
+            !content ||
+            ((column.scrollTop || 0) <= 0 &&
+                (content.scrollTop || 0) <= 0)
+        ) {
+            return
+        }
+        clearAutoMarkSuppression(content)
+        suppressedAutoMarkContents.add(content)
+        const timerId = setTimeout(() => {
+            clearAutoMarkSuppression(content)
+        }, autoMarkSuppressionTimeoutMs)
+        autoMarkSuppressionTimers.set(content, timerId)
+    }
+
+    function clearAutoMarkSuppression(content) {
+        suppressedAutoMarkContents.delete(content)
+        const timerId = autoMarkSuppressionTimers.get(content)
+        if (timerId !== undefined) {
+            clearTimeout(timerId)
+            autoMarkSuppressionTimers.delete(content)
+        }
     }
 
     function registerClickedFeedItem(feedItem) {
@@ -216,6 +245,20 @@ export function createColumnInteractions({
             return
         }
         hideNewItemsNoticeAtTop(content)
+        if (content.dataset?.suppressAutoMarkOnScroll === 'true') {
+            return
+        }
+        if (suppressedAutoMarkContents.has(content)) {
+            const column = content.closest('.columns__item')
+            if (
+                column &&
+                (column.scrollTop || 0) <= 0 &&
+                (content.scrollTop || 0) <= 0
+            ) {
+                clearAutoMarkSuppression(content)
+            }
+            return
+        }
         if (!shouldAutoMarkReadOnScroll()) {
             return
         }
@@ -253,6 +296,12 @@ export function createColumnInteractions({
             return
         }
         columnContents.forEach((content) => {
+            if (
+                content.dataset?.suppressAutoMarkOnScroll === 'true' ||
+                suppressedAutoMarkContents.has(content)
+            ) {
+                return
+            }
             markHiddenFeedItemsInColumn(content)
         })
     }
