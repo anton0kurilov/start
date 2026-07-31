@@ -476,3 +476,57 @@ test('restored scroll position does not trigger auto-marking', () => {
 
     assert.equal(scheduledMarkFrames, 0)
 })
+
+test('scrolling upward does not auto-mark after suppression expires', () => {
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame
+    let scheduledMarkFrames = 0
+    globalThis.requestAnimationFrame = () => {
+        scheduledMarkFrames += 1
+        return scheduledMarkFrames
+    }
+    const columns = createMockElement({classes: ['columns']})
+    const column = createMockElement({
+        classes: ['columns__item'],
+        parent: columns,
+    })
+    column.scrollTop = 0
+    const content = createMockElement({
+        classes: ['columns__content'],
+        dataset: {
+            suppressAutoMarkOnScroll: 'true',
+        },
+        parent: column,
+    })
+    content.scrollTop = 800
+    const interactions = createColumnInteractions({
+        columnsElement: columns,
+        markItemsVisited() {},
+        registerFeedItemClick() {
+            return false
+        },
+        registerFeedItemDismiss() {
+            return false
+        },
+        shouldAutoMarkReadOnScroll() {
+            return true
+        },
+        syncAppView() {},
+        unmarkItemsVisited() {},
+    })
+
+    try {
+        interactions.handleColumnScroll({target: content})
+        delete content.dataset.suppressAutoMarkOnScroll
+        content.scrollTop = 600
+        interactions.handleColumnScroll({target: content})
+
+        assert.equal(scheduledMarkFrames, 0)
+
+        content.scrollTop = 700
+        interactions.handleColumnScroll({target: content})
+    } finally {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame
+    }
+
+    assert.equal(scheduledMarkFrames, 1)
+})

@@ -10,6 +10,7 @@ export function createColumnInteractions({
     const pendingScrollMarkFrames = new WeakMap()
     const suppressedAutoMarkContents = new WeakSet()
     const autoMarkSuppressionTimers = new WeakMap()
+    const lastScrollTops = new WeakMap()
     const autoMarkSuppressionTimeoutMs = 1500
 
     return {
@@ -103,6 +104,7 @@ export function createColumnInteractions({
         ) {
             return
         }
+        lastScrollTops.set(content, getColumnScrollTop(column, content))
         clearAutoMarkSuppression(content)
         suppressedAutoMarkContents.add(content)
         const timerId = setTimeout(() => {
@@ -244,12 +246,15 @@ export function createColumnInteractions({
         if (!content) {
             return
         }
+        const column = content.closest('.columns__item')
+        const currentScrollTop = getColumnScrollTop(column, content)
+        const previousScrollTop = lastScrollTops.get(content)
+        lastScrollTops.set(content, currentScrollTop)
         hideNewItemsNoticeAtTop(content)
         if (content.dataset?.suppressAutoMarkOnScroll === 'true') {
             return
         }
         if (suppressedAutoMarkContents.has(content)) {
-            const column = content.closest('.columns__item')
             if (
                 column &&
                 (column.scrollTop || 0) <= 0 &&
@@ -260,6 +265,12 @@ export function createColumnInteractions({
             return
         }
         if (!shouldAutoMarkReadOnScroll()) {
+            return
+        }
+        if (
+            previousScrollTop !== undefined &&
+            currentScrollTop <= previousScrollTop
+        ) {
             return
         }
         if (pendingScrollMarkFrames.has(scroller)) {
@@ -288,6 +299,10 @@ export function createColumnInteractions({
         if (notice) {
             notice.hidden = true
         }
+    }
+
+    function getColumnScrollTop(column, content) {
+        return Math.max(column?.scrollTop || 0, content?.scrollTop || 0)
     }
 
     function markHiddenFeedItemsInAllColumns() {
