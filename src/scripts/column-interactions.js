@@ -104,6 +104,8 @@ export function createColumnInteractions({
         ) {
             return
         }
+        cancelPendingScrollMark(content)
+        cancelPendingScrollMark(column)
         lastScrollTops.set(content, getColumnScrollTop(column, content))
         clearAutoMarkSuppression(content)
         suppressedAutoMarkContents.add(content)
@@ -278,12 +280,36 @@ export function createColumnInteractions({
         }
         const frameId = requestAnimationFrame(() => {
             pendingScrollMarkFrames.delete(scroller)
+            if (
+                isAutoMarkSuppressed(content) ||
+                !shouldAutoMarkReadOnScroll()
+            ) {
+                return
+            }
             markHiddenFeedItemsInColumn(
                 content,
                 scroller.getBoundingClientRect().top,
             )
         })
         pendingScrollMarkFrames.set(scroller, frameId)
+    }
+
+    function cancelPendingScrollMark(scroller) {
+        if (!scroller || !pendingScrollMarkFrames.has(scroller)) {
+            return
+        }
+        const frameId = pendingScrollMarkFrames.get(scroller)
+        pendingScrollMarkFrames.delete(scroller)
+        if (typeof cancelAnimationFrame === 'function') {
+            cancelAnimationFrame(frameId)
+        }
+    }
+
+    function isAutoMarkSuppressed(content) {
+        return (
+            content?.dataset?.suppressAutoMarkOnScroll === 'true' ||
+            suppressedAutoMarkContents.has(content)
+        )
     }
 
     function hideNewItemsNoticeAtTop(content) {
@@ -311,10 +337,7 @@ export function createColumnInteractions({
             return
         }
         columnContents.forEach((content) => {
-            if (
-                content.dataset?.suppressAutoMarkOnScroll === 'true' ||
-                suppressedAutoMarkContents.has(content)
-            ) {
+            if (isAutoMarkSuppressed(content)) {
                 return
             }
             markHiddenFeedItemsInColumn(content)

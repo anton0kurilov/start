@@ -432,6 +432,84 @@ test('programmatic scroll to new items does not auto-mark hidden items', () => {
     }
 })
 
+test('new items click cancels a pending auto-mark frame', () => {
+    const previousWindow = globalThis.window
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame
+    const previousCancelAnimationFrame = globalThis.cancelAnimationFrame
+    globalThis.window = {
+        matchMedia() {
+            return {matches: false}
+        },
+    }
+    let pendingFrameCallback
+    const canceledFrames = []
+    let visitedCalls = 0
+    globalThis.requestAnimationFrame = (callback) => {
+        pendingFrameCallback = callback
+        return 42
+    }
+    globalThis.cancelAnimationFrame = (frameId) => {
+        canceledFrames.push(frameId)
+    }
+    const columns = createMockElement({classes: ['columns']})
+    const column = createMockElement({
+        classes: ['columns__item'],
+        parent: columns,
+    })
+    column.scrollTop = 0
+    column.scrollTo = () => {}
+    const newItemsButton = createMockElement({
+        classes: ['columns__new-items-notice'],
+        dataset: {
+            action: 'scroll-new-items-to-top',
+        },
+        parent: column,
+    })
+    const content = createMockElement({
+        classes: ['columns__content'],
+        parent: column,
+    })
+    content.scrollTop = 800
+    content.scrollTo = () => {}
+    const interactions = createColumnInteractions({
+        columnsElement: columns,
+        markItemsVisited() {
+            visitedCalls += 1
+        },
+        registerFeedItemClick() {
+            return false
+        },
+        registerFeedItemDismiss() {
+            return false
+        },
+        shouldAutoMarkReadOnScroll() {
+            return true
+        },
+        syncAppView() {},
+        unmarkItemsVisited() {},
+    })
+
+    try {
+        interactions.handleColumnScroll({target: content})
+        interactions.handleColumnHeaderClick({
+            target: newItemsButton,
+            preventDefault() {},
+        })
+
+        assert.deepEqual(canceledFrames, [42])
+
+        pendingFrameCallback()
+        assert.equal(visitedCalls, 0)
+
+        content.scrollTop = 0
+        interactions.handleColumnScroll({target: content})
+    } finally {
+        globalThis.window = previousWindow
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame
+        globalThis.cancelAnimationFrame = previousCancelAnimationFrame
+    }
+})
+
 test('restored scroll position does not trigger auto-marking', () => {
     const previousRequestAnimationFrame = globalThis.requestAnimationFrame
     let scheduledMarkFrames = 0
