@@ -25,8 +25,10 @@ import {
     applySettingsOpen,
     applySettingsTab,
     elements,
+    hideRefreshToast,
     render,
     setLastUpdatedInProgress,
+    showRefreshToast,
     updateLastUpdated,
 } from './ui.js'
 import {createAppActions} from './app-actions.js'
@@ -82,6 +84,8 @@ const appActions = createAppActions({
     importState,
     refreshAll,
     setLastUpdatedInProgress,
+    showRefreshToast,
+    hideRefreshToast,
     syncAppView,
 })
 
@@ -162,6 +166,12 @@ function bindEvents() {
     if (elements.refresh) {
         elements.refresh.addEventListener('click', () => refreshAllFeeds())
     }
+    if (elements.dismissRefreshToast) {
+        elements.dismissRefreshToast.addEventListener(
+            'click',
+            hideRefreshToast,
+        )
+    }
     if (elements.columns) {
         elements.columns.addEventListener('click', handleColumnHeaderClick)
         elements.columns.addEventListener('auxclick', handleColumnAuxClick)
@@ -214,7 +224,7 @@ function bindEvents() {
         )
     }
     window.addEventListener('focus', handleAutoRefreshWakeup)
-    window.addEventListener('online', handleAutoRefreshWakeup)
+    window.addEventListener('online', handleBrowserOnline)
     window.addEventListener('pageshow', handleAutoRefreshWakeup)
     document.addEventListener('visibilitychange', handleAutoRefreshWakeup)
     document.addEventListener('keydown', handleGlobalKeydown)
@@ -576,13 +586,24 @@ function handleAutoRefreshWakeup() {
     void maybeRunAutoRefresh()
 }
 
+function handleBrowserOnline() {
+    hideRefreshToast()
+    handleAutoRefreshWakeup()
+}
+
 async function maybeRunAutoRefresh() {
     if (
         !shouldAutoRefreshFeeds() ||
         !hasConfiguredFeeds() ||
-        getTimeUntilNextAutoRefresh() > 0 ||
-        !canRunAutoRefreshNow()
+        getTimeUntilNextAutoRefresh() > 0
     ) {
+        syncAutoRefreshSchedule()
+        return false
+    }
+    if (!canRunAutoRefreshNow()) {
+        if (!isBrowserOnline()) {
+            appActions.notifyOfflineRefresh()
+        }
         syncAutoRefreshSchedule()
         return false
     }
@@ -635,10 +656,14 @@ function canRunAutoRefreshNow() {
     ) {
         return false
     }
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    if (!isBrowserOnline()) {
         return false
     }
     return true
+}
+
+function isBrowserOnline() {
+    return typeof navigator === 'undefined' || navigator.onLine !== false
 }
 
 function focusEditingFolderNameInput(folderId) {

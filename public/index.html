@@ -22,6 +22,33 @@
         <main class="app">
             <section class="columns" data-columns></section>
             <div class="fab" role="group" aria-label="Управление лентой">
+                <div
+                    class="fab__toast"
+                    data-refresh-toast
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                    hidden
+                >
+                    <div class="fab__toast-text" data-refresh-toast-text></div>
+                    <button
+                        class="btn btn--ghost fab__toast-close"
+                        type="button"
+                        data-action="dismiss-refresh-toast"
+                        aria-label="Скрыть сообщение об обновлении"
+                    >
+                        <svg
+                            class="fab__toast-close-icon"
+                            viewBox="0 -960 960 960"
+                            aria-hidden="true"
+                            focusable="false"
+                        >
+                            <path
+                                d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"
+                            />
+                        </svg>
+                    </button>
+                </div>
                 <div class="fab__updated">
                     Обновлено:
                     <span data-last-updated>ещё не обновлялось</span>

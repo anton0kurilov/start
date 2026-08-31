@@ -6,6 +6,9 @@ export function createAppActions({
     refreshAll,
     syncAppView,
     setLastUpdatedInProgress,
+    showRefreshToast = () => {},
+    hideRefreshToast = () => {},
+    isOnline = isBrowserOnline,
 }) {
     let refreshAllFeedsPromise = null
 
@@ -15,6 +18,7 @@ export function createAppActions({
         handleExportJson,
         handleImportJson,
         handleImportFileSelected,
+        notifyOfflineRefresh,
     }
 
     async function refreshAllFeeds(options = {}) {
@@ -41,6 +45,13 @@ export function createAppActions({
             return
         }
 
+        if (!isOnline()) {
+            notifyOfflineRefresh()
+            return
+        }
+
+        hideRefreshToast()
+
         if (typeof setLastUpdatedInProgress === 'function') {
             setLastUpdatedInProgress()
         }
@@ -55,9 +66,17 @@ export function createAppActions({
             })
         }
         try {
-            await refreshAll()
+            const result = await refreshAll()
+            if (didAllFeedsFail(result, feeds.length)) {
+                showRefreshToast(
+                    'Не удалось обновить ленты. Проверьте подключение к интернету.',
+                )
+            }
         } catch (error) {
             void error
+            showRefreshToast(
+                'Не удалось обновить ленты. Проверьте подключение к интернету.',
+            )
         } finally {
             syncAppView({
                 withLastUpdated: true,
@@ -68,6 +87,12 @@ export function createAppActions({
                 elements.refresh.classList?.remove('fab__icon-btn--refreshing')
             }
         }
+    }
+
+    function notifyOfflineRefresh() {
+        showRefreshToast(
+            'Нет подключения к интернету. Ленты не обновились.',
+        )
     }
 
     async function handleFeedUpdated(updateResult) {
@@ -135,6 +160,17 @@ export function createAppActions({
         syncAppView({withLastUpdated: true})
         await refreshAllFeeds()
     }
+}
+
+function didAllFeedsFail(result, feedsCount) {
+    if (!feedsCount || !result) {
+        return false
+    }
+    return Number(result.errorsCount) >= feedsCount
+}
+
+function isBrowserOnline() {
+    return typeof navigator === 'undefined' || navigator.onLine !== false
 }
 
 function clearImportFileSelection() {

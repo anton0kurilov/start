@@ -31,6 +31,11 @@ export const elements = {
         document.querySelectorAll('[data-action="toggle-settings"]'),
     ),
     lastUpdated: document.querySelector('[data-last-updated]'),
+    refreshToast: document.querySelector('[data-refresh-toast]'),
+    refreshToastText: document.querySelector('[data-refresh-toast-text]'),
+    dismissRefreshToast: document.querySelector(
+        '[data-action="dismiss-refresh-toast"]',
+    ),
     exportJson: document.querySelector('[data-action="export-json"]'),
     importForm: document.querySelector('[data-action="import-json"]'),
     importFile: document.querySelector('[data-import-file]'),
@@ -1027,6 +1032,21 @@ export function setLastUpdatedInProgress() {
     elements.lastUpdated.textContent = 'в процессе'
     elements.lastUpdated.removeAttribute('title')
     delete elements.lastUpdated.dataset.lastUpdated
+}
+
+export function showRefreshToast(message) {
+    if (!elements.refreshToast || !elements.refreshToastText) {
+        return
+    }
+    elements.refreshToastText.textContent = String(message || '').trim()
+    elements.refreshToast.hidden = false
+}
+
+export function hideRefreshToast() {
+    if (!elements.refreshToast) {
+        return
+    }
+    elements.refreshToast.hidden = true
 }
 
 export function updateLastUpdated(lastUpdated) {

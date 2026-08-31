@@ -10,6 +10,9 @@ function createActions({
     shouldAutoMarkReadOnScroll = () => false,
     syncAppView = () => {},
     markHiddenFeedItemsInAllColumns = () => {},
+    showRefreshToast = () => {},
+    hideRefreshToast = () => {},
+    isOnline = () => true,
 } = {}) {
     return createAppActions({
         elements: {
@@ -25,6 +28,9 @@ function createActions({
         onImportFileReset: () => {},
         refreshAll,
         setLastUpdatedInProgress,
+        showRefreshToast,
+        hideRefreshToast,
+        isOnline,
         shouldAutoMarkReadOnScroll,
         syncAppView,
     })
@@ -207,6 +213,80 @@ test('refreshAllFeeds lets column notices handle feed errors', async () => {
             preserveColumnScroll: true,
         },
     ])
+})
+
+test('refreshAllFeeds shows an offline toast without making a request', async () => {
+    const toastMessages = []
+    let refreshCalls = 0
+    const actions = createActions({
+        isOnline: () => false,
+        refreshAll: async () => {
+            refreshCalls += 1
+            return {errorsCount: 0, errors: []}
+        },
+        showRefreshToast: (message) => {
+            toastMessages.push(message)
+        },
+    })
+
+    await actions.refreshAllFeeds()
+
+    assert.equal(refreshCalls, 0)
+    assert.deepEqual(toastMessages, [
+        'Нет подключения к интернету. Ленты не обновились.',
+    ])
+})
+
+test('refreshAllFeeds shows a global toast when every feed fails', async () => {
+    const toastEvents = []
+    const actions = createActions({
+        getState: () => ({
+            folders: [
+                {
+                    feeds: [{id: 'feed-1'}, {id: 'feed-2'}],
+                },
+            ],
+        }),
+        refreshAll: async () => ({
+            errorsCount: 2,
+            errors: [
+                {feedId: 'feed-1', message: 'ошибка сети/CORS'},
+                {feedId: 'feed-2', message: 'ошибка сети/CORS'},
+            ],
+        }),
+        hideRefreshToast: () => toastEvents.push('hide'),
+        showRefreshToast: (message) => toastEvents.push(message),
+    })
+
+    await actions.refreshAllFeeds({source: 'auto'})
+
+    assert.deepEqual(toastEvents, [
+        'hide',
+        'Не удалось обновить ленты. Проверьте подключение к интернету.',
+    ])
+})
+
+test('refreshAllFeeds leaves partial failures to column notices', async () => {
+    const toastEvents = []
+    const actions = createActions({
+        getState: () => ({
+            folders: [
+                {
+                    feeds: [{id: 'feed-1'}, {id: 'feed-2'}],
+                },
+            ],
+        }),
+        refreshAll: async () => ({
+            errorsCount: 1,
+            errors: [{feedId: 'feed-1', message: 'ошибка сети/CORS'}],
+        }),
+        hideRefreshToast: () => toastEvents.push('hide'),
+        showRefreshToast: (message) => toastEvents.push(message),
+    })
+
+    await actions.refreshAllFeeds()
+
+    assert.deepEqual(toastEvents, ['hide'])
 })
 
 test('auto refresh runs without loading and success statuses', async () => {
