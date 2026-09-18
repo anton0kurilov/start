@@ -14,7 +14,8 @@ import {
     resetState,
     setAutoMarkReadOnScroll,
     setAutoRefreshFeeds,
-    setShowFavoritesColumn,
+    setFeedFavorite,
+    setShowRecommendedColumn,
     shouldAutoMarkReadOnScroll,
     shouldAutoRefreshFeeds,
     unmarkItemsVisited,
@@ -217,10 +218,10 @@ function bindEvents() {
             handleAutoRefreshFeedsChange,
         )
     }
-    if (elements.showFavoritesColumn) {
-        elements.showFavoritesColumn.addEventListener(
+    if (elements.showRecommendedColumn) {
+        elements.showRecommendedColumn.addEventListener(
             'change',
-            handleShowFavoritesColumnChange,
+            handleShowRecommendedColumnChange,
         )
     }
     window.addEventListener('focus', handleAutoRefreshWakeup)
@@ -345,8 +346,33 @@ function handleListActions(event) {
         handleSaveFeedAction(button)
         return
     }
+    if (action === 'toggle-feed-favorite') {
+        handleToggleFeedFavoriteAction(button)
+        return
+    }
     if (action === 'remove-feed') {
         handleRemoveFeedAction(button)
+    }
+}
+
+function handleToggleFeedFavoriteAction(button) {
+    const context = resolveFeedContext(button)
+    if (!context) {
+        return
+    }
+    const feed = getState()
+        .folders.find((folder) => folder.id === context.folderId)
+        ?.feeds.find((item) => item.id === context.feedId)
+    if (!feed) {
+        return
+    }
+
+    const result = setFeedFavorite({
+        ...context,
+        isFavorite: !feed.isFavorite,
+    })
+    if (result.ok) {
+        syncAppView({preserveColumnScroll: true})
     }
 }
 
@@ -526,12 +552,12 @@ function handleAutoRefreshFeedsChange(event) {
     }
 }
 
-function handleShowFavoritesColumnChange(event) {
+function handleShowRecommendedColumnChange(event) {
     const target = event.currentTarget
     if (!target) {
         return
     }
-    setShowFavoritesColumn(Boolean(target.checked))
+    setShowRecommendedColumn(Boolean(target.checked))
     syncAppView({preserveColumnScroll: true})
 }
 

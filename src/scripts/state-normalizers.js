@@ -52,7 +52,10 @@ export function normalizeSettings(rawSettings) {
         ...DEFAULT_SETTINGS,
         autoMarkReadOnScroll: Boolean(rawSettings.autoMarkReadOnScroll),
         autoRefreshFeeds: Boolean(rawSettings.autoRefreshFeeds),
-        showFavoritesColumn: Boolean(rawSettings.showFavoritesColumn),
+        showRecommendedColumn: Boolean(
+            rawSettings.showRecommendedColumn ??
+                rawSettings.showFavoritesColumn,
+        ),
     }
 }
 
@@ -171,6 +174,7 @@ function normalizeFeed(rawFeed, usedFeedIds) {
         id: ensureUniqueId(rawFeed.id, usedFeedIds),
         name,
         url,
+        isFavorite: Boolean(rawFeed.isFavorite),
     }
 }
 

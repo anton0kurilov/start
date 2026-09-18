@@ -126,7 +126,7 @@ test('matches columns by stable key after their order changes', () => {
 
 test('falls back to the previous scroll offsets when the anchor disappears', () => {
     const before = createColumn({
-        columnKey: 'favorites',
+        columnKey: 'recommended',
         columnScrollTop: 75,
         contentScrollTop: 120,
         itemKeys: ['item-a', 'item-b'],
@@ -135,7 +135,7 @@ test('falls back to the previous scroll offsets when the anchor disappears', () 
         createColumnsElement([before.column]),
     )
     const after = createColumn({
-        columnKey: 'favorites',
+        columnKey: 'recommended',
         itemKeys: ['item-other'],
     })
 

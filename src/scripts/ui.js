@@ -47,7 +47,9 @@ export const elements = {
         '[name="autoMarkReadOnScroll"]',
     ),
     autoRefreshFeeds: document.querySelector('[name="autoRefreshFeeds"]'),
-    showFavoritesColumn: document.querySelector('[name="showFavoritesColumn"]'),
+    showRecommendedColumn: document.querySelector(
+        '[name="showRecommendedColumn"]',
+    ),
 }
 
 let lastUpdatedTimerId = null
@@ -65,6 +67,11 @@ const SETTINGS_EDIT_ICON = `
 const SETTINGS_DELETE_ICON = `
     <svg class="settings__action-icon" viewBox="0 -960 960 960" aria-hidden="true" focusable="false">
         <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+    </svg>
+`
+const SETTINGS_FAVORITE_ICON = `
+    <svg class="settings__action-icon" viewBox="0 -960 960 960" aria-hidden="true" focusable="false">
+        <path d="m480-121-113-258-281-24 214-185-64-274 244 145 244-145-64 274 214 185-281 24-113 258Z"/>
     </svg>
 `
 let activeSettingsTab = null
@@ -90,9 +97,9 @@ function renderSettings(state) {
             state.settings?.autoRefreshFeeds,
         )
     }
-    if (elements.showFavoritesColumn) {
-        elements.showFavoritesColumn.checked = Boolean(
-            state.settings?.showFavoritesColumn,
+    if (elements.showRecommendedColumn) {
+        elements.showRecommendedColumn.checked = Boolean(
+            state.settings?.showRecommendedColumn,
         )
     }
 }
@@ -338,6 +345,17 @@ function createFeedRow({feed, isEditing}) {
     const actions = document.createElement('div')
     actions.className = 'settings__feed-actions'
 
+    const favoriteLabel = feed.isFavorite
+        ? 'Убрать подписку из избранного'
+        : 'Добавить подписку в избранное'
+    const feedFavorite = createSettingsIconButton({
+        action: 'toggle-feed-favorite',
+        label: favoriteLabel,
+        icon: SETTINGS_FAVORITE_ICON,
+    })
+    feedFavorite.classList.add('settings__icon-btn--favorite')
+    feedFavorite.setAttribute('aria-pressed', String(feed.isFavorite))
+
     const feedEdit = createSettingsIconButton({
         action: 'edit-feed',
         label: 'Изменить подписку',
@@ -351,7 +369,7 @@ function createFeedRow({feed, isEditing}) {
         icon: SETTINGS_DELETE_ICON,
     })
 
-    actions.append(feedEdit, feedRemove)
+    actions.append(feedFavorite, feedEdit, feedRemove)
     feedRow.append(feedInfo, actions)
     return feedRow
 }
@@ -375,34 +393,47 @@ function renderColumns(state) {
         return
     }
 
-    if (state.settings?.showFavoritesColumn) {
-        elements.columns.appendChild(createFavoritesColumn(state))
+    const favoriteFeedIds = new Set(
+        state.folders.flatMap((folder) =>
+            folder.feeds
+                .filter((feed) => feed.isFavorite)
+                .map((feed) => feed.id),
+        ),
+    )
+
+    if (state.settings?.showRecommendedColumn) {
+        elements.columns.appendChild(
+            createRecommendedColumn(state, favoriteFeedIds),
+        )
     }
 
     state.folders.forEach((folder) => {
-        elements.columns.appendChild(createFolderColumn(folder))
+        elements.columns.appendChild(
+            createFolderColumn(folder, favoriteFeedIds),
+        )
     })
 
     observeFeedItemsForImpressions()
     ensureFeedItemTimesUpdates()
 }
 
-function createFavoritesColumn(state) {
+function createRecommendedColumn(state, favoriteFeedIds) {
     const hasFeeds = state.folders.some((folder) => folder.feeds?.length)
-    const items = getFavoriteFeedItems(state)
+    const items = getRecommendedFeedItems(state)
     return createFeedItemsColumn({
-        columnKey: 'favorites',
-        title: '⭐ Избранное',
+        columnKey: 'recommended',
+        title: '✦ Рекомендуемое',
         items,
         hasFeeds,
         emptyText: hasFeeds
-            ? 'Избранных публикаций пока нет.'
-            : 'Добавьте потоки, чтобы собрать избранное.',
-        modifierClass: 'columns__item--favorites',
+            ? 'Рекомендуемых публикаций пока нет.'
+            : 'Добавьте потоки, чтобы собрать рекомендации.',
+        modifierClass: 'columns__item--recommended',
+        favoriteFeedIds,
     })
 }
 
-function createFolderColumn(folder) {
+function createFolderColumn(folder, favoriteFeedIds) {
     const items = getFolderItems(folder)
     const failedFeeds = folder.feeds.filter((feed) => getFeedError(feed.id))
     const hasFeedErrors = failedFeeds.length > 0
@@ -419,6 +450,7 @@ function createFolderColumn(folder) {
             ? 'columns__empty columns__empty--error'
             : 'columns__empty',
         failedFeeds,
+        favoriteFeedIds,
     })
 }
 
@@ -432,6 +464,7 @@ function createFeedItemsColumn({
     emptyClassName = 'columns__empty',
     failedFeeds = [],
     modifierClass = '',
+    favoriteFeedIds = new Set(),
 }) {
     const column = document.createElement('article')
     column.className = ['columns__item', modifierClass]
@@ -513,7 +546,13 @@ function createFeedItemsColumn({
             )
         }
         visibleItems.forEach((item) => {
-            content.appendChild(createFeedItemCard(item))
+            content.appendChild(
+                createFeedItemCard(item, {
+                    isFavoriteFeed: favoriteFeedIds.has(
+                        String(item.feedId || '').trim(),
+                    ),
+                }),
+            )
         })
     }
 
@@ -521,7 +560,7 @@ function createFeedItemsColumn({
     return column
 }
 
-function getFavoriteFeedItems(state) {
+function getRecommendedFeedItems(state) {
     return state.folders
         .flatMap((folder) => getFolderItems(folder))
         .filter((item) => !isItemVisited(buildFeedItemKey(item)))
@@ -547,9 +586,10 @@ function getFavoriteFeedItems(state) {
         .map(({item}) => item)
 }
 
-function createFeedItemCard(item) {
+function createFeedItemCard(item, {isFavoriteFeed = false} = {}) {
     const card = document.createElement('article')
     card.className = 'feed__item'
+    card.classList.toggle('feed__item--favorite-feed', isFavoriteFeed)
     const itemKey = buildFeedItemKey(item)
     const isDismissed = itemKey ? isItemDismissed(itemKey) : false
     if (itemKey) {

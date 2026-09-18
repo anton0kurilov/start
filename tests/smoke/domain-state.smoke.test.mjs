@@ -56,7 +56,7 @@ function createBaseState(overrides = {}) {
         settings: {
             autoMarkReadOnScroll: false,
             autoRefreshFeeds: false,
-            showFavoritesColumn: false,
+            showRecommendedColumn: false,
         },
         visitedItemKeys: [],
         clickedItemKeys: [],
@@ -160,6 +160,7 @@ test('domain state mutations persist folders and feeds into storage', async () =
         state.folders[0].feeds[0].url,
         'https://news.ycombinator.com/rss',
     )
+    assert.equal(state.folders[0].feeds[0].isFavorite, false)
 
     const persistedState = getStoredState(localStorage)
     assert.equal(persistedState.folders.length, 1)
@@ -287,6 +288,39 @@ test('updateFeed updates stored feed name and normalizes url', async () => {
     assert.equal(
         persistedState.folders[0].feeds[0].url,
         'https://hnrss.github.io/frontpage',
+    )
+})
+
+test('setFeedFavorite persists the subscription favorite state', async () => {
+    const initialState = createBaseState({
+        folders: [
+            {
+                id: 'folder-1',
+                name: 'Tech',
+                feeds: [
+                    {
+                        id: 'feed-1',
+                        name: 'Hacker News',
+                        url: 'https://news.ycombinator.com/rss',
+                    },
+                ],
+            },
+        ],
+    })
+    const {domain, localStorage} = await loadFreshDomainModule(initialState)
+
+    assert.deepEqual(
+        domain.setFeedFavorite({
+            folderId: 'folder-1',
+            feedId: 'feed-1',
+            isFavorite: true,
+        }),
+        {ok: true},
+    )
+    assert.equal(domain.getState().folders[0].feeds[0].isFavorite, true)
+    assert.equal(
+        getStoredState(localStorage).folders[0].feeds[0].isFavorite,
+        true,
     )
 })
 
@@ -953,6 +987,7 @@ test('importState and exportState preserve folder and settings contract', async 
                         id: 'feed-1',
                         name: 'Example',
                         url: 'example.com/rss',
+                        isFavorite: true,
                     },
                 ],
             },
@@ -960,7 +995,7 @@ test('importState and exportState preserve folder and settings contract', async 
         settings: {
             autoMarkReadOnScroll: true,
             autoRefreshFeeds: true,
-            showFavoritesColumn: true,
+            showRecommendedColumn: true,
         },
     })
 
@@ -970,9 +1005,10 @@ test('importState and exportState preserve folder and settings contract', async 
     assert.equal(exported.folders.length, 1)
     assert.equal(exported.folders[0].feeds.length, 1)
     assert.equal(exported.folders[0].feeds[0].url, 'https://example.com/rss')
+    assert.equal(exported.folders[0].feeds[0].isFavorite, true)
     assert.equal(exported.settings.autoMarkReadOnScroll, true)
     assert.equal(exported.settings.autoRefreshFeeds, true)
-    assert.equal(exported.settings.showFavoritesColumn, true)
+    assert.equal(exported.settings.showRecommendedColumn, true)
 })
 
 test('setAutoRefreshFeeds persists auto refresh preference', async () => {
@@ -984,13 +1020,16 @@ test('setAutoRefreshFeeds persists auto refresh preference', async () => {
     assert.equal(getStoredState(localStorage).settings.autoRefreshFeeds, true)
 })
 
-test('setShowFavoritesColumn persists favorites column preference', async () => {
+test('setShowRecommendedColumn persists recommended column preference', async () => {
     const {domain, localStorage} = await loadFreshDomainModule()
 
-    domain.setShowFavoritesColumn(true)
+    domain.setShowRecommendedColumn(true)
 
-    assert.equal(domain.shouldShowFavoritesColumn(), true)
-    assert.equal(getStoredState(localStorage).settings.showFavoritesColumn, true)
+    assert.equal(domain.shouldShowRecommendedColumn(), true)
+    assert.equal(
+        getStoredState(localStorage).settings.showRecommendedColumn,
+        true,
+    )
 })
 
 test('resetState restores defaults from storage', async () => {

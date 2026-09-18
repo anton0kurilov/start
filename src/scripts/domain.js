@@ -86,8 +86,26 @@ export function addFeed({folderId, name, url}) {
         id: createId(),
         name,
         url: normalizeUrl(url),
+        isFavorite: false,
     })
     saveState(state)
+}
+
+export function setFeedFavorite({folderId, feedId, isFavorite}) {
+    const folder = state.folders.find((item) => item.id === folderId)
+    const feed = folder?.feeds.find((item) => item.id === feedId)
+    if (!feed) {
+        return {ok: false}
+    }
+
+    const nextValue = Boolean(isFavorite)
+    if (feed.isFavorite === nextValue) {
+        return {ok: true}
+    }
+
+    feed.isFavorite = nextValue
+    saveState(state)
+    return {ok: true}
 }
 
 export function updateFeed({folderId, feedId, name, url}) {
@@ -180,6 +198,7 @@ export function exportState() {
                 id: feed.id,
                 name: feed.name,
                 url: feed.url,
+                isFavorite: Boolean(feed.isFavorite),
             })),
         })),
         lastUpdated: state.lastUpdated,
@@ -218,8 +237,8 @@ export function shouldAutoRefreshFeeds() {
     return Boolean(state.settings?.autoRefreshFeeds)
 }
 
-export function shouldShowFavoritesColumn() {
-    return Boolean(state.settings?.showFavoritesColumn)
+export function shouldShowRecommendedColumn() {
+    return Boolean(state.settings?.showRecommendedColumn)
 }
 
 export function setAutoMarkReadOnScroll(isEnabled) {
@@ -250,16 +269,16 @@ export function setAutoRefreshFeeds(isEnabled) {
     saveState(state)
 }
 
-export function setShowFavoritesColumn(isEnabled) {
+export function setShowRecommendedColumn(isEnabled) {
     const nextValue = Boolean(isEnabled)
-    const currentValue = Boolean(state.settings?.showFavoritesColumn)
+    const currentValue = Boolean(state.settings?.showRecommendedColumn)
     if (currentValue === nextValue) {
         return
     }
     state.settings = {
         ...DEFAULT_SETTINGS,
         ...(state.settings || {}),
-        showFavoritesColumn: nextValue,
+        showRecommendedColumn: nextValue,
     }
     saveState(state)
 }

@@ -24,7 +24,7 @@ test('createDefaultState returns complete base shape', () => {
     assert.deepEqual(state.settings, {
         autoMarkReadOnScroll: false,
         autoRefreshFeeds: false,
-        showFavoritesColumn: false,
+        showRecommendedColumn: false,
     })
     assert.deepEqual(state.visitedItemKeys, [])
     assert.deepEqual(state.clickedItemKeys, [])
@@ -202,7 +202,12 @@ test('normalizeStatePayload sanitizes malformed payload and drops legacy scorer 
                 id: 'folder-1',
                 name: 'Tech',
                 feeds: [
-                    {id: 'feed-1', name: 'HN', url: 'news.ycombinator.com/rss'},
+                    {
+                        id: 'feed-1',
+                        name: 'HN',
+                        url: 'news.ycombinator.com/rss',
+                        isFavorite: true,
+                    },
                     {id: 'feed-1', name: 'Broken', url: ''},
                 ],
             },
@@ -226,11 +231,12 @@ test('normalizeStatePayload sanitizes malformed payload and drops legacy scorer 
     assert.equal(normalized.folders.length, 1)
     assert.equal(normalized.folders[0].feeds.length, 1)
     assert.equal(normalized.folders[0].feeds[0].url, 'https://news.ycombinator.com/rss')
+    assert.equal(normalized.folders[0].feeds[0].isFavorite, true)
     assert.equal(normalized.lastUpdated, null)
     assert.deepEqual(normalized.settings, {
         autoMarkReadOnScroll: true,
         autoRefreshFeeds: true,
-        showFavoritesColumn: true,
+        showRecommendedColumn: true,
     })
     assert.deepEqual(normalized.visitedItemKeys, ['a', 'b'])
     assert.deepEqual(normalized.clickedItemKeys, ['x', 'y'])

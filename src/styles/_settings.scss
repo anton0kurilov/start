@@ -539,6 +539,22 @@
         fill: currentColor;
     }
 
+    &__icon-btn--favorite {
+        color: var(--colorMuted);
+
+        &:hover {
+            color: var(--colorSignalMedium);
+            border-color: var(--colorSignalMediumBorder);
+            background: var(--colorSignalMediumBg);
+        }
+
+        &[aria-pressed='true'] {
+            color: var(--colorSignalMedium);
+            border-color: rgba(250, 204, 21, 0.28);
+            background: rgba(250, 204, 21, 0.07);
+        }
+    }
+
     &__feed {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
