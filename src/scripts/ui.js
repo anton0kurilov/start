@@ -70,8 +70,8 @@ const SETTINGS_DELETE_ICON = `
     </svg>
 `
 const SETTINGS_FAVORITE_ICON = `
-    <svg class="settings__action-icon" viewBox="0 -960 960 960" aria-hidden="true" focusable="false">
-        <path d="m480-121-113-258-281-24 214-185-64-274 244 145 244-145-64 274 214 185-281 24-113 258Z"/>
+    <svg class="settings__action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true" focusable="false">
+        <path d="m354-287 126-76 126 77-33-144 111-96-146-13-58-136-58 135-146 13 111 97-33 143ZM233-120l65-281L80-590l288-25 112-265 112 265 288 25-218 189 65 281-247-149-247 149Zm247-350Z"/>
     </svg>
 `
 let activeSettingsTab = null
