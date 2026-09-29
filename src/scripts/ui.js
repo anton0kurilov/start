@@ -486,14 +486,17 @@ function createFeedItemsColumn({
     markReadButton.className = 'btn btn--ghost columns__mark-read'
     markReadButton.type = 'button'
     markReadButton.dataset.action = 'mark-column-read'
-    markReadButton.title = 'Отметить публикации как прочитанные'
-    markReadButton.setAttribute(
-        'aria-label',
-        'Отметить публикации как прочитанные',
-    )
 
     const visibleItems = items.slice(0, MAX_ITEMS_PER_FOLDER)
     markReadButton.disabled = !visibleItems.length
+    const allItemsVisited =
+        visibleItems.length > 0 &&
+        visibleItems.every((item) => isItemVisited(buildFeedItemKey(item)))
+    const markReadLabel = allItemsVisited
+        ? 'Отметить публикации как непрочитанные'
+        : 'Отметить публикации как прочитанные'
+    markReadButton.title = markReadLabel
+    markReadButton.setAttribute('aria-label', markReadLabel)
     markReadButton.innerHTML = `
         <svg
             class="columns__mark-read-icon"

@@ -1,5 +1,6 @@
 const autoMarkRestoreSuppressionTimers = new WeakMap()
 const autoMarkRestoreSuppressionMs = 250
+const pendingNewItemKeysByNotice = new WeakMap()
 
 export function captureColumnScrollState(columnsElement) {
     if (!columnsElement) {
@@ -48,6 +49,7 @@ function captureColumnState(column, columnIndex) {
     const newItemsNotice = column.querySelector(
         '.columns__new-items-notice',
     )
+    refreshNewItemsNotice(column)
 
     return {
         columnKey: getColumnKey(column),
@@ -66,8 +68,8 @@ function captureColumnState(column, columnIndex) {
             ? anchor.getBoundingClientRect().top -
               getColumnVisibleTop(column, content)
             : 0,
-        hadNewItemsNotice: Boolean(
-            newItemsNotice && !newItemsNotice.hidden,
+        pendingNewItemKeys: Array.from(
+            pendingNewItemKeysByNotice.get(newItemsNotice) || [],
         ),
     }
 }
@@ -84,57 +86,45 @@ function restoreColumnState(column, columnState) {
         (columnState.columnScrollTop || 0) > 0 ||
         (columnState.contentScrollTop || 0) > 0
     if (!wasScrolled) {
-        updateNewItemsNotice(column, false)
+        updateNewItemsNotice(column, [])
         return
     }
 
     const feedItems = Array.from(content.querySelectorAll('.feed__item'))
     const anchorItemKey = String(columnState.anchorItemKey || '').trim()
-    if (!anchorItemKey) {
-        updateNewItemsNotice(
-            column,
-            isColumnScrolled(column, content) &&
-                columnState.hadNewItemsNotice,
-        )
-        return
-    }
     const anchor = feedItems.find(
         (feedItem) =>
             String(feedItem.dataset?.itemKey || '').trim() === anchorItemKey,
     )
-    if (!anchor) {
-        updateNewItemsNotice(
-            column,
-            isColumnScrolled(column, content) &&
-                columnState.hadNewItemsNotice,
-        )
-        return
+    if (anchor) {
+        const scrollers =
+            columnState.columnScrollTop > columnState.contentScrollTop
+                ? [column, content]
+                : [content, column]
+        scrollers.forEach((scroller) => {
+            const offset =
+                anchor.getBoundingClientRect().top -
+                getColumnVisibleTop(column, content)
+            const delta = offset - (columnState.anchorOffset || 0)
+            if (Math.abs(delta) < 0.5) {
+                return
+            }
+            scroller.scrollTop += delta
+        })
     }
 
-    const newItemsAboveCount = countNewItemsAbove(
-        feedItems,
-        anchor,
-        columnState.itemKeys,
-    )
-    const scrollers =
-        columnState.columnScrollTop > columnState.contentScrollTop
-            ? [column, content]
-            : [content, column]
-    scrollers.forEach((scroller) => {
-        const offset =
-            anchor.getBoundingClientRect().top -
-            getColumnVisibleTop(column, content)
-        const delta = offset - (columnState.anchorOffset || 0)
-        if (Math.abs(delta) < 0.5) {
-            return
-        }
-        scroller.scrollTop += delta
-    })
-    updateNewItemsNotice(
-        column,
-        isColumnScrolled(column, content) &&
-            (columnState.hadNewItemsNotice || newItemsAboveCount > 0),
-    )
+    const previousKeys = new Set(columnState.itemKeys || [])
+    const previousPendingKeys = new Set(columnState.pendingNewItemKeys || [])
+    // Keep only arrivals that have not been brought into view or marked read.
+    const pendingKeys = feedItems
+        .map((feedItem) => String(feedItem.dataset?.itemKey || '').trim())
+        .filter(
+            (itemKey) =>
+                itemKey &&
+                (previousPendingKeys.has(itemKey) ||
+                    !previousKeys.has(itemKey)),
+        )
+    updateNewItemsNotice(column, pendingKeys)
 }
 
 function findFirstVisibleFeedItem(column, content) {
@@ -155,28 +145,55 @@ function getColumnKey(column) {
     return String(column?.dataset?.columnKey || '').trim()
 }
 
-function countNewItemsAbove(feedItems, anchor, previousItemKeys) {
-    const anchorIndex = feedItems.indexOf(anchor)
-    if (anchorIndex <= 0) {
-        return 0
-    }
-    const previousKeys = new Set(previousItemKeys || [])
-    return feedItems.slice(0, anchorIndex).filter((feedItem) => {
-        const itemKey = String(feedItem.dataset?.itemKey || '').trim()
-        return itemKey && !previousKeys.has(itemKey)
-    }).length
-}
-
-function isColumnScrolled(column, content) {
-    return (column.scrollTop || 0) > 0 || (content.scrollTop || 0) > 0
-}
-
-function updateNewItemsNotice(column, isVisible) {
+function updateNewItemsNotice(column, itemKeys) {
     const notice = column.querySelector('.columns__new-items-notice')
     if (!notice) {
         return
     }
-    notice.hidden = !isVisible
+    pendingNewItemKeysByNotice.set(notice, new Set(itemKeys))
+    refreshNewItemsNotice(column)
+}
+
+export function refreshNewItemsNotice(column) {
+    const notice = column?.querySelector('.columns__new-items-notice')
+    const content = column?.querySelector('.columns__content')
+    if (!notice || !content) {
+        return
+    }
+    const pendingKeys = pendingNewItemKeysByNotice.get(notice) || new Set()
+    if (!pendingKeys.size) {
+        notice.hidden = true
+        return
+    }
+    if ((column.scrollTop || 0) <= 0 && (content.scrollTop || 0) <= 0) {
+        pendingKeys.clear()
+    } else {
+        const visibleTop = getColumnVisibleTop(column, content)
+        const pendingItems = new Map()
+        content.querySelectorAll('.feed__item').forEach((item) => {
+            const itemKey = String(item.dataset?.itemKey || '').trim()
+            if (pendingKeys.has(itemKey)) {
+                const copies = pendingItems.get(itemKey) || []
+                copies.push(item)
+                pendingItems.set(itemKey, copies)
+            }
+        })
+        pendingKeys.forEach((itemKey) => {
+            const copies = pendingItems.get(itemKey) || []
+            if (
+                !copies.length ||
+                copies.some(
+                    (item) =>
+                        item.classList?.contains('feed__item--visited') ||
+                        item.getBoundingClientRect().bottom > visibleTop,
+                )
+            ) {
+                pendingKeys.delete(itemKey)
+            }
+        })
+    }
+    pendingNewItemKeysByNotice.set(notice, pendingKeys)
+    notice.hidden = pendingKeys.size === 0
 }
 
 function suppressAutoMarkDuringScrollRestore(content) {

@@ -1,3 +1,5 @@
+import {refreshNewItemsNotice} from './column-scroll-state.js'
+
 export function createColumnInteractions({
     columnsElement,
     markItemsVisited,
@@ -7,17 +9,16 @@ export function createColumnInteractions({
     syncAppView,
     unmarkItemsVisited,
 }) {
-    const pendingScrollMarkFrames = new WeakMap()
     const suppressedAutoMarkContents = new WeakSet()
     const autoMarkSuppressionTimers = new WeakMap()
-    const lastScrollTops = new WeakMap()
+    const scrollSnapshots = new WeakMap()
     const autoMarkSuppressionTimeoutMs = 1500
 
     return {
         handleColumnAuxClick,
         handleColumnHeaderClick,
         handleColumnScroll,
-        markHiddenFeedItemsInAllColumns,
+        captureScrollState,
     }
 
     function handleColumnHeaderClick(event) {
@@ -55,13 +56,16 @@ export function createColumnInteractions({
         if (feedItem && columnsElement?.contains(feedItem)) {
             if (feedItemLink.dataset.noLink === 'true') {
                 event.preventDefault()
+                return
             }
             markFeedItemsVisited([feedItem])
             registerClickedFeedItem(feedItem)
             return
         }
 
-        const actionButton = event.target.closest('[data-action="mark-column-read"]')
+        const actionButton = event.target.closest(
+            '[data-action="mark-column-read"]',
+        )
         if (actionButton && columnsElement?.contains(actionButton)) {
             event.preventDefault()
             if (actionButton.disabled) {
@@ -72,6 +76,7 @@ export function createColumnInteractions({
                 return
             }
             markColumnFeedItemsVisited(column)
+            syncAppView({preserveColumnScroll: true})
             return
         }
 
@@ -104,9 +109,7 @@ export function createColumnInteractions({
         ) {
             return
         }
-        cancelPendingScrollMark(content)
-        cancelPendingScrollMark(column)
-        lastScrollTops.set(content, getColumnScrollTop(column, content))
+        scrollSnapshots.set(content, captureScrollSnapshot(column, content))
         clearAutoMarkSuppression(content)
         suppressedAutoMarkContents.add(content)
         const timerId = setTimeout(() => {
@@ -172,6 +175,9 @@ export function createColumnInteractions({
         if (!feedItem || !columnsElement?.contains(feedItem)) {
             return
         }
+        if (feedItemLink.dataset.noLink === 'true') {
+            return
+        }
         markFeedItemsVisited([feedItem])
         registerClickedFeedItem(feedItem)
     }
@@ -198,19 +204,10 @@ export function createColumnInteractions({
         if (!feedItems?.length) {
             return
         }
-        const unvisitedItemKeys = []
-        feedItems.forEach((feedItem) => {
-            if (!feedItem || !feedItem.classList.contains('feed__item--visited')) {
-                return
-            }
-            feedItem.classList.remove('feed__item--visited')
-            const itemKey = String(feedItem.dataset.itemKey || '').trim()
-            if (itemKey) {
-                unvisitedItemKeys.push(itemKey)
-            }
-        })
+        const unvisitedItemKeys = getItemKeys(feedItems)
         if (unvisitedItemKeys.length) {
             unmarkItemsVisited(unvisitedItemKeys)
+            updateVisibleItemCopies(unvisitedItemKeys, false)
         }
     }
 
@@ -249,10 +246,17 @@ export function createColumnInteractions({
             return
         }
         const column = content.closest('.columns__item')
-        const currentScrollTop = getColumnScrollTop(column, content)
-        const previousScrollTop = lastScrollTops.get(content)
-        lastScrollTops.set(content, currentScrollTop)
-        hideNewItemsNoticeAtTop(content)
+        const previousSnapshot = scrollSnapshots.get(content)
+        const currentSnapshot = captureScrollSnapshot(column, content)
+        scrollSnapshots.set(content, currentSnapshot)
+        if (!suppressedAutoMarkContents.has(content)) {
+            refreshNewItemsNotice(column)
+        } else if (
+            (column.scrollTop || 0) <= 0 &&
+            (content.scrollTop || 0) <= 0
+        ) {
+            refreshNewItemsNotice(column)
+        }
         if (content.dataset?.suppressAutoMarkOnScroll === 'true') {
             return
         }
@@ -266,123 +270,86 @@ export function createColumnInteractions({
             }
             return
         }
-        if (!shouldAutoMarkReadOnScroll()) {
+        if (!previousSnapshot || !shouldAutoMarkReadOnScroll()) {
             return
         }
-        if (
-            previousScrollTop !== undefined &&
-            currentScrollTop <= previousScrollTop
-        ) {
+        const movedDown = isColumnContent
+            ? currentSnapshot.contentScrollTop >
+              previousSnapshot.contentScrollTop
+            : currentSnapshot.columnScrollTop > previousSnapshot.columnScrollTop
+        if (!movedDown) {
             return
         }
-        if (pendingScrollMarkFrames.has(scroller)) {
-            return
-        }
-        const frameId = requestAnimationFrame(() => {
-            pendingScrollMarkFrames.delete(scroller)
-            if (
-                isAutoMarkSuppressed(content) ||
-                !shouldAutoMarkReadOnScroll()
-            ) {
-                return
-            }
-            markHiddenFeedItemsInColumn(
-                content,
-                scroller.getBoundingClientRect().top,
-            )
-        })
-        pendingScrollMarkFrames.set(scroller, frameId)
-    }
-
-    function cancelPendingScrollMark(scroller) {
-        if (!scroller || !pendingScrollMarkFrames.has(scroller)) {
-            return
-        }
-        const frameId = pendingScrollMarkFrames.get(scroller)
-        pendingScrollMarkFrames.delete(scroller)
-        if (typeof cancelAnimationFrame === 'function') {
-            cancelAnimationFrame(frameId)
-        }
-    }
-
-    function isAutoMarkSuppressed(content) {
-        return (
-            content?.dataset?.suppressAutoMarkOnScroll === 'true' ||
-            suppressedAutoMarkContents.has(content)
+        // A refresh can insert unread cards above the viewport. Only cards
+        // that cross the top edge during this scroll count as read.
+        const newlyHiddenItems = Array.from(currentSnapshot.hiddenItems).filter(
+            (item) => !previousSnapshot.hiddenItems.has(item),
         )
+        markFeedItemsVisited(newlyHiddenItems)
     }
 
-    function hideNewItemsNoticeAtTop(content) {
-        const column = content.closest('.columns__item')
-        if (
-            !column ||
-            (column.scrollTop || 0) > 0 ||
-            (content.scrollTop || 0) > 0
-        ) {
-            return
-        }
-        const notice = column.querySelector('.columns__new-items-notice')
-        if (notice) {
-            notice.hidden = true
-        }
-    }
-
-    function getColumnScrollTop(column, content) {
-        return Math.max(column?.scrollTop || 0, content?.scrollTop || 0)
-    }
-
-    function markHiddenFeedItemsInAllColumns() {
-        const columnContents = columnsElement?.querySelectorAll('.columns__content')
-        if (!columnContents?.length) {
-            return
-        }
-        columnContents.forEach((content) => {
-            if (isAutoMarkSuppressed(content)) {
-                return
-            }
-            markHiddenFeedItemsInColumn(content)
-        })
-    }
-
-    function markHiddenFeedItemsInColumn(content, visibleTop) {
-        if (!content) {
-            return
-        }
-        const columnTop =
-            typeof visibleTop === 'number'
-                ? visibleTop
-                : content.getBoundingClientRect().top
-        const feedItems = Array.from(content.querySelectorAll('.feed__item'))
-        const hiddenItems = feedItems.filter((item) => {
-            if (item.classList.contains('feed__item--visited')) {
-                return false
-            }
-            const itemBottom = item.getBoundingClientRect().bottom
-            return itemBottom <= columnTop
-        })
-        markFeedItemsVisited(hiddenItems)
+    function captureScrollState() {
+        columnsElement
+            ?.querySelectorAll('.columns__content')
+            ?.forEach((content) => {
+                const column = content.closest('.columns__item')
+                scrollSnapshots.set(
+                    content,
+                    captureScrollSnapshot(column, content),
+                )
+            })
     }
 
     function markFeedItemsVisited(feedItems) {
         if (!feedItems?.length) {
             return
         }
-        const visitedItemKeys = []
-        feedItems.forEach((feedItem) => {
-            if (!feedItem || feedItem.classList.contains('feed__item--visited')) {
-                return
-            }
-            feedItem.classList.add('feed__item--visited')
-            const itemKey = String(feedItem.dataset.itemKey || '').trim()
-            if (itemKey) {
-                visitedItemKeys.push(itemKey)
-            }
-        })
+        const visitedItemKeys = getItemKeys(feedItems)
         if (visitedItemKeys.length) {
             markItemsVisited(visitedItemKeys)
+            updateVisibleItemCopies(visitedItemKeys, true)
         }
     }
 
+    function updateVisibleItemCopies(itemKeys, isVisited) {
+        const keys = new Set(itemKeys)
+        columnsElement?.querySelectorAll('.feed__item')?.forEach((item) => {
+            if (!keys.has(String(item.dataset.itemKey || '').trim())) {
+                return
+            }
+            item.classList[isVisited ? 'add' : 'remove']('feed__item--visited')
+        })
+        columnsElement
+            ?.querySelectorAll('.columns__item')
+            ?.forEach(refreshNewItemsNotice)
+    }
+
+    function getItemKeys(feedItems) {
+        return Array.from(
+            new Set(
+                feedItems
+                    .map((item) => String(item?.dataset?.itemKey || '').trim())
+                    .filter(Boolean),
+            ),
+        )
+    }
+}
+
+function captureScrollSnapshot(column, content) {
+    const visibleTop = Math.max(
+        column?.getBoundingClientRect?.().top || 0,
+        content?.getBoundingClientRect?.().top || 0,
+    )
+    const hiddenItems = new Set(
+        Array.from(content.querySelectorAll?.('.feed__item') || []).filter(
+            (item) => item.getBoundingClientRect().bottom <= visibleTop,
+        ),
+    )
+    return {
+        columnScrollTop: column?.scrollTop || 0,
+        contentScrollTop: content?.scrollTop || 0,
+        hiddenItems,
+    }
 }
 
 function resolveFeedItemPayload(feedItem) {

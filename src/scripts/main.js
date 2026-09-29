@@ -56,6 +56,7 @@ function syncAppView({
     if (scrollState) {
         restoreColumnScrollState(elements.columns, scrollState)
     }
+    columnInteractions.captureScrollState()
     if (withLastUpdated) {
         updateLastUpdated(nextState.lastUpdated)
     }
@@ -535,9 +536,7 @@ function handleAutoMarkReadOnScrollChange(event) {
         return
     }
     setAutoMarkReadOnScroll(Boolean(target.checked))
-    if (shouldAutoMarkReadOnScroll()) {
-        columnInteractions.markHiddenFeedItemsInAllColumns()
-    }
+    columnInteractions.captureScrollState()
 }
 
 function handleAutoRefreshFeedsChange(event) {

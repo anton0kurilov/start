@@ -57,6 +57,15 @@ function createMockElement({
             }
             return null
         },
+        querySelectorAll(selector) {
+            return this.children.flatMap((child) => [
+                ...(matchesSelector(child, selector) ? [child] : []),
+                ...child.querySelectorAll(selector),
+            ])
+        },
+        getBoundingClientRect() {
+            return {top: 0, bottom: 0}
+        },
         setAttribute(name, value) {
             attributes.set(String(name), String(value))
         },
@@ -255,6 +264,121 @@ test('feed link click preserves column scroll when rerendering after click', () 
     assert.equal(feedItem.classList.contains('feed__item--visited'), true)
 })
 
+test('a card without a usable link is not marked as read', () => {
+    const visitedCalls = []
+    let clickCalls = 0
+    const columns = createMockElement({classes: ['columns']})
+    const column = createMockElement({
+        classes: ['columns__item'],
+        parent: columns,
+    })
+    const item = createMockElement({
+        classes: ['feed__item'],
+        dataset: {itemKey: 'no-link'},
+        parent: column,
+    })
+    const link = createMockElement({
+        dataset: {feedLink: 'true', noLink: 'true'},
+        parent: item,
+    })
+    const interactions = createColumnInteractions({
+        columnsElement: columns,
+        markItemsVisited(keys) {
+            visitedCalls.push(keys)
+        },
+        registerFeedItemClick() {
+            clickCalls += 1
+            return true
+        },
+        registerFeedItemDismiss() {
+            return false
+        },
+        shouldAutoMarkReadOnScroll() {
+            return false
+        },
+        syncAppView() {},
+        unmarkItemsVisited() {},
+    })
+
+    let prevented = false
+    interactions.handleColumnHeaderClick({
+        target: link,
+        preventDefault() {
+            prevented = true
+        },
+    })
+    interactions.handleColumnAuxClick({target: link, button: 1})
+
+    assert.equal(prevented, true)
+    assert.deepEqual(visitedCalls, [])
+    assert.equal(clickCalls, 0)
+    assert.equal(item.classList.contains('feed__item--visited'), false)
+})
+
+test('manual column action keeps duplicate cards in sync when toggled', () => {
+    const visitedCalls = []
+    const unvisitedCalls = []
+    const syncPayloads = []
+    const columns = createMockElement({classes: ['columns']})
+    const firstColumn = createMockElement({
+        classes: ['columns__item'],
+        parent: columns,
+    })
+    const button = createMockElement({
+        dataset: {action: 'mark-column-read'},
+        parent: firstColumn,
+    })
+    const firstItem = createMockElement({
+        classes: ['feed__item'],
+        dataset: {itemKey: 'shared'},
+        parent: firstColumn,
+    })
+    const secondColumn = createMockElement({
+        classes: ['columns__item'],
+        parent: columns,
+    })
+    const secondItem = createMockElement({
+        classes: ['feed__item'],
+        dataset: {itemKey: 'shared'},
+        parent: secondColumn,
+    })
+    const interactions = createColumnInteractions({
+        columnsElement: columns,
+        markItemsVisited(keys) {
+            visitedCalls.push(keys)
+        },
+        registerFeedItemClick() {
+            return false
+        },
+        registerFeedItemDismiss() {
+            return false
+        },
+        shouldAutoMarkReadOnScroll() {
+            return false
+        },
+        syncAppView(payload) {
+            syncPayloads.push(payload)
+        },
+        unmarkItemsVisited(keys) {
+            unvisitedCalls.push(keys)
+        },
+    })
+
+    interactions.handleColumnHeaderClick({target: button, preventDefault() {}})
+    assert.deepEqual(visitedCalls, [['shared']])
+    assert.equal(firstItem.classList.contains('feed__item--visited'), true)
+    assert.equal(secondItem.classList.contains('feed__item--visited'), true)
+
+    interactions.handleColumnHeaderClick({target: button, preventDefault() {}})
+    assert.deepEqual(unvisitedCalls, [['shared']])
+    assert.equal(firstItem.classList.contains('feed__item--visited'), false)
+    assert.equal(secondItem.classList.contains('feed__item--visited'), false)
+    assert.deepEqual(syncPayloads, [
+        {preserveColumnScroll: true},
+        {preserveColumnScroll: true},
+    ])
+})
+
 test('scrolling back to the top hides the new items notice', () => {
     const columns = createMockElement({classes: ['columns']})
     const column = createMockElement({
@@ -365,43 +489,61 @@ test('new items button scrolls its column to the top', () => {
     ])
 })
 
-test('programmatic scroll to new items does not auto-mark hidden items', () => {
-    const previousWindow = globalThis.window
-    const previousRequestAnimationFrame = globalThis.requestAnimationFrame
-    globalThis.window = {
-        matchMedia() {
-            return {matches: false}
-        },
-    }
-    let scheduledMarkFrames = 0
-    globalThis.requestAnimationFrame = () => {
-        scheduledMarkFrames += 1
-        return scheduledMarkFrames
-    }
+function createScrollFixture({
+    itemKeys,
+    scrollTop = 0,
+    mobile = false,
+    autoMarkRead = true,
+} = {}) {
+    const visitedCalls = []
+    let isAutoMarkReadEnabled = autoMarkRead
     const columns = createMockElement({classes: ['columns']})
     const column = createMockElement({
         classes: ['columns__item'],
         parent: columns,
     })
-    column.scrollTop = 0
+    column.scrollTop = mobile ? scrollTop : 0
+    column.getBoundingClientRect = () => ({top: 0, bottom: 340})
     column.scrollTo = () => {}
-    const newItemsButton = createMockElement({
-        classes: ['columns__new-items-notice'],
-        dataset: {
-            action: 'scroll-new-items-to-top',
-        },
+    const header = createMockElement({
+        classes: ['columns__header'],
         parent: column,
     })
-    newItemsButton.hidden = false
+    const notice = createMockElement({
+        classes: ['columns__new-items-notice'],
+        dataset: {action: 'scroll-new-items-to-top'},
+        parent: column,
+    })
+    notice.hidden = true
     const content = createMockElement({
         classes: ['columns__content'],
         parent: column,
     })
-    content.scrollTop = 800
+    content.scrollTop = mobile ? 0 : scrollTop
+    content.getBoundingClientRect = () => ({
+        top: 40 - (mobile ? column.scrollTop : 0),
+        bottom: 340,
+    })
     content.scrollTo = () => {}
+    const items = itemKeys.map((itemKey, index) => {
+        const item = createMockElement({
+            classes: ['feed__item'],
+            dataset: {itemKey},
+            parent: content,
+        })
+        item.getBoundingClientRect = () => {
+            const top =
+                40 + index * 100 -
+                (mobile ? column.scrollTop : content.scrollTop)
+            return {top, bottom: top + 100}
+        }
+        return item
+    })
     const interactions = createColumnInteractions({
         columnsElement: columns,
-        markItemsVisited() {},
+        markItemsVisited(itemKeysToMark) {
+            visitedCalls.push(itemKeysToMark)
+        },
         registerFeedItemClick() {
             return false
         },
@@ -409,202 +551,128 @@ test('programmatic scroll to new items does not auto-mark hidden items', () => {
             return false
         },
         shouldAutoMarkReadOnScroll() {
-            return true
+            return isAutoMarkReadEnabled
         },
         syncAppView() {},
         unmarkItemsVisited() {},
     })
+    interactions.captureScrollState()
+    return {
+        column,
+        content,
+        header,
+        interactions,
+        items,
+        notice,
+        visitedCalls,
+        setAutoMarkRead(isEnabled) {
+            isAutoMarkReadEnabled = isEnabled
+        },
+    }
+}
+
+test('downward scrolling marks only cards that cross the top edge', () => {
+    const fixture = createScrollFixture({itemKeys: ['a', 'b', 'c']})
+    fixture.content.scrollTop = 120
+    fixture.interactions.handleColumnScroll({target: fixture.content})
+    fixture.content.scrollTop = 220
+    fixture.interactions.handleColumnScroll({target: fixture.content})
+    fixture.content.scrollTop = 180
+    fixture.interactions.handleColumnScroll({target: fixture.content})
+
+    assert.deepEqual(fixture.visitedCalls, [['a'], ['b']])
+})
+
+test('new cards already above a restored viewport stay unread on downward scroll', () => {
+    const fixture = createScrollFixture({
+        itemKeys: ['new', 'a', 'b', 'c'],
+        scrollTop: 160,
+    })
+    fixture.content.scrollTop = 210
+    fixture.interactions.handleColumnScroll({target: fixture.content})
+
+    assert.deepEqual(fixture.visitedCalls, [['a']])
+    assert.equal(fixture.items[0].classList.contains('feed__item--visited'), false)
+})
+
+test('header click and upward scroll never mark cards as read', () => {
+    const previousWindow = globalThis.window
+    globalThis.window = {matchMedia: () => ({matches: false})}
+    const fixture = createScrollFixture({
+        itemKeys: ['new', 'a', 'b', 'c'],
+        scrollTop: 280,
+    })
 
     try {
-        interactions.handleColumnHeaderClick({
-            target: newItemsButton,
-            preventDefault() {},
-        })
-        interactions.handleColumnScroll({target: content})
+        fixture.interactions.handleColumnHeaderClick({target: fixture.header})
+        for (const scrollTop of [200, 100, 0]) {
+            fixture.content.scrollTop = scrollTop
+            fixture.interactions.handleColumnScroll({target: fixture.content})
+        }
+        assert.deepEqual(fixture.visitedCalls, [])
 
-        assert.equal(scheduledMarkFrames, 0)
-
-        content.scrollTop = 0
-        interactions.handleColumnScroll({target: content})
+        fixture.content.scrollTop = 110
+        fixture.interactions.handleColumnScroll({target: fixture.content})
+        assert.deepEqual(fixture.visitedCalls, [['new']])
     } finally {
         globalThis.window = previousWindow
-        globalThis.requestAnimationFrame = previousRequestAnimationFrame
     }
 })
 
-test('new items click cancels a pending auto-mark frame', () => {
-    const previousWindow = globalThis.window
-    const previousRequestAnimationFrame = globalThis.requestAnimationFrame
-    const previousCancelAnimationFrame = globalThis.cancelAnimationFrame
-    globalThis.window = {
-        matchMedia() {
-            return {matches: false}
-        },
-    }
-    let pendingFrameCallback
-    const canceledFrames = []
-    let visitedCalls = 0
-    globalThis.requestAnimationFrame = (callback) => {
-        pendingFrameCallback = callback
-        return 42
-    }
-    globalThis.cancelAnimationFrame = (frameId) => {
-        canceledFrames.push(frameId)
-    }
-    const columns = createMockElement({classes: ['columns']})
-    const column = createMockElement({
-        classes: ['columns__item'],
-        parent: columns,
+test('upward scrolling stays unread without programmatic suppression', () => {
+    const fixture = createScrollFixture({
+        itemKeys: ['new', 'a', 'b', 'c'],
+        scrollTop: 280,
     })
-    column.scrollTop = 0
-    column.scrollTo = () => {}
-    const newItemsButton = createMockElement({
-        classes: ['columns__new-items-notice'],
-        dataset: {
-            action: 'scroll-new-items-to-top',
-        },
-        parent: column,
-    })
-    const content = createMockElement({
-        classes: ['columns__content'],
-        parent: column,
-    })
-    content.scrollTop = 800
-    content.scrollTo = () => {}
-    const interactions = createColumnInteractions({
-        columnsElement: columns,
-        markItemsVisited() {
-            visitedCalls += 1
-        },
-        registerFeedItemClick() {
-            return false
-        },
-        registerFeedItemDismiss() {
-            return false
-        },
-        shouldAutoMarkReadOnScroll() {
-            return true
-        },
-        syncAppView() {},
-        unmarkItemsVisited() {},
-    })
-
-    try {
-        interactions.handleColumnScroll({target: content})
-        interactions.handleColumnHeaderClick({
-            target: newItemsButton,
-            preventDefault() {},
-        })
-
-        assert.deepEqual(canceledFrames, [42])
-
-        pendingFrameCallback()
-        assert.equal(visitedCalls, 0)
-
-        content.scrollTop = 0
-        interactions.handleColumnScroll({target: content})
-    } finally {
-        globalThis.window = previousWindow
-        globalThis.requestAnimationFrame = previousRequestAnimationFrame
-        globalThis.cancelAnimationFrame = previousCancelAnimationFrame
+    for (const scrollTop of [200, 100, 0]) {
+        fixture.content.scrollTop = scrollTop
+        fixture.interactions.handleColumnScroll({target: fixture.content})
     }
+
+    assert.deepEqual(fixture.visitedCalls, [])
 })
 
-test('restored scroll position does not trigger auto-marking', () => {
-    const previousRequestAnimationFrame = globalThis.requestAnimationFrame
-    let scheduledMarkFrames = 0
-    globalThis.requestAnimationFrame = () => {
-        scheduledMarkFrames += 1
-        return scheduledMarkFrames
-    }
-    const columns = createMockElement({classes: ['columns']})
-    const column = createMockElement({
-        classes: ['columns__item'],
-        parent: columns,
-    })
-    const content = createMockElement({
-        classes: ['columns__content'],
-        dataset: {
-            suppressAutoMarkOnScroll: 'true',
-        },
-        parent: column,
-    })
-    content.scrollTop = 800
-    const interactions = createColumnInteractions({
-        columnsElement: columns,
-        markItemsVisited() {},
-        registerFeedItemClick() {
-            return false
-        },
-        registerFeedItemDismiss() {
-            return false
-        },
-        shouldAutoMarkReadOnScroll() {
-            return true
-        },
-        syncAppView() {},
-        unmarkItemsVisited() {},
-    })
+test('restored scroll is a new baseline rather than a read action', () => {
+    const fixture = createScrollFixture({itemKeys: ['a', 'b', 'c', 'd']})
+    fixture.content.dataset.suppressAutoMarkOnScroll = 'true'
+    fixture.content.scrollTop = 220
+    fixture.interactions.handleColumnScroll({target: fixture.content})
+    delete fixture.content.dataset.suppressAutoMarkOnScroll
 
-    try {
-        interactions.handleColumnScroll({target: content})
-    } finally {
-        globalThis.requestAnimationFrame = previousRequestAnimationFrame
-    }
-
-    assert.equal(scheduledMarkFrames, 0)
+    assert.deepEqual(fixture.visitedCalls, [])
+    fixture.content.scrollTop = 300
+    fixture.interactions.handleColumnScroll({target: fixture.content})
+    assert.deepEqual(fixture.visitedCalls, [['c']])
 })
 
-test('scrolling upward does not auto-mark after suppression expires', () => {
-    const previousRequestAnimationFrame = globalThis.requestAnimationFrame
-    let scheduledMarkFrames = 0
-    globalThis.requestAnimationFrame = () => {
-        scheduledMarkFrames += 1
-        return scheduledMarkFrames
-    }
-    const columns = createMockElement({classes: ['columns']})
-    const column = createMockElement({
-        classes: ['columns__item'],
-        parent: columns,
+test('enabling automatic marking does not read cards already above the viewport', () => {
+    const fixture = createScrollFixture({
+        itemKeys: ['a', 'b', 'c'],
+        scrollTop: 160,
+        autoMarkRead: false,
     })
-    column.scrollTop = 0
-    const content = createMockElement({
-        classes: ['columns__content'],
-        dataset: {
-            suppressAutoMarkOnScroll: 'true',
-        },
-        parent: column,
+    fixture.content.scrollTop = 210
+    fixture.interactions.handleColumnScroll({target: fixture.content})
+    assert.deepEqual(fixture.visitedCalls, [])
+
+    fixture.setAutoMarkRead(true)
+    fixture.interactions.captureScrollState()
+    fixture.content.scrollTop = 220
+    fixture.interactions.handleColumnScroll({target: fixture.content})
+    assert.deepEqual(fixture.visitedCalls, [])
+
+    fixture.content.scrollTop = 310
+    fixture.interactions.handleColumnScroll({target: fixture.content})
+    assert.deepEqual(fixture.visitedCalls, [['c']])
+})
+
+test('mobile column scrolling uses the visible column edge', () => {
+    const fixture = createScrollFixture({
+        itemKeys: ['a', 'b', 'c'],
+        mobile: true,
     })
-    content.scrollTop = 800
-    const interactions = createColumnInteractions({
-        columnsElement: columns,
-        markItemsVisited() {},
-        registerFeedItemClick() {
-            return false
-        },
-        registerFeedItemDismiss() {
-            return false
-        },
-        shouldAutoMarkReadOnScroll() {
-            return true
-        },
-        syncAppView() {},
-        unmarkItemsVisited() {},
-    })
+    fixture.column.scrollTop = 150
+    fixture.interactions.handleColumnScroll({target: fixture.column})
 
-    try {
-        interactions.handleColumnScroll({target: content})
-        delete content.dataset.suppressAutoMarkOnScroll
-        content.scrollTop = 600
-        interactions.handleColumnScroll({target: content})
-
-        assert.equal(scheduledMarkFrames, 0)
-
-        content.scrollTop = 700
-        interactions.handleColumnScroll({target: content})
-    } finally {
-        globalThis.requestAnimationFrame = previousRequestAnimationFrame
-    }
-
-    assert.equal(scheduledMarkFrames, 1)
+    assert.deepEqual(fixture.visitedCalls, [['a']])
 })
