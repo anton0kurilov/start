@@ -270,12 +270,6 @@
         }
     }
 
-    &__title {
-        margin: 0;
-        font-size: 1.05rem;
-        letter-spacing: -0.02em;
-    }
-
     &__subtitle {
         margin: 0;
         font-size: 1rem;
@@ -340,12 +334,6 @@
     &__section-shell {
         display: grid;
         gap: calc(var(--padding) * 1.1);
-    }
-
-    &__section-head {
-        display: grid;
-        gap: 6px;
-        padding: 2px 2px 0;
     }
 
     &__section-note {
