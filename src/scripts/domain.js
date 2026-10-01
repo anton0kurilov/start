@@ -77,18 +77,49 @@ export function updateFolder({folderId, name}) {
     return {ok: true}
 }
 
-export function addFeed({folderId, name, url}) {
+export async function addFeed({folderId, name, url}) {
+    const nextName = String(name || '').trim()
+    const rawUrl = String(url || '').trim()
+    const nextUrl = normalizeHttpUrl(
+        rawUrl.includes('://') ? rawUrl : normalizeUrl(rawUrl),
+    )
+    if (!nextName || !nextUrl) {
+        return {
+            ok: false,
+            error: 'Укажите название подписки и корректный HTTP(S) URL.',
+        }
+    }
+    if (!state.folders.some((folder) => folder.id === folderId)) {
+        return {ok: false, error: 'Выберите существующую колонку.'}
+    }
+
+    try {
+        const xmlText = await fetchFeedText(nextUrl)
+        parseFeed(xmlText, nextUrl)
+    } catch (error) {
+        const isInvalidFeed = ['INVALID_XML', 'INVALID_FEED'].includes(
+            error?.code,
+        )
+        return {
+            ok: false,
+            error: isInvalidFeed
+                ? 'По этой ссылке нет корректной RSS- или Atom-ленты.'
+                : `Не удалось проверить ленту: ${formatFeedError(error)}. Попробуйте ещё раз.`,
+        }
+    }
+
     const folder = state.folders.find((item) => item.id === folderId)
     if (!folder) {
-        return
+        return {ok: false, error: 'Выберите существующую колонку.'}
     }
     folder.feeds.push({
         id: createId(),
-        name,
-        url: normalizeUrl(url),
+        name: nextName,
+        url: nextUrl,
         isFavorite: false,
     })
     saveState(state)
+    return {ok: true}
 }
 
 export function setFeedFavorite({folderId, feedId, isFavorite}) {
@@ -669,6 +700,11 @@ function parseFeed(xmlText, feedUrl) {
         error.code = 'INVALID_XML'
         throw error
     }
+    if (!isFeedDocument(doc)) {
+        const error = new Error('Not an RSS or Atom feed')
+        error.code = 'INVALID_FEED'
+        throw error
+    }
     const feedTitle = decodeHtmlEntities(
         doc.querySelector('channel > title, feed > title')?.textContent || '',
     ).trim()
@@ -700,6 +736,33 @@ function parseFeed(xmlText, feedUrl) {
     return {title: feedTitle, items}
 }
 
+function isFeedDocument(doc) {
+    const root = doc.documentElement
+    if (!root) {
+        return false
+    }
+    if (
+        root.localName === 'feed' &&
+        root.namespaceURI === 'http://www.w3.org/2005/Atom'
+    ) {
+        return true
+    }
+    const isRss = root.localName === 'rss' && !root.namespaceURI
+    const isRdf =
+        root.localName === 'RDF' &&
+        root.namespaceURI === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+    if (!isRss && !isRdf) {
+        return false
+    }
+    return Array.from(root.children).some(
+        (child) =>
+            child.localName === 'channel' &&
+            (isRss
+                ? !child.namespaceURI
+                : child.namespaceURI === 'http://purl.org/rss/1.0/'),
+    )
+}
+
 function formatFeedError(error) {
     if (error?.name === 'AbortError') {
         return 'таймаут запроса'
@@ -709,6 +772,9 @@ function formatFeedError(error) {
     }
     if (error?.code === 'INVALID_XML') {
         return 'ошибка парсинга XML'
+    }
+    if (error?.code === 'INVALID_FEED') {
+        return 'ссылка не ведёт на RSS- или Atom-ленту'
     }
     if (error?.code === 'HTTP_ERROR') {
         return `ошибка загрузки (HTTP ${error.status || 'unknown'})`

@@ -247,6 +247,7 @@
                                                     type="url"
                                                     name="feedUrl"
                                                     placeholder="https://example.com/feed.xml"
+                                                    aria-describedby="feed-form-error"
                                                     required
                                                 />
                                             </label>
@@ -258,6 +259,13 @@
                                                     required
                                                 ></select>
                                             </label>
+                                            <p
+                                                class="settings__form-error"
+                                                id="feed-form-error"
+                                                data-feed-form-error
+                                                role="alert"
+                                                hidden
+                                            ></p>
                                             <div class="settings__actions-row">
                                                 <button
                                                     class="btn btn--primary settings__submit"

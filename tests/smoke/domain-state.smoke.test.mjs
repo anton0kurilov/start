@@ -4,6 +4,7 @@ import path from 'node:path'
 import {pathToFileURL} from 'node:url'
 
 import {
+    CORS_PROXY,
     FETCH_TIMEOUT,
     MODEL_IMPRESSION_NEGATIVE_DELAY_MS,
     MODEL_STATE_SCHEMA_VERSION,
@@ -69,6 +70,46 @@ function createBaseState(overrides = {}) {
         },
         ...overrides,
     }
+}
+
+function createFeedDocument({
+    localName = 'rss',
+    namespaceURI = null,
+    children = [{localName: 'channel', namespaceURI: null}],
+    parserError = false,
+} = {}) {
+    return {
+        documentElement: {localName, namespaceURI, children},
+        querySelector(selector) {
+            return selector === 'parsererror' && parserError ? {} : null
+        },
+        querySelectorAll() {
+            return []
+        },
+    }
+}
+
+function mockFeedResponse(t, {doc = createFeedDocument(), status = 200} = {}) {
+    const originalDOMParser = globalThis.DOMParser
+    globalThis.DOMParser = class {
+        parseFromString(text, contentType) {
+            assert.equal(text, 'mock feed response')
+            assert.equal(contentType, 'text/xml')
+            return doc
+        }
+    }
+    t.after(() => {
+        if (originalDOMParser) {
+            globalThis.DOMParser = originalDOMParser
+        } else {
+            delete globalThis.DOMParser
+        }
+    })
+    return t.mock.method(globalThis, 'fetch', async () => ({
+        ok: status >= 200 && status < 300,
+        status,
+        text: async () => 'mock feed response',
+    }))
 }
 
 function createInteractionEvent({
@@ -140,7 +181,8 @@ async function withMockedNow(now, callback) {
     }
 }
 
-test('domain state mutations persist folders and feeds into storage', async () => {
+test('domain state mutations persist folders and feeds into storage', async (t) => {
+    const fetchMock = mockFeedResponse(t)
     const {domain, localStorage} = await loadFreshDomainModule()
 
     domain.createFolder('Tech')
@@ -149,11 +191,17 @@ test('domain state mutations persist folders and feeds into storage', async () =
     const folderId = state.folders[0].id
     assert.ok(folderId)
 
-    domain.addFeed({
+    const result = await domain.addFeed({
         folderId,
         name: 'Hacker News',
         url: 'news.ycombinator.com/rss',
     })
+    assert.deepEqual(result, {ok: true})
+    assert.equal(fetchMock.mock.callCount(), 1)
+    assert.equal(
+        fetchMock.mock.calls[0].arguments[0],
+        `${CORS_PROXY}${encodeURIComponent('https://news.ycombinator.com/rss')}`,
+    )
     state = domain.getState()
     assert.equal(state.folders[0].feeds.length, 1)
     assert.equal(
@@ -169,6 +217,250 @@ test('domain state mutations persist folders and feeds into storage', async () =
     const feedId = state.folders[0].feeds[0].id
     domain.removeFeed(folderId, feedId)
     assert.equal(domain.getState().folders[0].feeds.length, 0)
+})
+
+test('addFeed accepts RSS, Atom and RSS 1.0 documents without entries', async (t) => {
+    const documents = [
+        {name: 'RSS', doc: createFeedDocument()},
+        {
+            name: 'Atom',
+            doc: createFeedDocument({
+                localName: 'feed',
+                namespaceURI: 'http://www.w3.org/2005/Atom',
+                children: [],
+            }),
+        },
+        {
+            name: 'RSS 1.0',
+            doc: createFeedDocument({
+                localName: 'RDF',
+                namespaceURI: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+                children: [
+                    {
+                        localName: 'channel',
+                        namespaceURI: 'http://purl.org/rss/1.0/',
+                    },
+                ],
+            }),
+        },
+    ]
+    for (const {name, doc} of documents) {
+        await t.test(name, async (t) => {
+            mockFeedResponse(t, {doc})
+            const {domain, localStorage} = await loadFreshDomainModule()
+            domain.createFolder('Tech')
+            const folderId = domain.getState().folders[0].id
+
+            const result = await domain.addFeed({
+                folderId,
+                name: '  Example  ',
+                url: 'https://example.com/feed',
+            })
+
+            assert.equal(result.ok, true)
+            const feeds = getStoredState(localStorage).folders[0].feeds
+            assert.equal(feeds.length, 1)
+            assert.equal(feeds[0].name, 'Example')
+        })
+    }
+})
+
+test('addFeed leaves state and storage unchanged for non-feed documents', async (t) => {
+    const documents = [
+        {name: 'HTML', doc: createFeedDocument({localName: 'html'})},
+        {name: 'unrelated XML', doc: createFeedDocument({localName: 'data'})},
+        {name: 'RSS without channel', doc: createFeedDocument({children: []})},
+        {
+            name: 'RSS with unrelated namespace',
+            doc: createFeedDocument({namespaceURI: 'urn:example'}),
+        },
+        {
+            name: 'Atom with unrelated namespace',
+            doc: createFeedDocument({
+                localName: 'feed',
+                namespaceURI: 'urn:example',
+            }),
+        },
+        {
+            name: 'RDF without an RSS channel',
+            doc: createFeedDocument({
+                localName: 'RDF',
+                namespaceURI: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+            }),
+        },
+        {name: 'malformed XML', doc: createFeedDocument({parserError: true})},
+    ]
+    for (const {name, doc} of documents) {
+        await t.test(name, async (t) => {
+            mockFeedResponse(t, {doc})
+            const {domain, localStorage} = await loadFreshDomainModule()
+            domain.createFolder('Tech')
+            const folderId = domain.getState().folders[0].id
+            const storedBefore = localStorage.getItem(STORAGE_KEY)
+
+            const result = await domain.addFeed({
+                folderId,
+                name: 'Example',
+                url: 'https://example.com/feed',
+            })
+
+            assert.equal(result.ok, false)
+            assert.equal(
+                result.error,
+                'По этой ссылке нет корректной RSS- или Atom-ленты.',
+            )
+            assert.equal(domain.getState().folders[0].feeds.length, 0)
+            assert.equal(localStorage.getItem(STORAGE_KEY), storedBefore)
+        })
+    }
+})
+
+test('addFeed does not persist a feed while validation is pending', async (t) => {
+    const fetchMock = mockFeedResponse(t)
+    let resolveBody
+    const body = new Promise((resolve) => {
+        resolveBody = resolve
+    })
+    fetchMock.mock.mockImplementation(async () => ({
+        ok: true,
+        text: () => body,
+    }))
+    const {domain, localStorage} = await loadFreshDomainModule()
+    domain.createFolder('Tech')
+    const folderId = domain.getState().folders[0].id
+    const storedBefore = localStorage.getItem(STORAGE_KEY)
+
+    const request = domain.addFeed({
+        folderId,
+        name: 'Example',
+        url: 'https://example.com/feed',
+    })
+
+    assert.equal(domain.getState().folders[0].feeds.length, 0)
+    assert.equal(localStorage.getItem(STORAGE_KEY), storedBefore)
+    resolveBody('mock feed response')
+    assert.equal((await request).ok, true)
+    assert.equal(getStoredState(localStorage).folders[0].feeds.length, 1)
+})
+
+test('addFeed handles a column removed while validation is pending', async (t) => {
+    mockFeedResponse(t)
+    const {domain, localStorage} = await loadFreshDomainModule()
+    domain.createFolder('Tech')
+    const folderId = domain.getState().folders[0].id
+
+    const request = domain.addFeed({
+        folderId,
+        name: 'Example',
+        url: 'https://example.com/feed',
+    })
+    domain.removeFolder(folderId)
+    const storedAfterRemoval = localStorage.getItem(STORAGE_KEY)
+
+    assert.equal((await request).ok, false)
+    assert.equal(domain.getState().folders.length, 0)
+    assert.equal(localStorage.getItem(STORAGE_KEY), storedAfterRemoval)
+})
+
+test('addFeed does not fetch invalid URLs or missing columns', async (t) => {
+    const fetchMock = mockFeedResponse(t)
+    const {domain, localStorage} = await loadFreshDomainModule()
+    domain.createFolder('Tech')
+    const folderId = domain.getState().folders[0].id
+    const storedBefore = localStorage.getItem(STORAGE_KEY)
+
+    for (const url of ['', 'https://', 'ftp://example.com/feed']) {
+        assert.equal(
+            (await domain.addFeed({folderId, name: 'Example', url})).ok,
+            false,
+        )
+    }
+    assert.equal(
+        (
+            await domain.addFeed({
+                folderId: 'missing',
+                name: 'Example',
+                url: 'https://example.com/feed',
+            })
+        ).ok,
+        false,
+    )
+    assert.equal(fetchMock.mock.callCount(), 0)
+    assert.equal(localStorage.getItem(STORAGE_KEY), storedBefore)
+})
+
+test('addFeed does not persist a feed after HTTP or network errors', async (t) => {
+    for (const status of [404, 500]) {
+        await t.test(`HTTP ${status}`, async (t) => {
+            mockFeedResponse(t, {status})
+            const {domain, localStorage} = await loadFreshDomainModule()
+            domain.createFolder('Tech')
+            const folderId = domain.getState().folders[0].id
+            const storedBefore = localStorage.getItem(STORAGE_KEY)
+
+            const result = await domain.addFeed({
+                folderId,
+                name: 'Example',
+                url: 'https://example.com/feed',
+            })
+
+            assert.equal(result.ok, false)
+            assert.match(result.error, new RegExp(`HTTP ${status}`))
+            assert.equal(domain.getState().folders[0].feeds.length, 0)
+            assert.equal(localStorage.getItem(STORAGE_KEY), storedBefore)
+        })
+    }
+    await t.test('network error', async (t) => {
+        t.mock.method(globalThis, 'fetch', async () => {
+            throw new TypeError('Failed to fetch')
+        })
+        const {domain, localStorage} = await loadFreshDomainModule()
+        domain.createFolder('Tech')
+        const folderId = domain.getState().folders[0].id
+        const storedBefore = localStorage.getItem(STORAGE_KEY)
+
+        const result = await domain.addFeed({
+            folderId,
+            name: 'Example',
+            url: 'https://example.com/feed',
+        })
+
+        assert.equal(result.ok, false)
+        assert.match(result.error, /ошибка сети\/CORS/)
+        assert.equal(domain.getState().folders[0].feeds.length, 0)
+        assert.equal(localStorage.getItem(STORAGE_KEY), storedBefore)
+    })
+})
+
+test('addFeed does not persist a feed after a body-read timeout', async (t) => {
+    t.mock.timers.enable({apis: ['setTimeout']})
+    t.mock.method(globalThis, 'fetch', async (url, {signal}) => ({
+        ok: true,
+        text: () =>
+            new Promise((resolve, reject) => {
+                signal.addEventListener('abort', () => {
+                    reject(new DOMException('aborted', 'AbortError'))
+                })
+            }),
+    }))
+    const {domain, localStorage} = await loadFreshDomainModule()
+    domain.createFolder('Tech')
+    const folderId = domain.getState().folders[0].id
+    const storedBefore = localStorage.getItem(STORAGE_KEY)
+    const request = domain.addFeed({
+        folderId,
+        name: 'Example',
+        url: 'https://example.com/feed',
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    t.mock.timers.tick(FETCH_TIMEOUT)
+
+    const result = await request
+    assert.equal(result.ok, false)
+    assert.match(result.error, /таймаут запроса/)
+    assert.equal(domain.getState().folders[0].feeds.length, 0)
+    assert.equal(localStorage.getItem(STORAGE_KEY), storedBefore)
 })
 
 test('refreshAll keeps the timeout active while reading the feed body', async (t) => {

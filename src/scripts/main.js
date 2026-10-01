@@ -28,6 +28,8 @@ import {
     elements,
     hideRefreshToast,
     render,
+    setFeedFormError,
+    setFeedFormPending,
     setLastUpdatedInProgress,
     showRefreshToast,
     updateLastUpdated,
@@ -42,6 +44,7 @@ import {
 let editingFeed = null
 let editingFolderId = null
 let autoRefreshTimerId = null
+let addingFeed = false
 
 function syncAppView({
     state = null,
@@ -161,6 +164,7 @@ function bindEvents() {
     }
     if (elements.feedForm) {
         elements.feedForm.addEventListener('submit', handleAddFeed)
+        elements.feedForm.addEventListener('input', () => setFeedFormError())
     }
     if (elements.foldersList) {
         elements.foldersList.addEventListener('click', handleListActions)
@@ -295,21 +299,39 @@ function handleCreateFolder(event) {
     syncAppView()
 }
 
-function handleAddFeed(event) {
+async function handleAddFeed(event) {
     event.preventDefault()
-    const formData = new FormData(event.target)
+    if (addingFeed) {
+        return
+    }
+    const form = event.target
+    const formData = new FormData(form)
     const name = String(formData.get('feedName') || '').trim()
     const rawUrl = String(formData.get('feedUrl') || '').trim()
     const folderId = String(formData.get('folderId') || '')
     if (!name || !rawUrl || !folderId) {
         return
     }
-    addFeed({
-        folderId,
-        name,
-        url: rawUrl,
-    })
-    event.target.reset()
+    addingFeed = true
+    setFeedFormError()
+    setFeedFormPending(true)
+    let result
+    try {
+        result = await addFeed({folderId, name, url: rawUrl})
+    } catch {
+        result = {
+            ok: false,
+            error: 'Не удалось добавить подписку. Попробуйте ещё раз.',
+        }
+    } finally {
+        addingFeed = false
+        setFeedFormPending(false)
+    }
+    if (!result.ok) {
+        setFeedFormError(result.error)
+        return
+    }
+    form.reset()
     syncAppAndRefreshFeeds()
 }
 

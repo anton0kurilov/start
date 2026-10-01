@@ -75,6 +75,7 @@ const SETTINGS_FAVORITE_ICON = `
     </svg>
 `
 let activeSettingsTab = null
+let feedFormPending = false
 let feedItemImpressionObserver = null
 const feedItemImpressionTimers = new Map()
 const dismissedColumnRefreshNoticeKeys = new Set()
@@ -134,10 +135,41 @@ function setFeedFormDisabled(isDisabled) {
     }
 }
 
+export function setFeedFormPending(isPending) {
+    feedFormPending = Boolean(isPending)
+    if (!elements.feedForm) {
+        return
+    }
+    elements.feedForm.setAttribute('aria-busy', String(feedFormPending))
+    const submitButton = elements.feedForm.querySelector('[type="submit"]')
+    if (submitButton) {
+        submitButton.textContent = feedFormPending ? 'Проверка…' : 'Подписаться'
+    }
+    setFeedFormDisabled(feedFormPending || !elements.folderSelect?.value)
+}
+
+export function setFeedFormError(message = '') {
+    const errorElement = elements.feedForm?.querySelector(
+        '[data-feed-form-error]',
+    )
+    if (errorElement) {
+        errorElement.textContent = message
+        errorElement.hidden = !message
+    }
+    const urlInput = elements.feedForm?.querySelector('[name="feedUrl"]')
+    if (message) {
+        urlInput?.setAttribute('aria-invalid', 'true')
+        urlInput?.focus()
+    } else {
+        urlInput?.removeAttribute('aria-invalid')
+    }
+}
+
 function renderFolderSelect(state) {
     if (!elements.folderSelect) {
         return
     }
+    const selectedFolderId = elements.folderSelect.value
     elements.folderSelect.innerHTML = ''
     if (!state.folders.length) {
         setFeedFormDisabled(true)
@@ -147,13 +179,16 @@ function renderFolderSelect(state) {
         elements.folderSelect.appendChild(option)
         return
     }
-    setFeedFormDisabled(false)
+    setFeedFormDisabled(feedFormPending)
     state.folders.forEach((folder) => {
         const option = document.createElement('option')
         option.value = folder.id
         option.textContent = folder.name
         elements.folderSelect.appendChild(option)
     })
+    if (state.folders.some((folder) => folder.id === selectedFolderId)) {
+        elements.folderSelect.value = selectedFolderId
+    }
 }
 
 function renderFoldersList(state, editingFeed, editingFolderId) {

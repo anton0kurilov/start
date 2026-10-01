@@ -364,6 +364,13 @@
         gap: var(--padding);
     }
 
+    &__form-error {
+        margin: 0;
+        color: var(--colorDanger);
+        font-size: 0.85rem;
+        line-height: 1.45;
+    }
+
     .control {
         font-size: 1rem;
     }
