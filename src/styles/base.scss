@@ -13,8 +13,9 @@
     --colorHighlight: rgb(var(--colorHighlightRgb));
     --colorRecent: rgba(var(--colorHighlightRgb), 0.565);
     --colorDanger: #f97373;
-    --colorSignalHigh: #86efac;
-    --colorSignalHighBorder: rgba(134, 239, 172, 0.5);
+    --colorSignalHighRgb: 134, 239, 172;
+    --colorSignalHigh: rgb(var(--colorSignalHighRgb));
+    --colorSignalHighBorder: rgba(var(--colorSignalHighRgb), 0.5);
     --colorSignalHighBg: rgba(34, 197, 94, 0.08);
     --colorSignalMedium: #fde68a;
     --colorSignalMediumBorder: rgba(253, 230, 138, 0.45);
