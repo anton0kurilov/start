@@ -563,6 +563,7 @@ function createFeedItemsColumn({
 
     const content = document.createElement('div')
     content.className = 'columns__content'
+    content.appendChild(header)
 
     if (!hasFeeds) {
         const empty = document.createElement('div')
@@ -594,7 +595,7 @@ function createFeedItemsColumn({
         })
     }
 
-    column.append(header, newItemsNotice, content)
+    column.append(newItemsNotice, content)
     return column
 }
 
