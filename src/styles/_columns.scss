@@ -36,6 +36,10 @@
             background: rgba(var(--colorSignalHighRgb), 0.035);
             box-shadow: inset 0 0 0 1px rgba(var(--colorSignalHighRgb), 0.035);
 
+            .columns__header {
+                border-bottom-color: rgba(var(--colorSignalHighRgb), 0.26);
+            }
+
             .columns__mark-read {
                 color: var(--colorSignalHigh);
                 border-color: rgba(var(--colorSignalHighRgb), 0.18);
@@ -62,10 +66,9 @@
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        min-height: calc(35px + var(--padding) * 0.85);
-        margin-bottom: calc(var(--padding) * -0.2);
-        padding: calc(var(--padding) * 0.7) var(--padding)
-            calc(var(--padding) * 0.15);
+        min-height: calc(35px + var(--padding) * 1.4);
+        padding: calc(var(--padding) * 0.7) var(--padding);
+        border-bottom: 1px solid var(--colorBorder);
         background: rgba(1, 1, 1, var(--fabGlassAlpha));
         -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
@@ -121,7 +124,7 @@
     &__new-items-notice {
         position: absolute;
         z-index: 3;
-        top: calc(35px + var(--padding) * 1.75);
+        top: calc(35px + var(--padding) * 2.3);
         left: 50%;
         transform: translateX(-50%);
         max-width: calc(100% - var(--padding) * 2);
