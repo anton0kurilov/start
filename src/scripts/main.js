@@ -26,11 +26,14 @@ import {
     applySettingsMenu,
     applySettingsOpen,
     applySettingsSection,
+    closeFeedComposer,
     elements,
     hideRefreshToast,
+    openFeedComposer,
     render,
     setFeedFormError,
     setFeedFormPending,
+    setFolderComposerOpen,
     setLastUpdatedInProgress,
     showRefreshToast,
     updateLastUpdated,
@@ -170,14 +173,12 @@ function bindEvents() {
     if (elements.foldersList) {
         elements.foldersList.addEventListener('click', handleListActions)
     }
+    elements.settings?.addEventListener('click', handleSettingsActions)
     if (elements.refresh) {
         elements.refresh.addEventListener('click', () => refreshAllFeeds())
     }
     if (elements.dismissRefreshToast) {
-        elements.dismissRefreshToast.addEventListener(
-            'click',
-            hideRefreshToast,
-        )
+        elements.dismissRefreshToast.addEventListener('click', hideRefreshToast)
     }
     if (elements.columns) {
         elements.columns.addEventListener('click', handleColumnHeaderClick)
@@ -297,8 +298,30 @@ function handleCreateFolder(event) {
         return
     }
     createFolder(name)
+    const folderId = getState().folders.at(-1)?.id
     event.target.reset()
     syncAppView()
+    setFolderComposerOpen(false, {focus: false})
+    if (folderId) {
+        focusAddFeedButton(folderId)
+    }
+}
+
+function handleSettingsActions(event) {
+    const button = event.target.closest('[data-action]')
+    if (!button) {
+        return
+    }
+    if (button.dataset.action === 'toggle-folder-form') {
+        setFolderComposerOpen(elements.folderComposer?.hidden)
+    }
+    if (button.dataset.action === 'cancel-folder-form') {
+        elements.folderForm?.reset()
+        setFolderComposerOpen(false)
+    }
+    if (button.dataset.action === 'cancel-feed-form') {
+        closeFeedComposer()
+    }
 }
 
 async function handleAddFeed(event) {
@@ -329,12 +352,16 @@ async function handleAddFeed(event) {
         addingFeed = false
         setFeedFormPending(false)
     }
+    if (elements.feedFolderInput?.value !== folderId) {
+        return
+    }
     if (!result.ok) {
         setFeedFormError(result.error)
         return
     }
-    form.reset()
+    closeFeedComposer({focus: false})
     syncAppAndRefreshFeeds()
+    focusAddFeedButton(folderId)
 }
 
 function handleListActions(event) {
@@ -343,6 +370,15 @@ function handleListActions(event) {
         return
     }
     const action = button.dataset.action
+    if (action === 'add-feed-to-folder') {
+        const folder = getState().folders.find(
+            (item) => item.id === resolveFolderId(button),
+        )
+        if (folder) {
+            openFeedComposer(folder)
+        }
+        return
+    }
     if (action === 'remove-folder') {
         handleRemoveFolderAction(button)
         return
@@ -528,13 +564,25 @@ function handleSaveFeedAction(button) {
 
 function handleReset() {
     const confirmReset = window.confirm(
-        'Сбросить колонки и потоки к начальному состоянию?',
+        'Удалить все колонки, подписки и настройки приложения?',
     )
     if (!confirmReset) {
         return
     }
     resetState()
+    editingFeed = null
+    editingFolderId = null
+    closeFeedComposer({focus: false})
+    elements.folderForm?.reset()
+    setFolderComposerOpen(false, {focus: false})
     syncAppAndRefreshFeeds()
+}
+
+function focusAddFeedButton(folderId) {
+    const wrapper = Array.from(
+        elements.foldersList?.querySelectorAll('[data-folder-id]') || [],
+    ).find((folder) => folder.dataset.folderId === folderId)
+    wrapper?.querySelector('[data-action="add-feed-to-folder"]')?.focus()
 }
 
 function handleToggleSettings() {
@@ -618,9 +666,7 @@ function resolveFolderId(element) {
 }
 
 function isEditingFeed(folderId, feedId) {
-    return (
-        editingFeed?.folderId === folderId && editingFeed?.feedId === feedId
-    )
+    return editingFeed?.folderId === folderId && editingFeed?.feedId === feedId
 }
 
 function handleAutoRefreshWakeup() {

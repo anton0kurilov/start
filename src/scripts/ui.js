@@ -16,12 +16,19 @@ import {
 
 export const elements = {
     folderForm: document.querySelector('[data-action="create-folder"]'),
+    folderComposer: document.querySelector('[data-folder-composer]'),
+    createFolderToggle: document.querySelector(
+        '[data-action="toggle-folder-form"]',
+    ),
     feedForm: document.querySelector('[data-action="add-feed"]'),
+    feedComposer: document.querySelector('[data-feed-composer]'),
+    feedFormParking: document.querySelector('[data-feed-form-parking]'),
+    feedFormTarget: document.querySelector('[data-feed-form-target]'),
     foldersList: document.querySelector('[data-folders]'),
     columns: document.querySelector('[data-columns]'),
     refresh: document.querySelector('[data-action="refresh"]'),
     reset: document.querySelector('[data-action="reset"]'),
-    folderSelect: document.querySelector('select[name="folderId"]'),
+    feedFolderInput: document.querySelector('input[name="folderId"]'),
     settings: document.querySelector('.settings'),
     settingsBack: document.querySelector('[data-action="settings-menu"]'),
     settingsTitle: document.querySelector('[data-settings-title]'),
@@ -61,7 +68,7 @@ let lastUpdatedTimerId = null
 let feedItemTimesTimerId = null
 const RECENT_ITEM_WINDOW_MS = 30 * 60 * 1000
 const RELATIVE_TIME_UPDATE_INTERVAL_MS = 60000
-const FEED_LABEL_FORMS = ['поток', 'потока', 'потоков']
+const FEED_LABEL_FORMS = ['подписка', 'подписки', 'подписок']
 const FEED_ITEM_IMPRESSION_DWELL_MS = 1200
 const FEED_ITEM_IMPRESSION_MIN_RATIO = 0.6
 const SETTINGS_EDIT_ICON = `
@@ -82,6 +89,7 @@ const SETTINGS_FAVORITE_ICON = `
 let activeSettingsSection = null
 const settingsSectionScroll = new Map()
 let feedFormPending = false
+let addingFeedFolderId = null
 let feedItemImpressionObserver = null
 const feedItemImpressionTimers = new Map()
 const dismissedColumnRefreshNoticeKeys = new Set()
@@ -91,7 +99,7 @@ export function render(
     {editingFeed = null, editingFolderId = null} = {},
 ) {
     renderSettings(state)
-    renderFolderSelect(state)
+    syncSettingsForms(state)
     renderFoldersList(state, editingFeed, editingFolderId)
     renderColumns(state)
 }
@@ -150,11 +158,18 @@ export function setFeedFormPending(isPending) {
         return
     }
     elements.feedForm.setAttribute('aria-busy', String(feedFormPending))
-    const submitButton = elements.feedForm.querySelector('[type="submit"]')
+    const submitButton = elements.feedForm.querySelector(
+        'button[type="submit"], button:not([type])',
+    )
     if (submitButton) {
         submitButton.textContent = feedFormPending ? 'Проверка…' : 'Подписаться'
     }
-    setFeedFormDisabled(feedFormPending || !elements.folderSelect?.value)
+    setFeedFormDisabled(feedFormPending || !elements.feedFolderInput?.value)
+    elements.foldersList
+        ?.querySelectorAll('[data-action="add-feed-to-folder"]')
+        .forEach((button) => {
+            button.disabled = feedFormPending
+        })
 }
 
 export function setFeedFormError(message = '') {
@@ -174,42 +189,104 @@ export function setFeedFormError(message = '') {
     }
 }
 
-function renderFolderSelect(state) {
-    if (!elements.folderSelect) {
+function syncSettingsForms(state) {
+    const folder = state.folders.find((item) => item.id === addingFeedFolderId)
+    if (addingFeedFolderId && !folder) {
+        closeFeedComposer({focus: false})
+    }
+    if (folder && elements.feedFormTarget) {
+        elements.feedFormTarget.textContent = `Подписка будет добавлена в колонку «${folder.name}».`
+    }
+    setFeedFormDisabled(feedFormPending || !folder)
+}
+
+export function setFolderComposerOpen(isOpen, {focus = true} = {}) {
+    if (!elements.folderComposer) {
         return
     }
-    const selectedFolderId = elements.folderSelect.value
-    elements.folderSelect.innerHTML = ''
-    if (!state.folders.length) {
-        setFeedFormDisabled(true)
-        const option = document.createElement('option')
-        option.value = ''
-        option.textContent = 'Сначала создайте колонку'
-        elements.folderSelect.appendChild(option)
+    elements.folderComposer.hidden = !isOpen
+    elements.createFolderToggle?.setAttribute('aria-expanded', String(isOpen))
+    if (focus) {
+        const target = isOpen
+            ? elements.folderForm?.querySelector('[name="folderName"]')
+            : elements.createFolderToggle
+        target?.focus()
+    }
+}
+
+export function openFeedComposer(folder) {
+    if (feedFormPending || !elements.feedComposer) {
         return
     }
-    setFeedFormDisabled(feedFormPending)
-    state.folders.forEach((folder) => {
-        const option = document.createElement('option')
-        option.value = folder.id
-        option.textContent = folder.name
-        elements.folderSelect.appendChild(option)
-    })
-    if (state.folders.some((folder) => folder.id === selectedFolderId)) {
-        elements.folderSelect.value = selectedFolderId
+    const wrapper = findSettingsFolder(folder.id)
+    if (!wrapper) {
+        return
     }
+    const previousFolderId = addingFeedFolderId
+    addingFeedFolderId = folder.id
+    elements.feedFolderInput.value = folder.id
+    elements.feedFormTarget.textContent = `Подписка будет добавлена в колонку «${folder.name}».`
+    elements.feedComposer.hidden = false
+    wrapper.appendChild(elements.feedComposer)
+    updateFeedComposerButton(previousFolderId, false)
+    updateFeedComposerButton(folder.id, true)
+    setFeedFormError()
+    setFeedFormDisabled(false)
+    elements.feedForm.querySelector('[name="feedName"]')?.focus()
+}
+
+export function closeFeedComposer({focus = true} = {}) {
+    const folderId = addingFeedFolderId
+    addingFeedFolderId = null
+    elements.feedForm?.reset()
+    setFeedFormError()
+    if (elements.feedComposer) {
+        elements.feedComposer.hidden = true
+        elements.feedFormParking?.appendChild(elements.feedComposer)
+    }
+    const button = updateFeedComposerButton(folderId, false)
+    if (focus) {
+        button?.focus()
+    }
+}
+
+function findSettingsFolder(folderId) {
+    return Array.from(
+        elements.foldersList?.querySelectorAll('[data-folder-id]') || [],
+    ).find((folder) => folder.dataset.folderId === folderId)
+}
+
+function updateFeedComposerButton(folderId, isOpen) {
+    const button = findSettingsFolder(folderId)?.querySelector(
+        '[data-action="add-feed-to-folder"]',
+    )
+    if (button) {
+        button.hidden = isOpen
+        button.parentElement.hidden = isOpen
+        button.setAttribute('aria-expanded', String(isOpen))
+    }
+    return button
 }
 
 function renderFoldersList(state, editingFeed, editingFolderId) {
     if (!elements.foldersList) {
         return
     }
+    const focusedField = elements.feedComposer?.contains(document.activeElement)
+        ? document.activeElement
+        : null
+    const selectionStart = focusedField?.selectionStart
+    const selectionEnd = focusedField?.selectionEnd
+    // Keep the live form and its draft when the list is rebuilt.
+    if (elements.feedComposer) {
+        elements.feedFormParking?.appendChild(elements.feedComposer)
+    }
     elements.foldersList.innerHTML = ''
     if (!state.folders.length) {
         const empty = document.createElement('div')
         empty.className = 'settings__empty'
         empty.textContent =
-            'Пока нет колонок. Создайте первую в разделе «Добавление».'
+            'Пока нет колонок. Создайте первую и добавьте подписки.'
         elements.foldersList.appendChild(empty)
         return
     }
@@ -294,12 +371,7 @@ function renderFoldersList(state, editingFeed, editingFolderId) {
 
         const feeds = document.createElement('div')
         feeds.className = 'settings__feeds'
-        if (!folder.feeds.length) {
-            const emptyFeed = document.createElement('div')
-            emptyFeed.className = 'settings__feed is-muted'
-            emptyFeed.textContent = 'Добавьте первый поток.'
-            feeds.appendChild(emptyFeed)
-        } else {
+        if (folder.feeds.length) {
             folder.feeds.forEach((feed) => {
                 const feedRow = createFeedRow({
                     feed,
@@ -311,9 +383,38 @@ function renderFoldersList(state, editingFeed, editingFolderId) {
             })
         }
 
-        wrapper.append(header, feeds)
+        wrapper.appendChild(header)
+        if (folder.feeds.length) {
+            wrapper.appendChild(feeds)
+        }
+        const addFeedActions = document.createElement('div')
+        addFeedActions.className = 'settings__actions-row'
+        const addFeedButton = document.createElement('button')
+        addFeedButton.className = 'btn btn--ghost settings__submit'
+        addFeedButton.type = 'button'
+        addFeedButton.dataset.action = 'add-feed-to-folder'
+        addFeedButton.textContent = folder.feeds.length
+            ? 'Добавить подписку'
+            : 'Добавить первую подписку'
+        addFeedButton.disabled = feedFormPending
+        const isAddingFeed = addingFeedFolderId === folder.id
+        addFeedActions.hidden = isAddingFeed
+        addFeedButton.hidden = isAddingFeed
+        addFeedButton.setAttribute('aria-expanded', String(isAddingFeed))
+        addFeedButton.setAttribute('aria-controls', 'settings-feed-form')
+        addFeedActions.appendChild(addFeedButton)
+        wrapper.appendChild(addFeedActions)
+        if (isAddingFeed && elements.feedComposer) {
+            wrapper.appendChild(elements.feedComposer)
+        }
         elements.foldersList.appendChild(wrapper)
     })
+    if (focusedField && !elements.feedComposer?.hidden) {
+        focusedField.focus({preventScroll: true})
+        if (Number.isInteger(selectionStart)) {
+            focusedField.setSelectionRange(selectionStart, selectionEnd)
+        }
+    }
 }
 
 function createFeedRow({feed, isEditing}) {
