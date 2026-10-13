@@ -11,6 +11,7 @@ import {
     registerFeedItemDismiss,
     removeFeed,
     removeFolder,
+    reorderFolders,
     resetState,
     setAutoMarkReadOnScroll,
     setAutoRefreshFeeds,
@@ -41,6 +42,7 @@ import {
 } from './ui.js'
 import {createAppActions} from './app-actions.js'
 import {createColumnInteractions} from './column-interactions.js'
+import {createSettingsFolderInteractions} from './settings-folder-interactions.js'
 import {
     captureColumnScrollState,
     restoreColumnScrollState,
@@ -55,12 +57,16 @@ function syncAppView({
     state = null,
     withLastUpdated = false,
     preserveColumnScroll = false,
+    preserveSettings = false,
 } = {}) {
+    if (!preserveSettings) {
+        settingsFolderInteractions.cancelDrag()
+    }
     const nextState = state || getState()
     const scrollState = preserveColumnScroll
         ? captureColumnScrollState(elements.columns)
         : null
-    render(nextState, {editingFeed, editingFolderId})
+    render(nextState, {editingFeed, editingFolderId, preserveSettings})
     if (scrollState) {
         restoreColumnScrollState(elements.columns, scrollState)
     }
@@ -97,6 +103,19 @@ const appActions = createAppActions({
     showRefreshToast,
     hideRefreshToast,
     syncAppView,
+})
+
+const settingsFolderInteractions = createSettingsFolderInteractions({
+    list: elements.foldersList,
+    scrollContainer: elements.settingsContent,
+    status: elements.folderOrderStatus,
+    onOrderChange(folderIds) {
+        const result = reorderFolders(folderIds)
+        if (result.ok) {
+            syncAppView({preserveColumnScroll: true, preserveSettings: true})
+        }
+        return result.ok
+    },
 })
 
 init()
@@ -173,7 +192,33 @@ function bindEvents() {
     }
     if (elements.foldersList) {
         elements.foldersList.addEventListener('click', handleListActions)
+        elements.foldersList.addEventListener(
+            'pointerdown',
+            settingsFolderInteractions.handlePointerDown,
+        )
+        elements.foldersList.addEventListener(
+            'lostpointercapture',
+            settingsFolderInteractions.handlePointerCancel,
+        )
     }
+    document.addEventListener(
+        'pointermove',
+        settingsFolderInteractions.handlePointerMove,
+        {passive: false},
+    )
+    document.addEventListener(
+        'pointerup',
+        settingsFolderInteractions.handlePointerUp,
+    )
+    document.addEventListener(
+        'pointercancel',
+        settingsFolderInteractions.handlePointerCancel,
+    )
+    document.addEventListener(
+        'keydown',
+        settingsFolderInteractions.handleKeyDown,
+    )
+    window.addEventListener('blur', settingsFolderInteractions.cancelDrag)
     elements.settings?.addEventListener('click', handleSettingsActions)
     if (elements.refresh) {
         elements.refresh.addEventListener('click', () => refreshAllFeeds())
@@ -641,6 +686,7 @@ function handleShowRecommendedColumnChange(event) {
 }
 
 function closeSettings() {
+    settingsFolderInteractions.cancelDrag()
     const hadEditingState = Boolean(editingFeed || editingFolderId)
     editingFeed = null
     editingFolderId = null

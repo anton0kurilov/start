@@ -77,6 +77,29 @@ export function updateFolder({folderId, name}) {
     return {ok: true}
 }
 
+export function reorderFolders(folderIds) {
+    const foldersById = new Map(
+        state.folders.map((folder) => [folder.id, folder]),
+    )
+    if (
+        !Array.isArray(folderIds) ||
+        folderIds.length !== state.folders.length ||
+        new Set(folderIds).size !== folderIds.length ||
+        folderIds.some((folderId) => !foldersById.has(folderId))
+    ) {
+        return {ok: false}
+    }
+    const folders = folderIds.map((folderId) => foldersById.get(folderId))
+    if (folders.every((folder, index) => folder === state.folders[index])) {
+        return {ok: true}
+    }
+    if (!saveState({...state, folders})) {
+        return {ok: false}
+    }
+    state.folders = folders
+    return {ok: true}
+}
+
 export async function addFeed({folderId, name, url}) {
     const nextName = String(name || '').trim()
     const rawUrl = String(url || '').trim()

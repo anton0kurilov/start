@@ -25,6 +25,7 @@ export const elements = {
     feedFormParking: document.querySelector('[data-feed-form-parking]'),
     feedFormTarget: document.querySelector('[data-feed-form-target]'),
     foldersList: document.querySelector('[data-folders]'),
+    folderOrderStatus: document.querySelector('[data-folder-order-status]'),
     columns: document.querySelector('[data-columns]'),
     refresh: document.querySelector('[data-action="refresh"]'),
     reset: document.querySelector('[data-action="reset"]'),
@@ -97,11 +98,17 @@ const dismissedColumnRefreshNoticeKeys = new Set()
 
 export function render(
     state,
-    {editingFeed = null, editingFolderId = null} = {},
+    {
+        editingFeed = null,
+        editingFolderId = null,
+        preserveSettings = false,
+    } = {},
 ) {
-    renderSettings(state)
-    syncSettingsForms(state)
-    renderFoldersList(state, editingFeed, editingFolderId)
+    if (!preserveSettings) {
+        renderSettings(state)
+        syncSettingsForms(state)
+        renderFoldersList(state, editingFeed, editingFolderId)
+    }
     renderColumns(state)
 }
 
@@ -373,20 +380,31 @@ function renderFoldersList(state, editingFeed, editingFolderId) {
             header.append(editor, actions)
         } else {
             header.dataset.action = 'toggle-folder'
+            const dragHandle = createSettingsIconButton({
+                action: 'reorder-folder',
+                label: `Переместить колонку «${folder.name}»`,
+                icon: `
+                    <svg class="settings__action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <circle cx="9" cy="5" r="1.5"/>
+                        <circle cx="15" cy="5" r="1.5"/>
+                        <circle cx="9" cy="12" r="1.5"/>
+                        <circle cx="15" cy="12" r="1.5"/>
+                        <circle cx="9" cy="19" r="1.5"/>
+                        <circle cx="15" cy="19" r="1.5"/>
+                    </svg>
+                `,
+            })
+            dragHandle.classList.add('settings__folder-drag-handle')
+            dragHandle.title =
+                'Перетащите колонку или используйте стрелки вверх и вниз'
+            dragHandle.setAttribute('aria-description', dragHandle.title)
+            dragHandle.disabled = state.folders.length < 2
             const toggle = document.createElement('button')
             toggle.className = 'btn btn--ghost settings__folder-toggle'
             toggle.type = 'button'
             toggle.dataset.action = 'toggle-folder'
             toggle.setAttribute('aria-expanded', String(!content.hidden))
             toggle.setAttribute('aria-controls', content.id)
-            const indicator = document.createElement('span')
-            indicator.className = 'settings__folder-indicator'
-            indicator.setAttribute('aria-hidden', 'true')
-            indicator.innerHTML = `
-                <svg viewBox="0 0 24 24" focusable="false">
-                    <path d="m9 6 6 6-6 6"/>
-                </svg>
-            `
             const info = document.createElement('span')
             info.className = 'settings__folder-info'
             const name = document.createElement('span')
@@ -397,7 +415,7 @@ function renderFoldersList(state, editingFeed, editingFolderId) {
             meta.className = 'settings__folder-meta'
             meta.textContent = feedsLabel
             info.append(name, meta)
-            toggle.append(indicator, info)
+            toggle.appendChild(info)
 
             const editButton = createSettingsIconButton({
                 action: 'edit-folder',
@@ -413,7 +431,7 @@ function renderFoldersList(state, editingFeed, editingFolderId) {
             })
 
             actions.append(editButton, removeButton)
-            header.append(toggle, actions)
+            header.append(dragHandle, toggle, actions)
         }
 
         const feeds = document.createElement('div')

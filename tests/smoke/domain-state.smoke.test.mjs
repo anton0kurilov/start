@@ -650,6 +650,86 @@ test('markItemsVisited and unmarkItemsVisited keep unique visited keys', async (
     assert.deepEqual(domain.getState().visitedItemKeys, ['item-b'])
 })
 
+test('reorderFolders persists order and preserves column data after reload', async () => {
+    const initialState = createBaseState({
+        folders: [
+            {
+                id: 'tech',
+                name: 'Tech',
+                feeds: [
+                    {id: 'rss', name: 'RSS', url: 'https://example.com/rss'},
+                ],
+            },
+            {id: 'news', name: 'News', feeds: []},
+            {id: 'design', name: 'Design', feeds: []},
+        ],
+        visitedItemKeys: ['read-item'],
+    })
+    const {domain, localStorage} = await loadFreshDomainModule(initialState)
+    const folders = [...domain.getState().folders]
+    const expectedIds = ['design', 'tech', 'news']
+
+    assert.deepEqual(domain.reorderFolders(expectedIds), {ok: true})
+    assert.deepEqual(domain.getState().folders, [
+        folders[2],
+        folders[0],
+        folders[1],
+    ])
+    assert.equal(domain.getState().folders[1], folders[0])
+    const stored = getStoredState(localStorage)
+    assert.deepEqual(stored.folders.map((folder) => folder.id), expectedIds)
+    assert.deepEqual(stored.visitedItemKeys, ['read-item'])
+    assert.deepEqual(domain.exportState().folders, stored.folders)
+
+    const {domain: reloaded} = await loadFreshDomainModule(stored)
+    assert.deepEqual(reloaded.getState().folders, stored.folders)
+})
+
+test('reorderFolders rejects incomplete, duplicate and unknown columns', async () => {
+    const {domain, localStorage} = await loadFreshDomainModule(
+        createBaseState({
+            folders: [
+                {id: 'tech', name: 'Tech', feeds: []},
+                {id: 'news', name: 'News', feeds: []},
+            ],
+        }),
+    )
+    const before = JSON.stringify(domain.getState())
+    const storedBefore = localStorage.getItem(STORAGE_KEY)
+
+    const invalidOrders = [
+        null,
+        [],
+        ['tech'],
+        ['tech', 'tech'],
+        ['news', 'missing'],
+    ]
+    for (const order of invalidOrders) {
+        assert.deepEqual(domain.reorderFolders(order), {ok: false})
+    }
+    assert.equal(JSON.stringify(domain.getState()), before)
+    assert.equal(localStorage.getItem(STORAGE_KEY), storedBefore)
+})
+
+test('reorderFolders keeps the previous order when saving fails', async () => {
+    const {domain, localStorage} = await loadFreshDomainModule(
+        createBaseState({
+            folders: [
+                {id: 'tech', name: 'Tech', feeds: []},
+                {id: 'news', name: 'News', feeds: []},
+            ],
+        }),
+    )
+    const folders = domain.getState().folders
+    localStorage.setItem = () => {
+        throw new Error('Storage quota exceeded')
+    }
+
+    assert.deepEqual(domain.reorderFolders(['news', 'tech']), {ok: false})
+    assert.equal(domain.getState().folders, folders)
+    assert.deepEqual(domain.reorderFolders(['tech', 'news']), {ok: true})
+})
+
 test('registerFeedItemImpressions stores a single impression event per item key', async () => {
     const {domain} = await loadFreshDomainModule()
 
