@@ -602,7 +602,6 @@ function createFeedItemsColumn({
 function getRecommendedFeedItems(state) {
     return state.folders
         .flatMap((folder) => getFolderItems(folder))
-        .filter((item) => !isItemVisited(buildFeedItemKey(item)))
         .map((item) => ({
             item,
             usefulness: getFeedItemUsefulness(item),
