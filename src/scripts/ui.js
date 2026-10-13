@@ -23,7 +23,12 @@ export const elements = {
     reset: document.querySelector('[data-action="reset"]'),
     folderSelect: document.querySelector('select[name="folderId"]'),
     settings: document.querySelector('.settings'),
-    settingsTabs: Array.from(document.querySelectorAll('[data-settings-tab]')),
+    settingsBack: document.querySelector('[data-action="settings-menu"]'),
+    settingsTitle: document.querySelector('[data-settings-title]'),
+    settingsContent: document.querySelector('.settings__content'),
+    settingsNavigation: Array.from(
+        document.querySelectorAll('[data-settings-section]'),
+    ),
     settingsPanels: Array.from(
         document.querySelectorAll('[data-settings-panel]'),
     ),
@@ -74,7 +79,8 @@ const SETTINGS_FAVORITE_ICON = `
         <path d="m354-287 126-76 126 77-33-144 111-96-146-13-58-136-58 135-146 13 111 97-33 143ZM233-120l65-281L80-590l288-25 112-265 112 265 288 25-218 189 65 281-247-149-247 149Zm247-350Z"/>
     </svg>
 `
-let activeSettingsTab = null
+let activeSettingsSection = null
+const settingsSectionScroll = new Map()
 let feedFormPending = false
 let feedItemImpressionObserver = null
 const feedItemImpressionTimers = new Map()
@@ -1178,6 +1184,14 @@ export function applySettingsOpen(isOpen) {
     if (!elements.settings) {
         return
     }
+    if (isOpen && isMobileSettings()) {
+        applySettingsMenu({focus: false})
+    }
+    if (!isOpen && elements.settings.contains(document.activeElement)) {
+        elements.toggleSettings.find((toggle) =>
+            toggle.hasAttribute('aria-expanded'),
+        )?.focus()
+    }
     elements.settings.classList.toggle('settings--open', isOpen)
     elements.settings.setAttribute('aria-hidden', String(!isOpen))
     document.body.classList.toggle('settings-is-open', isOpen)
@@ -1188,30 +1202,81 @@ export function applySettingsOpen(isOpen) {
             }
         })
     }
+    if (isOpen && isMobileSettings()) {
+        elements.settingsNavigation[0]?.focus()
+    }
 }
 
-export function applySettingsTab(tabId) {
-    if (!elements.settingsTabs.length || !elements.settingsPanels.length) {
+function isMobileSettings() {
+    return window.matchMedia('(max-width: 720px)').matches
+}
+
+function rememberSettingsScroll() {
+    if (
+        activeSettingsSection &&
+        elements.settingsContent &&
+        (!isMobileSettings() ||
+            elements.settings?.classList.contains('settings--section-open'))
+    ) {
+        settingsSectionScroll.set(
+            activeSettingsSection,
+            elements.settingsContent.scrollTop,
+        )
+    }
+}
+
+export function applySettingsMenu({focus = true} = {}) {
+    rememberSettingsScroll()
+    elements.settings?.classList.remove('settings--section-open')
+    if (focus) {
+        const currentItem = elements.settingsNavigation.find(
+            (item) => item.dataset.settingsSection === activeSettingsSection,
+        )
+        currentItem?.focus()
+    }
+}
+
+export function applySettingsSection(sectionId) {
+    if (!elements.settingsNavigation.length || !elements.settingsPanels.length) {
         return
     }
-    const nextTabId =
-        tabId ||
-        activeSettingsTab ||
-        elements.settingsTabs[0]?.dataset.settingsTab
-    if (!nextTabId) {
+    const nextSectionId =
+        sectionId ||
+        activeSettingsSection ||
+        elements.settingsNavigation[0]?.dataset.settingsSection
+    if (!nextSectionId) {
         return
     }
-    activeSettingsTab = nextTabId
-    elements.settingsTabs.forEach((tab) => {
-        const isActive = tab.dataset.settingsTab === nextTabId
-        tab.classList.toggle('settings__tab--active', isActive)
-        tab.setAttribute('aria-selected', String(isActive))
-        tab.setAttribute('tabindex', isActive ? '0' : '-1')
+    rememberSettingsScroll()
+    activeSettingsSection = nextSectionId
+    if (sectionId) {
+        elements.settings?.classList.add('settings--section-open')
+    }
+    elements.settingsNavigation.forEach((item) => {
+        const isActive = item.dataset.settingsSection === nextSectionId
+        item.classList.toggle('settings__nav-item--active', isActive)
+        if (isActive) {
+            item.setAttribute('aria-current', 'true')
+            if (elements.settingsTitle) {
+                elements.settingsTitle.textContent = item
+                    .querySelector('[data-settings-label]')
+                    .textContent.trim()
+            }
+        } else {
+            item.removeAttribute('aria-current')
+        }
     })
     elements.settingsPanels.forEach((panel) => {
-        const isActive = panel.dataset.settingsPanel === nextTabId
+        const isActive = panel.dataset.settingsPanel === nextSectionId
         panel.classList.toggle('settings__panel-section--active', isActive)
         panel.hidden = !isActive
         panel.setAttribute('aria-hidden', String(!isActive))
     })
+    if (elements.settingsContent) {
+        elements.settingsContent.scrollTop =
+            settingsSectionScroll.get(nextSectionId) || 0
+    }
+    if (sectionId && isMobileSettings()) {
+        elements.settingsBack?.focus()
+    }
 }

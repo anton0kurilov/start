@@ -23,8 +23,9 @@ import {
     updateFeed,
 } from './domain.js'
 import {
+    applySettingsMenu,
     applySettingsOpen,
-    applySettingsTab,
+    applySettingsSection,
     elements,
     hideRefreshToast,
     render,
@@ -132,7 +133,7 @@ function init() {
     setupSafeAreaRefresh()
     bindEvents()
     applySettingsOpen(false)
-    applySettingsTab()
+    applySettingsSection()
     refreshAllFeeds()
 }
 
@@ -206,11 +207,12 @@ function bindEvents() {
             toggle.addEventListener('click', handleToggleSettings)
         })
     }
-    if (elements.settingsTabs.length) {
-        elements.settingsTabs.forEach((tab) => {
-            tab.addEventListener('click', handleSettingsTabClick)
+    if (elements.settingsNavigation.length) {
+        elements.settingsNavigation.forEach((item) => {
+            item.addEventListener('click', handleSettingsSectionClick)
         })
     }
+    elements.settingsBack?.addEventListener('click', () => applySettingsMenu())
     if (elements.autoMarkReadOnScroll) {
         elements.autoMarkReadOnScroll.addEventListener(
             'change',
@@ -544,12 +546,12 @@ function handleToggleSettings() {
     applySettingsOpen(true)
 }
 
-function handleSettingsTabClick(event) {
-    const tab = event.currentTarget
-    if (!tab) {
+function handleSettingsSectionClick(event) {
+    const item = event.currentTarget
+    if (!item) {
         return
     }
-    applySettingsTab(tab.dataset.settingsTab)
+    applySettingsSection(item.dataset.settingsSection)
 }
 
 function handleAutoMarkReadOnScrollChange(event) {
