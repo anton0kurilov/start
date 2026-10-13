@@ -36,6 +36,7 @@ import {
     setFolderComposerOpen,
     setLastUpdatedInProgress,
     showRefreshToast,
+    toggleSettingsFolder,
     updateLastUpdated,
 } from './ui.js'
 import {createAppActions} from './app-actions.js'
@@ -370,6 +371,10 @@ function handleListActions(event) {
         return
     }
     const action = button.dataset.action
+    if (action === 'toggle-folder') {
+        toggleSettingsFolder(resolveFolderId(button))
+        return
+    }
     if (action === 'add-feed-to-folder') {
         const folder = getState().folders.find(
             (item) => item.id === resolveFolderId(button),
@@ -582,7 +587,10 @@ function focusAddFeedButton(folderId) {
     const wrapper = Array.from(
         elements.foldersList?.querySelectorAll('[data-folder-id]') || [],
     ).find((folder) => folder.dataset.folderId === folderId)
-    wrapper?.querySelector('[data-action="add-feed-to-folder"]')?.focus()
+    const action = wrapper?.querySelector('.settings__folder-content')?.hidden
+        ? 'toggle-folder'
+        : 'add-feed-to-folder'
+    wrapper?.querySelector(`button[data-action="${action}"]`)?.focus()
 }
 
 function handleToggleSettings() {

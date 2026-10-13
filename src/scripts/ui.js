@@ -88,6 +88,7 @@ const SETTINGS_FAVORITE_ICON = `
 `
 let activeSettingsSection = null
 const settingsSectionScroll = new Map()
+const expandedSettingsFolderIds = new Set()
 let feedFormPending = false
 let addingFeedFolderId = null
 let feedItemImpressionObserver = null
@@ -227,7 +228,9 @@ export function openFeedComposer(folder) {
     elements.feedFolderInput.value = folder.id
     elements.feedFormTarget.textContent = `Подписка будет добавлена в колонку «${folder.name}».`
     elements.feedComposer.hidden = false
-    wrapper.appendChild(elements.feedComposer)
+    wrapper.querySelector('.settings__folder-content').appendChild(
+        elements.feedComposer,
+    )
     updateFeedComposerButton(previousFolderId, false)
     updateFeedComposerButton(folder.id, true)
     setFeedFormError()
@@ -256,6 +259,23 @@ function findSettingsFolder(folderId) {
     ).find((folder) => folder.dataset.folderId === folderId)
 }
 
+export function toggleSettingsFolder(folderId) {
+    const wrapper = findSettingsFolder(folderId)
+    const toggle = wrapper?.querySelector('.settings__folder-toggle')
+    const content = wrapper?.querySelector('.settings__folder-content')
+    if (!toggle || !content) {
+        return
+    }
+    const isExpanded = content.hidden
+    if (isExpanded) {
+        expandedSettingsFolderIds.add(folderId)
+    } else {
+        expandedSettingsFolderIds.delete(folderId)
+    }
+    toggle.setAttribute('aria-expanded', String(isExpanded))
+    content.hidden = !isExpanded
+}
+
 function updateFeedComposerButton(folderId, isOpen) {
     const button = findSettingsFolder(folderId)?.querySelector(
         '[data-action="add-feed-to-folder"]',
@@ -282,6 +302,12 @@ function renderFoldersList(state, editingFeed, editingFolderId) {
         elements.feedFormParking?.appendChild(elements.feedComposer)
     }
     elements.foldersList.innerHTML = ''
+    const folderIds = new Set(state.folders.map((folder) => folder.id))
+    expandedSettingsFolderIds.forEach((folderId) => {
+        if (!folderIds.has(folderId)) {
+            expandedSettingsFolderIds.delete(folderId)
+        }
+    })
     if (!state.folders.length) {
         const empty = document.createElement('div')
         empty.className = 'settings__empty'
@@ -298,6 +324,11 @@ function renderFoldersList(state, editingFeed, editingFolderId) {
 
         const header = document.createElement('div')
         header.className = 'settings__folder-header'
+
+        const content = document.createElement('div')
+        content.className = 'settings__folder-content'
+        content.id = `settings-folder-content-${folder.id}`
+        content.hidden = !expandedSettingsFolderIds.has(folder.id)
 
         const actions = document.createElement('div')
         actions.className = 'settings__folder-actions'
@@ -341,16 +372,32 @@ function renderFoldersList(state, editingFeed, editingFolderId) {
             actions.append(saveButton, cancelButton)
             header.append(editor, actions)
         } else {
-            const info = document.createElement('div')
+            header.dataset.action = 'toggle-folder'
+            const toggle = document.createElement('button')
+            toggle.className = 'btn btn--ghost settings__folder-toggle'
+            toggle.type = 'button'
+            toggle.dataset.action = 'toggle-folder'
+            toggle.setAttribute('aria-expanded', String(!content.hidden))
+            toggle.setAttribute('aria-controls', content.id)
+            const indicator = document.createElement('span')
+            indicator.className = 'settings__folder-indicator'
+            indicator.setAttribute('aria-hidden', 'true')
+            indicator.innerHTML = `
+                <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="m9 6 6 6-6 6"/>
+                </svg>
+            `
+            const info = document.createElement('span')
             info.className = 'settings__folder-info'
-            const name = document.createElement('div')
+            const name = document.createElement('span')
             name.className = 'settings__folder-name'
             name.textContent = folder.name
             name.title = folder.name
-            const meta = document.createElement('div')
+            const meta = document.createElement('span')
             meta.className = 'settings__folder-meta'
             meta.textContent = feedsLabel
             info.append(name, meta)
+            toggle.append(indicator, info)
 
             const editButton = createSettingsIconButton({
                 action: 'edit-folder',
@@ -366,7 +413,7 @@ function renderFoldersList(state, editingFeed, editingFolderId) {
             })
 
             actions.append(editButton, removeButton)
-            header.append(info, actions)
+            header.append(toggle, actions)
         }
 
         const feeds = document.createElement('div')
@@ -385,7 +432,7 @@ function renderFoldersList(state, editingFeed, editingFolderId) {
 
         wrapper.appendChild(header)
         if (folder.feeds.length) {
-            wrapper.appendChild(feeds)
+            content.appendChild(feeds)
         }
         const addFeedActions = document.createElement('div')
         addFeedActions.className = 'settings__actions-row'
@@ -403,13 +450,14 @@ function renderFoldersList(state, editingFeed, editingFolderId) {
         addFeedButton.setAttribute('aria-expanded', String(isAddingFeed))
         addFeedButton.setAttribute('aria-controls', 'settings-feed-form')
         addFeedActions.appendChild(addFeedButton)
-        wrapper.appendChild(addFeedActions)
+        content.appendChild(addFeedActions)
         if (isAddingFeed && elements.feedComposer) {
-            wrapper.appendChild(elements.feedComposer)
+            content.appendChild(elements.feedComposer)
         }
+        wrapper.appendChild(content)
         elements.foldersList.appendChild(wrapper)
     })
-    if (focusedField && !elements.feedComposer?.hidden) {
+    if (focusedField && expandedSettingsFolderIds.has(addingFeedFolderId)) {
         focusedField.focus({preventScroll: true})
         if (Number.isInteger(selectionStart)) {
             focusedField.setSelectionRange(selectionStart, selectionEnd)

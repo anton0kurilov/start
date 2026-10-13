@@ -601,11 +601,60 @@
         gap: 8px;
     }
 
+    &__folder-content {
+        display: grid;
+        gap: 12px;
+        min-width: 0;
+    }
+
     &__folder-header {
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
         gap: 10px;
+
+        &[data-action='toggle-folder'] {
+            cursor: pointer;
+        }
+    }
+
+    &__folder-toggle {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        flex: 1;
+        padding: 0;
+        border: 0;
+        border-radius: 4px;
+        font-weight: 400;
+        text-align: left;
+
+        &:hover {
+            background: transparent;
+        }
+
+        &[aria-expanded='true'] .settings__folder-indicator {
+            transform: rotate(90deg);
+        }
+    }
+
+    &__folder-indicator {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
+        color: var(--colorMuted);
+
+        svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
     }
 
     &__folder-header--editing {
