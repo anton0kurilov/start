@@ -454,11 +454,13 @@
     }
 
     &__option {
+        --settingsOptionSpacing: 14px;
+
         display: grid;
         grid-template-columns: auto minmax(0, 1fr);
         align-items: flex-start;
-        gap: 10px;
-        padding: 12px 14px;
+        gap: var(--settingsOptionSpacing);
+        padding: 12px var(--settingsOptionSpacing);
         border: 1px solid var(--colorBorder);
         border-radius: 12px;
         cursor: pointer;
@@ -476,12 +478,55 @@
             background: rgba(255, 255, 255, 0.035);
         }
 
-        input {
-            width: 16px;
-            height: 16px;
-            margin: 2px 0 0;
-            accent-color: var(--colorAccent);
+        input[type='checkbox'] {
+            -webkit-appearance: none;
+            appearance: none;
+            display: grid;
+            place-items: center;
+            width: 20px;
+            height: 20px;
+            margin: 0;
+            border: 1px solid var(--colorAccent);
+            border-radius: 5px;
+            background: var(--colorSurface);
+            color: var(--colorText);
+            cursor: inherit;
             flex: 0 0 auto;
+            transition:
+                border-color 0.2s ease,
+                background-color 0.2s ease;
+
+            &::after {
+                content: '';
+                width: 6px;
+                height: 10px;
+                border: solid currentColor;
+                border-width: 0 2px 2px 0;
+                transform: translateY(-1px) rotate(45deg);
+                opacity: 0;
+            }
+
+            &:checked {
+                border-color: var(--colorText);
+                background: rgba(255, 255, 255, 0.06);
+
+                &::after {
+                    opacity: 1;
+                }
+            }
+
+            &:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            @media (forced-colors: active) {
+                appearance: auto;
+
+                &::after {
+                    display: none;
+                }
+            }
         }
     }
 
