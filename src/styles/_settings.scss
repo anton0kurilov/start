@@ -118,6 +118,8 @@
 }
 
 .settings {
+    --settingsControlHeight: calc(1.25rem + 22px);
+
     position: fixed;
     inset: 0;
     z-index: 50;
@@ -409,7 +411,9 @@
     }
 
     .control {
+        min-height: var(--settingsControlHeight);
         font-size: 1rem;
+        line-height: 1.25;
     }
 
     &__actions-row {
@@ -425,9 +429,14 @@
         }
     }
 
-    &__submit {
-        min-height: 38px;
-        padding: 8px 16px;
+    &__submit,
+    &__folder-btn,
+    &__feed-btn,
+    &__danger .btn {
+        min-height: var(--settingsControlHeight);
+        padding: 10px 16px;
+        font-size: 0.95rem;
+        line-height: 1.25rem;
     }
 
     &__transfer-grid {
@@ -631,13 +640,6 @@
         justify-content: flex-end;
         gap: 8px;
         flex: 0 0 auto;
-    }
-
-    &__folder-btn,
-    &__feed-btn {
-        padding: 6px 12px;
-        font-size: 0.78rem;
-        min-height: 34px;
     }
 
     &__feed-name {
@@ -883,16 +885,21 @@ body.settings-is-open {
             justify-content: flex-end;
         }
 
+        &__actions-row,
+        &__folder-header--editing .settings__folder-actions,
+        &__feed--editing .settings__feed-actions {
+            flex-direction: column;
+        }
+
+        &__actions-row .btn,
         &__folder-btn,
         &__feed-btn,
         &__danger .btn {
-            flex: 0 1 auto;
+            width: 100%;
+            flex: 0 0 auto;
+            padding-inline: 8px;
             justify-content: center;
             text-align: center;
-        }
-
-        &__danger .btn {
-            width: 100%;
         }
 
         &__footer-note {

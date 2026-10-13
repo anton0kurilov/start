@@ -86,7 +86,10 @@ let feedItemImpressionObserver = null
 const feedItemImpressionTimers = new Map()
 const dismissedColumnRefreshNoticeKeys = new Set()
 
-export function render(state, {editingFeed = null, editingFolderId = null} = {}) {
+export function render(
+    state,
+    {editingFeed = null, editingFolderId = null} = {},
+) {
     renderSettings(state)
     renderFolderSelect(state)
     renderFoldersList(state, editingFeed, editingFolderId)
@@ -205,7 +208,8 @@ function renderFoldersList(state, editingFeed, editingFolderId) {
     if (!state.folders.length) {
         const empty = document.createElement('div')
         empty.className = 'settings__empty'
-        empty.textContent = 'Пока нет колонок. Создайте первую.'
+        empty.textContent =
+            'Пока нет колонок. Создайте первую в разделе «Добавление».'
         elements.foldersList.appendChild(empty)
         return
     }
@@ -555,8 +559,7 @@ function createFeedItemsColumn({
     header.append(headerText, markReadButton)
 
     const newItemsNotice = document.createElement('button')
-    newItemsNotice.className =
-        'btn btn--ghost columns__new-items-notice'
+    newItemsNotice.className = 'btn btn--ghost columns__new-items-notice'
     newItemsNotice.type = 'button'
     newItemsNotice.hidden = true
     newItemsNotice.dataset.action = 'scroll-new-items-to-top'
@@ -1188,9 +1191,9 @@ export function applySettingsOpen(isOpen) {
         applySettingsMenu({focus: false})
     }
     if (!isOpen && elements.settings.contains(document.activeElement)) {
-        elements.toggleSettings.find((toggle) =>
-            toggle.hasAttribute('aria-expanded'),
-        )?.focus()
+        elements.toggleSettings
+            .find((toggle) => toggle.hasAttribute('aria-expanded'))
+            ?.focus()
     }
     elements.settings.classList.toggle('settings--open', isOpen)
     elements.settings.setAttribute('aria-hidden', String(!isOpen))
@@ -1237,7 +1240,10 @@ export function applySettingsMenu({focus = true} = {}) {
 }
 
 export function applySettingsSection(sectionId) {
-    if (!elements.settingsNavigation.length || !elements.settingsPanels.length) {
+    if (
+        !elements.settingsNavigation.length ||
+        !elements.settingsPanels.length
+    ) {
         return
     }
     const nextSectionId =
