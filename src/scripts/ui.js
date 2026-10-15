@@ -780,7 +780,7 @@ function getRecommendedFeedItems(state) {
         .flatMap((folder) => getFolderItems(folder))
         .map((item) => ({
             item,
-            usefulness: getFeedItemUsefulness(item),
+            usefulness: getFeedItemUsefulness(item, {includeClickBoost: false}),
         }))
         .filter(({usefulness}) => usefulness.tone === 'high')
         .sort((left, right) => {

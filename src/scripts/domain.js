@@ -501,14 +501,14 @@ export function registerFeedItemDismiss(itemMeta) {
     return true
 }
 
-export function getFeedItemUsefulness(item) {
+export function getFeedItemUsefulness(item, {includeClickBoost = true} = {}) {
     synchronizeModelStateIfNeeded()
 
     if (isKnownDismissedItem(item)) {
         return createDismissedUsefulness()
     }
 
-    if (isKnownClickedItem(item)) {
+    if (includeClickBoost && isKnownClickedItem(item)) {
         return createClickedUsefulness()
     }
 

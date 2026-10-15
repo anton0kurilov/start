@@ -875,6 +875,50 @@ test('getFeedItemUsefulness marks previously clicked item as clicked', async () 
     assert.ok(usefulness.percentage >= 90)
 })
 
+test('recommendation scoring does not promote opened posts while learning', async () => {
+    const {domain} = await loadFreshDomainModule()
+    const item = {
+        source: 'Any source',
+        title: 'Any headline',
+        link: 'https://example.com/opened',
+    }
+
+    domain.markItemsVisited([item.link])
+    domain.registerFeedItemClick({...item, itemKey: item.link})
+
+    assert.equal(domain.getFeedItemUsefulness(item).label, 'посетил')
+    assert.equal(
+        domain.getFeedItemUsefulness(item, {includeClickBoost: false}).tone,
+        'learning',
+    )
+})
+
+test('recommendation scoring keeps the model prediction after opening a post', async () => {
+    for (const [probability, expectedTone] of [[0.04, 'low'], [0.4, 'high']]) {
+        const {domain} = await loadFreshDomainModule(
+            createPublishedScorerState({probability}),
+        )
+        const item = {
+            source: 'Any source',
+            title: 'Any headline',
+            link: `https://example.com/predicted-${expectedTone}`,
+        }
+        const before = domain.getFeedItemUsefulness(item, {
+            includeClickBoost: false,
+        })
+        assert.equal(before.tone, expectedTone)
+
+        domain.markItemsVisited([item.link])
+        domain.registerFeedItemClick({...item, itemKey: item.link})
+
+        assert.equal(domain.getFeedItemUsefulness(item).label, 'посетил')
+        assert.deepEqual(
+            domain.getFeedItemUsefulness(item, {includeClickBoost: false}),
+            before,
+        )
+    }
+})
+
 test('getFeedItemUsefulness prioritizes dismiss over a prior click', async () => {
     const {domain} = await loadFreshDomainModule()
 
