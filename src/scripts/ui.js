@@ -63,6 +63,7 @@ export const elements = {
     showRecommendedColumn: document.querySelector(
         '[name="showRecommendedColumn"]',
     ),
+    blockedTitlePhrases: document.querySelector('[name="blockedTitlePhrases"]'),
 }
 
 let lastUpdatedTimerId = null
@@ -113,6 +114,14 @@ export function render(
 }
 
 function renderSettings(state) {
+    if (
+        elements.blockedTitlePhrases &&
+        document.activeElement !== elements.blockedTitlePhrases
+    ) {
+        elements.blockedTitlePhrases.value = (
+            state.settings?.blockedTitlePhrases || []
+        ).join('\n')
+    }
     if (elements.autoMarkReadOnScroll) {
         elements.autoMarkReadOnScroll.checked = Boolean(
             state.settings?.autoMarkReadOnScroll,

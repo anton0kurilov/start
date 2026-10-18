@@ -77,14 +77,26 @@ function createFeedDocument({
     namespaceURI = null,
     children = [{localName: 'channel', namespaceURI: null}],
     parserError = false,
+    titles = [],
 } = {}) {
+    const entries = titles.map((title, index) => ({
+        querySelector(selector) {
+            if (selector === 'title') {
+                return {textContent: title}
+            }
+            if (selector === 'guid') {
+                return {textContent: `item-${index}`}
+            }
+            return null
+        },
+    }))
     return {
         documentElement: {localName, namespaceURI, children},
         querySelector(selector) {
             return selector === 'parsererror' && parserError ? {} : null
         },
-        querySelectorAll() {
-            return []
+        querySelectorAll(selector) {
+            return selector === 'item' ? entries : []
         },
     }
 }
@@ -1412,6 +1424,7 @@ test('importState and exportState preserve folder and settings contract', async 
             autoMarkReadOnScroll: true,
             autoRefreshFeeds: true,
             showRecommendedColumn: true,
+            blockedTitlePhrases: [' Реклама ', 'C++'],
         },
     })
 
@@ -1425,6 +1438,79 @@ test('importState and exportState preserve folder and settings contract', async 
     assert.equal(exported.settings.autoMarkReadOnScroll, true)
     assert.equal(exported.settings.autoRefreshFeeds, true)
     assert.equal(exported.settings.showRecommendedColumn, true)
+    assert.deepEqual(exported.settings.blockedTitlePhrases, ['Реклама', 'C++'])
+})
+
+test('publication filter matches literal title substrings without case and restores cached items when cleared', async (t) => {
+    const titles = [
+        'РЕКЛАМА сервиса',
+        'Новый рекламодатель',
+        'Большое СПЕЦИАЛЬНОЕ ПРЕДЛОЖЕНИЕ сегодня',
+        'Новая версия C++',
+        'Новая версия C',
+        'Обновление [beta] API',
+        'Обновление beta API',
+        'Символы .* в заголовке',
+        'Обычная публикация',
+    ]
+    const fetchMock = mockFeedResponse(t, {
+        doc: createFeedDocument({titles}),
+    })
+    const {domain, localStorage} = await loadFreshDomainModule()
+    domain.createFolder('News')
+    const folder = domain.getState().folders[0]
+    await domain.addFeed({
+        folderId: folder.id,
+        name: 'Рекламная лента',
+        url: 'https://example.com/rss',
+    })
+    await domain.refreshAll()
+    const getTitles = () =>
+        domain.getFolderItems(folder).map((item) => item.title)
+    assert.deepEqual(getTitles(), titles)
+
+    domain.setBlockedTitlePhrases([
+        ' реклам ',
+        'РЕКЛАМ',
+        '',
+        'специальное предложение',
+        'c++',
+        '[beta]',
+        '.*',
+    ])
+    assert.deepEqual(getTitles(), [
+        'Новая версия C',
+        'Обновление beta API',
+        'Обычная публикация',
+    ])
+    const savedState = getStoredState(localStorage)
+    assert.deepEqual(savedState.settings.blockedTitlePhrases, [
+        'реклам',
+        'специальное предложение',
+        'c++',
+        '[beta]',
+        '.*',
+    ])
+    assert.deepEqual(
+        domain.exportState().settings.blockedTitlePhrases,
+        savedState.settings.blockedTitlePhrases,
+    )
+    assert.deepEqual(domain.getState().visitedItemKeys, [])
+    assert.deepEqual(domain.getState().modelState.interactionLog, [])
+
+    domain.setBlockedTitlePhrases([])
+    assert.deepEqual(getTitles(), titles)
+    assert.equal(fetchMock.mock.callCount(), 3)
+    assert.deepEqual(
+        getStoredState(localStorage).settings.blockedTitlePhrases,
+        [],
+    )
+
+    const {domain: reloadedDomain} = await loadFreshDomainModule(savedState)
+    assert.deepEqual(
+        reloadedDomain.getState().settings.blockedTitlePhrases,
+        savedState.settings.blockedTitlePhrases,
+    )
 })
 
 test('setAutoRefreshFeeds persists auto refresh preference', async () => {
@@ -1452,6 +1538,7 @@ test('resetState restores defaults from storage', async () => {
     const {domain} = await loadFreshDomainModule()
 
     domain.createFolder('Temporary')
+    domain.setBlockedTitlePhrases(['temporary'])
     domain.registerFeedItemClick({
         itemKey: 'temporary-item',
         feedId: 'feed-1',
@@ -1467,4 +1554,5 @@ test('resetState restores defaults from storage', async () => {
     assert.deepEqual(domain.getState().visitedItemKeys, [])
     assert.deepEqual(domain.getState().clickedItemKeys, [])
     assert.deepEqual(domain.getState().modelState.interactionLog, [])
+    assert.deepEqual(domain.getState().settings.blockedTitlePhrases, [])
 })

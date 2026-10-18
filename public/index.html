@@ -216,6 +216,32 @@
                                 <button
                                     class="settings__nav-item"
                                     type="button"
+                                    id="settings-section-filter"
+                                    aria-labelledby="settings-label-filter"
+                                    aria-controls="settings-panel-filter"
+                                    data-settings-section="filter"
+                                >
+                                    <span
+                                        class="settings__nav-copy"
+                                        id="settings-label-filter"
+                                        data-settings-label
+                                    >
+                                        Фильтр публикаций
+                                    </span>
+                                    <svg
+                                        class="settings__nav-icon"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                        focusable="false"
+                                    >
+                                        <path
+                                            d="m8.6 5.6 1.4-1.4 7.8 7.8-7.8 7.8-1.4-1.4L15 12z"
+                                        />
+                                    </svg>
+                                </button>
+                                <button
+                                    class="settings__nav-item"
+                                    type="button"
                                     id="settings-section-transfer"
                                     aria-labelledby="settings-label-transfer"
                                     aria-controls="settings-panel-transfer"
@@ -477,6 +503,42 @@
                                             </span>
                                         </label>
                                     </div>
+                                </div>
+                            </section>
+                            <section
+                                class="settings__section settings__panel-section"
+                                role="region"
+                                id="settings-panel-filter"
+                                aria-labelledby="settings-label-filter"
+                                data-settings-panel="filter"
+                                hidden
+                            >
+                                <div class="settings__card settings__block">
+                                    <div class="settings__card-head">
+                                        <h4 class="settings__subtitle">
+                                            Скрывать по словам и фразам
+                                        </h4>
+                                        <p
+                                            class="settings__note"
+                                            id="publication-filter-help"
+                                        >
+                                            По одному слову или фразе на строку.
+                                            Публикация скрывается, если её
+                                            заголовок содержит любую из строк.
+                                            Регистр не учитывается.
+                                        </p>
+                                    </div>
+                                    <label class="form__field">
+                                        Слова и фразы
+                                        <textarea
+                                            class="control settings__filter-input"
+                                            name="blockedTitlePhrases"
+                                            rows="8"
+                                            placeholder="реклама&#10;специальное предложение"
+                                            aria-describedby="publication-filter-help publication-filter-note"
+                                            spellcheck="false"
+                                        ></textarea>
+                                    </label>
                                 </div>
                             </section>
                             <section

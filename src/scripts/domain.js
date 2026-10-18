@@ -337,6 +337,23 @@ export function setShowRecommendedColumn(isEnabled) {
     saveState(state)
 }
 
+export function setBlockedTitlePhrases(phrases) {
+    const nextPhrases = stateNormalizers.normalizeBlockedTitlePhrases(phrases)
+    const currentPhrases = state.settings?.blockedTitlePhrases || []
+    if (
+        currentPhrases.length === nextPhrases.length &&
+        currentPhrases.every((phrase, index) => phrase === nextPhrases[index])
+    ) {
+        return
+    }
+    state.settings = {
+        ...DEFAULT_SETTINGS,
+        ...(state.settings || {}),
+        blockedTitlePhrases: nextPhrases,
+    }
+    saveState(state)
+}
+
 export function isItemVisited(itemKey) {
     const normalizedItemKey = stateNormalizers.normalizeItemKey(itemKey)
     if (!normalizedItemKey) {
@@ -593,8 +610,19 @@ export function getFolderItems(folder) {
     synchronizeModelStateIfNeeded()
     const feeds = Array.isArray(folder?.feeds) ? folder.feeds : []
     const items = feeds.flatMap((feed) => feedItems.get(feed.id) || [])
+    const blockedPhrases = (state.settings?.blockedTitlePhrases || []).map(
+        (phrase) => phrase.toLowerCase(),
+    )
     return items
-        .filter((item) => item && String(item.title || '').trim())
+        .filter((item) => {
+            const title = String(item?.title || '')
+                .trim()
+                .toLowerCase()
+            return (
+                title &&
+                !blockedPhrases.some((phrase) => title.includes(phrase))
+            )
+        })
         .sort((a, b) => {
             const aTime = getItemTimestamp(a)
             const bTime = getItemTimestamp(b)

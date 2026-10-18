@@ -18,9 +18,7 @@ export function createDefaultState() {
     return {
         folders: [],
         lastUpdated: null,
-        settings: {
-            ...DEFAULT_SETTINGS,
-        },
+        settings: normalizeSettings(),
         visitedItemKeys: [],
         clickedItemKeys: [],
         modelState: createDefaultModelState(),
@@ -46,6 +44,7 @@ export function normalizeSettings(rawSettings) {
     if (!rawSettings || typeof rawSettings !== 'object') {
         return {
             ...DEFAULT_SETTINGS,
+            blockedTitlePhrases: [],
         }
     }
     return {
@@ -54,9 +53,30 @@ export function normalizeSettings(rawSettings) {
         autoRefreshFeeds: Boolean(rawSettings.autoRefreshFeeds),
         showRecommendedColumn: Boolean(
             rawSettings.showRecommendedColumn ??
-                rawSettings.showFavoritesColumn,
+            rawSettings.showFavoritesColumn,
+        ),
+        blockedTitlePhrases: normalizeBlockedTitlePhrases(
+            rawSettings.blockedTitlePhrases,
         ),
     }
+}
+
+export function normalizeBlockedTitlePhrases(rawPhrases) {
+    if (!Array.isArray(rawPhrases)) {
+        return []
+    }
+    const seen = new Set()
+    return rawPhrases
+        .filter((phrase) => typeof phrase === 'string')
+        .map((phrase) => phrase.trim())
+        .filter((phrase) => {
+            const key = phrase.toLowerCase()
+            if (!key || seen.has(key)) {
+                return false
+            }
+            seen.add(key)
+            return true
+        })
 }
 
 export function normalizeIsoDate(value) {

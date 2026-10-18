@@ -455,6 +455,16 @@
         line-height: 1.25;
     }
 
+    &__filter-input.control {
+        min-height: 180px;
+        line-height: 1.5;
+
+        &:focus-visible {
+            outline: 2px solid var(--colorAccent);
+            outline-offset: 2px;
+        }
+    }
+
     &__actions-row {
         display: flex;
         gap: 10px;

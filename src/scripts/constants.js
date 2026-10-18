@@ -35,4 +35,5 @@ export const DEFAULT_SETTINGS = {
     autoMarkReadOnScroll: false,
     autoRefreshFeeds: false,
     showRecommendedColumn: false,
+    blockedTitlePhrases: [],
 }

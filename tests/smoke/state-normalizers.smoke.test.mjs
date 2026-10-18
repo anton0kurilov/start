@@ -5,6 +5,7 @@ import {
     createDefaultState,
     normalizeClickedItemKeys,
     normalizeModelState,
+    normalizeSettings,
     normalizeStatePayload,
     normalizeVisitedItemKeys,
 } from '../../src/scripts/state-normalizers.js'
@@ -25,6 +26,7 @@ test('createDefaultState returns complete base shape', () => {
         autoMarkReadOnScroll: false,
         autoRefreshFeeds: false,
         showRecommendedColumn: false,
+        blockedTitlePhrases: [],
     })
     assert.deepEqual(state.visitedItemKeys, [])
     assert.deepEqual(state.clickedItemKeys, [])
@@ -237,10 +239,48 @@ test('normalizeStatePayload sanitizes malformed payload and drops legacy scorer 
         autoMarkReadOnScroll: true,
         autoRefreshFeeds: true,
         showRecommendedColumn: true,
+        blockedTitlePhrases: [],
     })
     assert.deepEqual(normalized.visitedItemKeys, ['a', 'b'])
     assert.deepEqual(normalized.clickedItemKeys, ['x', 'y'])
     assert.deepEqual(normalized.modelState.interactionLog, [])
+})
+
+test('normalizeSettings trims filter phrases and removes empty, invalid and duplicate entries', () => {
+    const settings = normalizeSettings({
+        blockedTitlePhrases: [
+            ' Реклама ',
+            '',
+            '   ',
+            'рекЛАма',
+            'Специальное предложение',
+            'C++',
+            '[beta]',
+            '.*',
+            null,
+            42,
+            {},
+        ],
+    })
+
+    assert.deepEqual(settings.blockedTitlePhrases, [
+        'Реклама',
+        'Специальное предложение',
+        'C++',
+        '[beta]',
+        '.*',
+    ])
+    for (const rawPhrases of [undefined, null, 42, 'реклама', {}]) {
+        assert.deepEqual(
+            normalizeSettings({blockedTitlePhrases: rawPhrases})
+                .blockedTitlePhrases,
+            [],
+        )
+    }
+
+    const firstState = createDefaultState()
+    firstState.settings.blockedTitlePhrases.push('temporary')
+    assert.deepEqual(createDefaultState().settings.blockedTitlePhrases, [])
 })
 
 test('normalizeVisitedItemKeys falls back to MAX_VISITED_ITEMS for bad limit', () => {

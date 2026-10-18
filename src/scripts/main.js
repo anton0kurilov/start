@@ -15,6 +15,7 @@ import {
     resetState,
     setAutoMarkReadOnScroll,
     setAutoRefreshFeeds,
+    setBlockedTitlePhrases,
     setFeedFavorite,
     setShowRecommendedColumn,
     shouldAutoMarkReadOnScroll,
@@ -278,6 +279,10 @@ function bindEvents() {
             handleShowRecommendedColumnChange,
         )
     }
+    elements.blockedTitlePhrases?.addEventListener(
+        'input',
+        handleBlockedTitlePhrasesInput,
+    )
     window.addEventListener('focus', handleAutoRefreshWakeup)
     window.addEventListener('online', handleBrowserOnline)
     window.addEventListener('pageshow', handleAutoRefreshWakeup)
@@ -683,6 +688,11 @@ function handleShowRecommendedColumnChange(event) {
     }
     setShowRecommendedColumn(Boolean(target.checked))
     syncAppView({preserveColumnScroll: true})
+}
+
+function handleBlockedTitlePhrasesInput(event) {
+    setBlockedTitlePhrases(event.currentTarget.value.split('\n'))
+    syncAppView({preserveColumnScroll: true, preserveSettings: true})
 }
 
 function closeSettings() {
