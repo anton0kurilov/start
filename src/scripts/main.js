@@ -279,9 +279,9 @@ function bindEvents() {
             handleShowRecommendedColumnChange,
         )
     }
-    elements.blockedTitlePhrases?.addEventListener(
-        'input',
-        handleBlockedTitlePhrasesInput,
+    elements.publicationFilterForm?.addEventListener(
+        'submit',
+        handleSavePublicationFilter,
     )
     window.addEventListener('focus', handleAutoRefreshWakeup)
     window.addEventListener('online', handleBrowserOnline)
@@ -690,9 +690,12 @@ function handleShowRecommendedColumnChange(event) {
     syncAppView({preserveColumnScroll: true})
 }
 
-function handleBlockedTitlePhrasesInput(event) {
-    setBlockedTitlePhrases(event.currentTarget.value.split('\n'))
-    syncAppView({preserveColumnScroll: true, preserveSettings: true})
+function handleSavePublicationFilter(event) {
+    event.preventDefault()
+    setBlockedTitlePhrases(elements.blockedTitlePhrases.value.split('\n'))
+    elements.blockedTitlePhrases.value =
+        getState().settings.blockedTitlePhrases.join('\n')
+    syncAppView({preserveColumnScroll: true})
 }
 
 function closeSettings() {

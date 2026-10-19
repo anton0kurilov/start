@@ -64,6 +64,9 @@ export const elements = {
         '[name="showRecommendedColumn"]',
     ),
     blockedTitlePhrases: document.querySelector('[name="blockedTitlePhrases"]'),
+    publicationFilterForm: document.querySelector(
+        '[data-action="save-publication-filter"]',
+    ),
 }
 
 let lastUpdatedTimerId = null
@@ -93,6 +96,7 @@ const settingsSectionScroll = new Map()
 const expandedSettingsFolderIds = new Set()
 let feedFormPending = false
 let addingFeedFolderId = null
+let savedBlockedTitlePhrases = null
 let feedItemImpressionObserver = null
 const feedItemImpressionTimers = new Map()
 const dismissedColumnRefreshNoticeKeys = new Set()
@@ -114,13 +118,15 @@ export function render(
 }
 
 function renderSettings(state) {
+    const blockedTitlePhrases = (
+        state.settings?.blockedTitlePhrases || []
+    ).join('\n')
     if (
         elements.blockedTitlePhrases &&
-        document.activeElement !== elements.blockedTitlePhrases
+        savedBlockedTitlePhrases !== blockedTitlePhrases
     ) {
-        elements.blockedTitlePhrases.value = (
-            state.settings?.blockedTitlePhrases || []
-        ).join('\n')
+        elements.blockedTitlePhrases.value = blockedTitlePhrases
+        savedBlockedTitlePhrases = blockedTitlePhrases
     }
     if (elements.autoMarkReadOnScroll) {
         elements.autoMarkReadOnScroll.checked = Boolean(

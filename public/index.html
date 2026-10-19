@@ -513,7 +513,10 @@
                                 data-settings-panel="filter"
                                 hidden
                             >
-                                <div class="settings__card settings__block">
+                                <form
+                                    class="settings__card settings__block"
+                                    data-action="save-publication-filter"
+                                >
                                     <div class="settings__card-head">
                                         <h4 class="settings__subtitle">
                                             Скрывать по словам и фразам
@@ -535,11 +538,19 @@
                                             name="blockedTitlePhrases"
                                             rows="8"
                                             placeholder="реклама&#10;специальное предложение"
-                                            aria-describedby="publication-filter-help publication-filter-note"
+                                            aria-describedby="publication-filter-help"
                                             spellcheck="false"
                                         ></textarea>
                                     </label>
-                                </div>
+                                    <div class="settings__actions-row">
+                                        <button
+                                            class="btn btn--primary settings__submit"
+                                            type="submit"
+                                        >
+                                            Сохранить
+                                        </button>
+                                    </div>
+                                </form>
                             </section>
                             <section
                                 class="settings__section settings__panel-section"
