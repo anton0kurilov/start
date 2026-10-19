@@ -532,8 +532,8 @@
             appearance: none;
             display: grid;
             place-items: center;
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             margin: 0;
             border: 1px solid var(--colorAccent);
             border-radius: 5px;
@@ -547,8 +547,8 @@
 
             &::after {
                 content: '';
-                width: 6px;
-                height: 10px;
+                width: 5px;
+                height: 9px;
                 border: solid currentColor;
                 border-width: 0 2px 2px 0;
                 transform: translateY(-1px) rotate(45deg);
@@ -667,7 +667,7 @@
 
     &__folder-header {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         justify-content: space-between;
         gap: 10px;
 
@@ -1036,10 +1036,6 @@ body.settings-is-open {
 
         &__feed {
             grid-template-columns: minmax(0, 1fr) auto;
-        }
-
-        &__folder-header {
-            align-items: flex-start;
         }
 
         &__feed-fields {
