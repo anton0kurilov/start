@@ -37,6 +37,7 @@ import {
     setFeedFormPending,
     setFolderComposerOpen,
     setLastUpdatedInProgress,
+    setPublicationFilterSaved,
     showRefreshToast,
     toggleSettingsFolder,
     updateLastUpdated,
@@ -283,6 +284,9 @@ function bindEvents() {
         'submit',
         handleSavePublicationFilter,
     )
+    elements.blockedTitlePhrases?.addEventListener('input', () => {
+        setPublicationFilterSaved(false)
+    })
     window.addEventListener('focus', handleAutoRefreshWakeup)
     window.addEventListener('online', handleBrowserOnline)
     window.addEventListener('pageshow', handleAutoRefreshWakeup)
@@ -696,6 +700,7 @@ function handleSavePublicationFilter(event) {
     elements.blockedTitlePhrases.value =
         getState().settings.blockedTitlePhrases.join('\n')
     syncAppView({preserveColumnScroll: true})
+    setPublicationFilterSaved(true)
 }
 
 function closeSettings() {

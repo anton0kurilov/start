@@ -97,6 +97,7 @@ const expandedSettingsFolderIds = new Set()
 let feedFormPending = false
 let addingFeedFolderId = null
 let savedBlockedTitlePhrases = null
+let publicationFilterSavedTimerId = null
 let feedItemImpressionObserver = null
 const feedItemImpressionTimers = new Map()
 const dismissedColumnRefreshNoticeKeys = new Set()
@@ -141,6 +142,24 @@ function renderSettings(state) {
     if (elements.showRecommendedColumn) {
         elements.showRecommendedColumn.checked = Boolean(
             state.settings?.showRecommendedColumn,
+        )
+    }
+}
+
+export function setPublicationFilterSaved(isSaved) {
+    window.clearTimeout(publicationFilterSavedTimerId)
+    publicationFilterSavedTimerId = null
+    const button = elements.publicationFilterForm?.querySelector(
+        '[type="submit"]',
+    )
+    if (!button) {
+        return
+    }
+    button.textContent = isSaved ? 'Сохранено' : 'Сохранить'
+    if (isSaved) {
+        publicationFilterSavedTimerId = window.setTimeout(
+            () => setPublicationFilterSaved(false),
+            5000,
         )
     }
 }
