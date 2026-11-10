@@ -3,3 +3,6 @@
 dist
 node_modules
 .DS_Store
+output/
+test-results/
+playwright-report/
