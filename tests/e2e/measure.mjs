@@ -10,9 +10,22 @@ const measures = []
 for (let i = 0; i < 7; i++) {
     const page = await browser.newPage({viewport: {width: 1440, height: 900}})
     await preparePage(page)
+    // Capture readiness in the page; locator polling adds variable transport delay.
+    await page.addInitScript(() => {
+        const observer = new MutationObserver(() => {
+            if (document.querySelectorAll('.feed__item').length < 320) return
+            observer.disconnect()
+            requestAnimationFrame(() =>
+                requestAnimationFrame(() => {
+                    window.__startReady = performance.now()
+                }),
+            )
+        })
+        observer.observe(document, {childList: true, subtree: true})
+    })
     await page.goto(url)
-    await page.locator('.feed__item').nth(319).waitFor()
-    const startup = await page.evaluate(() => performance.now())
+    await page.waitForFunction(() => window.__startReady !== undefined)
+    const startup = await page.evaluate(() => window.__startReady)
     const refresh = await page.evaluate(async () => {
         const start = performance.now()
         document.querySelector('[data-action="refresh"]').click()

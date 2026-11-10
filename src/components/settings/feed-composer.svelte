@@ -45,7 +45,11 @@
     }
 </script>
 
-<div class="settings__feed-composer settings__block" id="settings-feed-form">
+<div
+    class="settings__feed-composer settings__block"
+    class:settings__block--disabled={pending}
+    id="settings-feed-form"
+>
     <div class="settings__card-head">
         <h4 class="settings__subtitle">Новая подписка</h4>
         <p class="settings__note">

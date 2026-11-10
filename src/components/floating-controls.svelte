@@ -1,16 +1,18 @@
 <script lang="ts">
     import type {AppViewState} from '../app/types'
     import type {AppController} from '../app/controller'
-    import {formatRelativeTime} from '../scripts/utils.js'
+    import {formatRelativeTime, formatDateTime} from '../scripts/utils.js'
     import IconButton from './ui/icon-button.svelte'
     let {
         state,
         controller,
         openSettings,
+        settingsOpen,
     }: {
         state: AppViewState
         controller: AppController
         openSettings: () => void
+        settingsOpen: boolean
     } = $props()
     const date = $derived(
         state.lastUpdated ? new Date(state.lastUpdated) : null,
@@ -47,7 +49,7 @@
         Обновлено: <span
             data-last-updated
             data-last-updated-value={state.lastUpdated}
-            title={state.refreshing ? undefined : date?.toLocaleString('ru-RU')}
+            title={state.refreshing ? undefined : formatDateTime(date)}
             >{text}</span
         >
     </div>
@@ -68,7 +70,7 @@
             icon="settings"
             iconClass="fab__icon"
             label="Настройки"
-            aria-expanded="false"
+            aria-expanded={settingsOpen}
             data-action="toggle-settings"
             onclick={openSettings}
         />

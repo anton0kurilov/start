@@ -139,7 +139,8 @@ export async function addFeed({folderId, name, url, signal}) {
         }
     }
 
-    if (signal?.aborted || generation !== contentGeneration) return {ok: false, error: 'Добавление отменено.'}
+    if (signal?.aborted || generation !== contentGeneration)
+        return {ok: false, error: 'Добавление отменено.'}
     const folder = state.folders.find((item) => item.id === folderId)
     if (!folder) {
         return {ok: false, error: 'Выберите существующую колонку.'}
@@ -649,7 +650,8 @@ export async function refreshAll({signal} = {}) {
     }
 
     const proxyCheck = await ensureProxyAvailable(signal)
-    if (signal?.aborted || generation !== contentGeneration) return {hasFeeds: true, errorsCount: 0, errors: []}
+    if (signal?.aborted || generation !== contentGeneration)
+        return {hasFeeds: true, errorsCount: 0, errors: []}
     if (!proxyCheck.ok) {
         const errorMessage = formatFeedError(proxyCheck.error)
         const errors = feeds.map((feed) => {
@@ -671,7 +673,8 @@ export async function refreshAll({signal} = {}) {
         }),
     )
 
-    if (signal?.aborted || generation !== contentGeneration) return {hasFeeds: true, errorsCount: 0, errors: []}
+    if (signal?.aborted || generation !== contentGeneration)
+        return {hasFeeds: true, errorsCount: 0, errors: []}
     const errorsCount = results.filter((result) => !result.ok).length
     const errors = results
         .filter((result) => !result.ok)
@@ -687,7 +690,14 @@ export async function refreshAll({signal} = {}) {
 }
 
 async function loadFeed(feed, signal, generation) {
-    const isCurrent = () => !signal?.aborted && generation === contentGeneration && state.folders.some(folder => folder.feeds.some(current => current.id === feed.id && current.url === feed.url))
+    const isCurrent = () =>
+        !signal?.aborted &&
+        generation === contentGeneration &&
+        state.folders.some((folder) =>
+            folder.feeds.some(
+                (current) => current.id === feed.id && current.url === feed.url,
+            ),
+        )
     try {
         const xmlText = await fetchFeedText(feed.url, signal)
         const parsed = parseFeed(xmlText, feed.url)
@@ -715,12 +725,16 @@ async function loadFeed(feed, signal, generation) {
 
 async function fetchFeedText(url, signal) {
     const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`
-    return await fetchWithTimeout(proxyUrl, async (response) => {
-        if (!response.ok) {
-            throw createHttpError(response.status)
-        }
-        return await response.text()
-    }, signal)
+    return await fetchWithTimeout(
+        proxyUrl,
+        async (response) => {
+            if (!response.ok) {
+                throw createHttpError(response.status)
+            }
+            return await response.text()
+        },
+        signal,
+    )
 }
 
 async function ensureProxyAvailable(signal) {
@@ -746,7 +760,11 @@ function createHttpError(status) {
     return error
 }
 
-async function fetchWithTimeout(url, consumeResponse = (response) => response, externalSignal) {
+async function fetchWithTimeout(
+    url,
+    consumeResponse = (response) => response,
+    externalSignal,
+) {
     const controller = new AbortController()
     const abort = () => controller.abort()
     externalSignal?.addEventListener('abort', abort, {once: true})

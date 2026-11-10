@@ -1,11 +1,14 @@
 <script lang="ts">
-    import {onMount,getContext} from 'svelte'
+    import {onMount, getContext} from 'svelte'
     import type {ImpressionTracker} from '../app/impressions'
     import type {AppController} from '../app/controller'
     import type {Card} from '../app/types'
-    import {formatRelativeTime, normalizeHttpUrl} from '../scripts/utils.js'
+    import {
+        formatRelativeTime,
+        formatDateTime,
+        normalizeHttpUrl,
+    } from '../scripts/utils.js'
     import Icon from './ui/icon.svelte'
-    import IconButton from './ui/icon-button.svelte'
     let {
         card,
         controller,
@@ -29,8 +32,8 @@
         else if (event.type !== 'auxclick' || event.button === 1)
             controller.open(card)
     }
-    const impressions=getContext<ImpressionTracker>('impressions')
-    onMount(()=>href ? impressions.observe(element,()=>card) : undefined)
+    const impressions = getContext<ImpressionTracker>('impressions')
+    onMount(() => (href ? impressions.observe(element, () => card) : undefined))
 </script>
 
 <article
@@ -60,7 +63,7 @@
         <div
             class="feed__item-time"
             class:feed__item-time--fresh={fresh}
-            title={card.date?.toLocaleString('ru-RU')}
+            title={formatDateTime(card.date)}
         >
             {time}
         </div>
@@ -80,15 +83,20 @@
                             >{label}</span
                         >{/if}
                 </span>
-                <IconButton
-                    class={`feed__item-dismiss ${card.dismissed ? 'feed__item-dismiss--active' : ''}`}
-                    icon="dislike"
-                    iconClass="feed__item-dismiss-icon"
-                    label="Показывать меньше похожих публикаций"
+                <button
+                    type="button"
+                    class="btn btn--ghost feed__item-dismiss"
+                    class:feed__item-dismiss--active={card.dismissed}
+                    aria-label="Показывать меньше похожих публикаций"
+                    title="Показывать меньше похожих публикаций"
                     aria-pressed={card.dismissed}
                     data-action="dismiss-feed-item"
                     onclick={() => controller.dismiss(card)}
-                />
+                    ><Icon
+                        name="dislike"
+                        class="feed__item-dismiss-icon"
+                    /></button
+                >
             </div>
         </div>
     </div>

@@ -1,58 +1,57 @@
 # Start.
 
-### Простой RSS-ридер с колонками в духе TweetDeck
+Персональный RSS/Atom-ридер с колонками в духе TweetDeck.
 
-![Скриншот Start.](.github/screenshot.png)
+## Возможности
 
-## Что умеет
+- Колонки и подписки, избранные источники и локальные рекомендации.
+- Ручное и автоматическое обновление, отметки прочитанного, фильтр заголовков.
+- Клавиатурная и pointer-перестановка колонок.
+- Локальное состояние в localStorage; совместимый JSON import/export.
+- Адаптивный интерфейс и web manifest для установки. Полноценного offline-кэша
+  публикаций и Service Worker пока нет.
 
-- Колонки по папкам: каждая папка рендерится отдельной колонкой.
-- Ручное управление источниками: создание, изменение и удаление колонок и
-  RSS-подписок.
-- Ручное и автоматическое обновление RSS-лент.
-- Отметка прочитанных публикаций и скрытие нерелевантных материалов.
-- Локальные рекомендации на основе истории взаимодействий.
-- Сохранение состояния в `localStorage` (без бэкенда).
-- Импорт и экспорт настроек в JSON.
-- Установка как PWA.
+## Разработка
 
-## Технологии
-
-- JavaScript (ES Modules)
-- SCSS
-- Parcel
-
-## Документация UI/UX
-
-[Дизайн-система и основа переноса на Svelte](docs/README.md): визуальные
-токены, компоненты, пользовательские сценарии, ограничения и приёмка.
-
-## Быстрый старт
+Нужен Node.js 22.12+ (или более новая поддерживаемая версия).
 
 ```bash
 npm install
-npm run dev
+npm start
 ```
 
-Приложение будет доступно по адресу `http://localhost:1234`.
+Dev-сервер — http://127.0.0.1:1234. Команда npm run dev также открывает браузер.
 
-## Скрипты
+| Команда            | Назначение                                           |
+| ------------------ | ---------------------------------------------------- |
+| npm run check      | Строгая проверка Svelte/TypeScript                   |
+| npm run build      | Статическая production-сборка в dist                 |
+| npm run preview    | Локальный просмотр dist на 127.0.0.1:4173            |
+| npm run test:smoke | Домен, контроллер и геометрия чтения через node:test |
+| npm run test:e2e   | Playwright против production preview на порту 4174   |
 
-- `npm run dev` / `npm start` — запуск dev-сервера Parcel.
-- `npm run build` — production-сборка в `dist/`.
-- `npm run test:smoke` — быстрые smoke-тесты на `node:test`.
+Перед первым запуском E2E установить браузер: npx playwright install chromium.
+Перед E2E выполнить npm run build. Тесты используют отдельный профиль и
+мокированные RSS, не изменяя пользовательские данные. Скриншоты и метрики:
+node tests/e2e/measure.mjs svelte при работающем preview; APP_URL позволяет
+выбрать другой адрес. Артефакты находятся в output/playwright и не коммитятся.
 
-## Структура проекта
+## Устройство
 
-```text
-public/index.html          # точка входа
-public/assets/icons/       # PWA manifest, иконки и скриншот
-src/scripts/main.js        # инициализация и обработчики UI-событий
-src/scripts/domain.js      # загрузка/парсинг RSS и бизнес-логика
-src/scripts/model-state.js # локальная модель рекомендаций
-src/scripts/ui.js          # рендер интерфейса
-src/scripts/storage.js     # localStorage
-src/styles/                # SCSS-стили
-tests/smoke/               # smoke-тесты на node:test
-dist/                      # production-сборка (генерируется)
-```
+- Svelte 5, TypeScript для нового UI, Vite и SCSS.
+- index.html и src/main.ts — вход; src/app.svelte — оболочка приложения.
+- src/components — компоненты чтения, настроек и общие контролы.
+- src/app/controller.ts — команды и read-only store снимков UI.
+- src/app — типы, иконки, геометрия чтения, drag и общий учёт показов.
+- src/scripts/domain.js — существующие бизнес-правила и RSS; model-state.js,
+  state-normalizers.js, storage.js, utils.js и constants.js остаются на JS.
+- src/styles/_tokens.scss — единые шкалы и семантические цвета.
+- public/assets/icons — manifest, иконки и установочные ресурсы.
+
+## UI/UX
+
+[Дизайн-система](docs/README.md), [переезд и результаты](docs/svelte-migration.md),
+[проверки и ограничения](docs/ui-audit.md).
+
+Ключ start:rss:v1 и формат экспорта сохранены. Выпуск остаётся статическим;
+откат выполняется возвратом предыдущей сборки без миграции хранилища.

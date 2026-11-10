@@ -1,3 +1,21 @@
+const dateTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+})
+export function formatDateTime(date) {
+    return date && !Number.isNaN(date.getTime())
+        ? dateTimeFormatter.format(date)
+        : ''
+}
+
+const relativeTimeFormatter = new Intl.RelativeTimeFormat('ru', {
+    numeric: 'auto',
+})
+
 export function createId() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID()
@@ -67,7 +85,7 @@ export function formatRelativeTime(date) {
     const now = Date.now()
     const diff = now - date.getTime()
     const minutes = Math.round(diff / 60000)
-    const rtf = new Intl.RelativeTimeFormat('ru', {numeric: 'auto'})
+    const rtf = relativeTimeFormatter
     if (Math.abs(minutes) < 60) {
         return rtf.format(-minutes, 'minute')
     }

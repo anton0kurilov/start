@@ -2,33 +2,30 @@
 
 ## Project Structure & Module Organization
 
-- `public/index.html` is the Parcel entry and links the app stylesheet from `src/styles/base.scss`.
-- `public/assets/icons/` stores static assets (manifest, favicon, apple touch icon, app svg).
-- `src/scripts/main.js` is the JS entry file referenced by `public/index.html`.
-- `src/scripts/` contains ES modules:
-    - `main.js` bootstraps the app, binds UI events, and refreshes safe-area vars.
-    - `domain.js` manages state, RSS refresh, and business rules.
-    - `ui.js` renders columns/settings and handles UI state helpers.
-    - `app-actions.js` encapsulates app-level handlers (refresh, import/export, status updates).
-    - `column-interactions.js` handles column header/scroll interactions and auto mark-as-read behavior.
-    - `model-state.js` trains and applies the local usefulness model.
-    - `state-normalizers.js` normalizes imported state.
-    - `storage.js`, `utils.js`, `constants.js` provide persistence and shared helpers.
-- `src/styles/` holds SCSS: `base.scss` loads `_tokens.scss` first, then `_components.scss`, `_columns.scss`, and `_settings.scss` via `@use`.
-- `tests/smoke/` contains smoke tests using `node:test`.
-- `dist/` is generated build output; do not edit by hand.
+- index.html is the Vite entry; src/main.ts mounts src/app.svelte.
+- src/components/ contains lowercase Svelte 5 components, settings and UI primitives.
+- src/app/ contains TypeScript types, the controller/read-only store, reading geometry,
+  folder drag and the shared impression tracker.
+- src/scripts/ keeps the JavaScript domain, RSS, storage, normalizers, model and utils.
+- Components call controller commands; they do not mutate domain state/localStorage.
+- Domain selectors are pure; prepareView explicitly performs scheduled model work.
+- src/styles/base.scss loads _tokens.scss first, then the global component styles.
+- public/assets/icons/ stores the manifest and install assets. dist/ is generated.
+- tests/smoke/ uses node:test; tests/e2e/ uses Playwright with deterministic RSS fixtures.
 
 ## Build, Test, and Development Commands
 
-- `npm install` installs Parcel and dev dependencies.
-- `npm start` runs the Parcel dev server for `public/index.html`.
-- `npm run dev` runs the Parcel dev server and opens a browser tab.
-- `npm run build` removes `dist/*` and creates a production bundle.
-- `npm run test:smoke` runs smoke tests from `tests/smoke/*.test.mjs` via `node --test`.
+- npm install installs dependencies. Use Node.js 22.12+.
+- npm start / npm run dev runs Vite; dev also opens a browser.
+- npm run check checks Svelte and TypeScript.
+- npm run build generates a static dist/; npm run preview serves the build.
+- npm run test:smoke runs domain, controller and geometry tests.
+- npm run test:e2e runs against production preview; build first.
+- Install the E2E browser with npx playwright install chromium.
 
 ## Coding Style & Naming Conventions
 
-- JavaScript and SCSS, formatted by Prettier (`.prettierrc`): 4-space indentation, single quotes, no semicolons, print width 80.
+- TypeScript, Svelte, JavaScript and SCSS, formatted by Prettier (`.prettierrc`): 4-space indentation, single quotes, no semicolons, print width 80.
 - Keep file names lowercase. JS and SCSS partials start with `_`.
 - Use existing class naming patterns (BEM-ish).
 - Keep design values in `src/styles/_tokens.scss`. Use its spacing, radius, typography, motion, and semantic color scales instead of adding near-duplicate literals or fractional spacing multipliers in components.
@@ -39,7 +36,7 @@
 
 ## Testing Guidelines
 
-- Run `npm run test:smoke` before finishing changes that affect behavior.
+- Run npm run check, npm run test:smoke and npm run build before finishing behavior changes. Run relevant Playwright scenarios for UI changes.
 - Add new tests under `tests/smoke/` (or introduce a dedicated test folder/script if coverage grows).
 
 ## Commit & Pull Request Guidelines

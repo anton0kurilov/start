@@ -7,9 +7,32 @@
     const controller = createAppController()
     const appState = controller.state
     let settingsOpen = $state(false)
+    let settingsMounted = $state(false)
+    let settingsTrigger = $state<HTMLElement | null>(null)
     onMount(() => {
+        let frame = 0
+        const applySafeArea = () => {
+            for (const side of ['Top', 'Right', 'Bottom', 'Left'])
+                document.documentElement.style.setProperty(
+                    `--safeArea${side}`,
+                    `env(safe-area-inset-${side.toLowerCase()})`,
+                )
+        }
+        const refreshSafeArea = () => {
+            cancelAnimationFrame(frame)
+            frame = requestAnimationFrame(applySafeArea)
+        }
+        const events = ['pageshow', 'orientationchange', 'resize'] as const
+        applySafeArea()
+        for (const event of events)
+            window.addEventListener(event, refreshSafeArea)
         controller.start()
-        return () => controller.dispose()
+        return () => {
+            controller.dispose()
+            cancelAnimationFrame(frame)
+            for (const event of events)
+                window.removeEventListener(event, refreshSafeArea)
+        }
     })
     function key(event: KeyboardEvent) {
         if (
@@ -37,13 +60,21 @@
         <FeedBoard state={$appState} {controller} /><FloatingControls
             state={$appState}
             {controller}
-            openSettings={() => (settingsOpen = true)}
+            {settingsOpen}
+            openSettings={() => {
+                settingsTrigger = document.activeElement as HTMLElement
+                settingsMounted = true
+                settingsOpen = true
+            }}
         />
     </div>
-    <SettingsDialog
-        state={$appState}
-        {controller}
-        open={settingsOpen}
-        onclose={() => (settingsOpen = false)}
-    />
+    {#if settingsMounted}
+        <SettingsDialog
+            state={$appState}
+            {controller}
+            returnFocus={settingsTrigger}
+            open={settingsOpen}
+            onclose={() => (settingsOpen = false)}
+        />
+    {/if}
 </main>

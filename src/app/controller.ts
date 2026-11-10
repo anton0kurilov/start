@@ -167,7 +167,8 @@ export function createAppController({
     }
     function wakeup() {
         if (disposed) return
-        const elapsed = now() - Date.parse(view.lastUpdated || '')
+        const last = Date.parse(view.lastUpdated || '')
+        const elapsed = Number.isFinite(last) ? now() - last : Infinity
         if (
             view.settings.autoRefreshFeeds &&
             elapsed >= AUTO_REFRESH_INTERVAL_MS &&
@@ -183,6 +184,7 @@ export function createAppController({
         generation += 1
         refreshPromise = null
         refreshing = false
+        refreshError = ''
     }
     function refresh(): Promise<void> {
         if (disposed) return Promise.resolve()
@@ -272,7 +274,10 @@ export function createAppController({
         async addFeed(input: FeedInput): Promise<Result> {
             if (disposed) return {ok: false}
             try {
-                const result = await api.addFeed({...input, signal: requests.signal})
+                const result = await api.addFeed({
+                    ...input,
+                    signal: requests.signal,
+                })
                 if (!disposed) {
                     publish()
                     if (result.ok) void refresh()
@@ -286,7 +291,13 @@ export function createAppController({
             }
         },
         updateFeed(input: FeedInput & {feedId: string}): Result {
-            const url = normalizeHttpUrl(normalizeUrl(input.url))
+            const raw = input.url.trim()
+            const url = normalizeHttpUrl(
+                raw.includes('://') ||
+                    /^(mailto|javascript|data|file):/i.test(raw)
+                    ? raw
+                    : normalizeUrl(raw),
+            )
             if (!input.name.trim() || !url)
                 return {
                     ok: false,

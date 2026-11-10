@@ -14,11 +14,13 @@
         controller,
         open,
         onclose,
+        returnFocus = null,
     }: {
         state: AppViewState
         controller: AppController
         open: boolean
         onclose: () => void
+        returnFocus?: HTMLElement | null
     } = $props()
     const sections = [
         {id: 'sources', label: 'Колонки и подписки'},
@@ -53,7 +55,7 @@
     $effect(() => {
         if (open && !wasOpen) {
             wasOpen = true
-            origin = document.activeElement as HTMLElement
+            origin = returnFocus || (document.activeElement as HTMLElement)
             document.body.classList.add('settings-is-open')
             if (mobile) sectionOpen = false
             void tick().then(() => {

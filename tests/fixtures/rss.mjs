@@ -50,3 +50,43 @@ export async function preparePage(
         }),
     )
 }
+
+export function signalState(bias = 0.35) {
+    return {
+        ...initialState(2),
+        settings: {...initialState(2).settings, showRecommendedColumn: true},
+        clickedItemKeys: ['https://articles.example/0'],
+        modelState: {
+            schemaVersion: 1,
+            modelVersion: 2,
+            interactionLog: [
+                {
+                    type: 'dismiss',
+                    itemKey: 'https://articles.example/3',
+                    recordedAt: fixedTime - 60000,
+                    snapshot: {
+                        source: 'Избранный источник',
+                        feedId: 'feed-0',
+                        title: 'Дизайн интерфейса и разработка 3',
+                        link: 'https://articles.example/3',
+                        publishedAt: new Date(
+                            fixedTime - 10800000,
+                        ).toISOString(),
+                    },
+                },
+            ],
+            publishedModelArtifacts: {
+                totalLabeledSamples: 42,
+                bias,
+                weights: {},
+                baselineCtr: 0.12,
+            },
+            publishedCalibrationArtifacts: {
+                ready: true,
+                slope: 1,
+                intercept: 0,
+                metrics: {ece: 0.04},
+            },
+        },
+    }
+}

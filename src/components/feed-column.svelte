@@ -28,6 +28,9 @@
     const allRead = $derived(
         !!column.cards.length && column.cards.every((card) => card.visited),
     )
+    $effect(() => {
+        if (!errorsKey) dismissedErrors = ''
+    })
     onMount(() => {
         reading = createReadingPosition(
             element,
@@ -68,13 +71,14 @@
         onscroll={() => reading?.scroll()}
     >
         <div class="columns__header">
-            <button
-                class="columns__header-text columns__top-button"
-                type="button"
-                aria-label={`К началу колонки «${column.title}»`}
-                onclick={() => reading?.toTop()}
-                ><h2 class="columns__title">{column.title}</h2></button
-            >
+            <h2 class="columns__header-text columns__title">
+                <button
+                    class="columns__top-button"
+                    type="button"
+                    aria-label={`К началу колонки «${column.title}»`}
+                    onclick={() => reading?.toTop()}>{column.title}</button
+                >
+            </h2>
             <IconButton
                 class="columns__mark-read"
                 icon="read"

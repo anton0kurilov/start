@@ -6,9 +6,11 @@
     import FeedColumn from './feed-column.svelte'
     let {state, controller}: {state: AppViewState; controller: AppController} =
         $props()
-    const impressions=createImpressionTracker(card=>controller.impression(card))
-    setContext('impressions',impressions)
-    onDestroy(()=>impressions.dispose())
+    const impressions = createImpressionTracker((card) =>
+        controller.impression(card),
+    )
+    setContext('impressions', impressions)
+    onDestroy(() => impressions.dispose())
     let element: HTMLElement
     onMount(() =>
         controller.beforeUpdate(() => {
