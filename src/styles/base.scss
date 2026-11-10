@@ -78,3 +78,40 @@ a {
         transition: none !important;
     }
 }
+
+.app__content {
+    height: 100%;
+}
+
+.columns__top-button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.settings__backdrop {
+    border: 0;
+    padding: 0;
+}
+
+.settings__fieldset {
+    display: grid;
+    gap: var(--space5);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.settings__feed-editor {
+    display: grid;
+    gap: var(--space5);
+}
+
+.settings__forward-icon {
+    transform: rotate(180deg);
+}
