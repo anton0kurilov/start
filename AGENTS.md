@@ -14,7 +14,7 @@
     - `model-state.js` trains and applies the local usefulness model.
     - `state-normalizers.js` normalizes imported state.
     - `storage.js`, `utils.js`, `constants.js` provide persistence and shared helpers.
-- `src/styles/` holds SCSS: `base.scss` and partials `_components.scss`, `_columns.scss`, `_settings.scss` via `@use`.
+- `src/styles/` holds SCSS: `base.scss` loads `_tokens.scss` first, then `_components.scss`, `_columns.scss`, and `_settings.scss` via `@use`.
 - `tests/smoke/` contains smoke tests using `node:test`.
 - `dist/` is generated build output; do not edit by hand.
 
@@ -31,6 +31,7 @@
 - JavaScript and SCSS, formatted by Prettier (`.prettierrc`): 4-space indentation, single quotes, no semicolons, print width 80.
 - Keep file names lowercase. JS and SCSS partials start with `_`.
 - Use existing class naming patterns (BEM-ish).
+- Keep design values in `src/styles/_tokens.scss`. Use its spacing, radius, typography, motion, and semantic color scales instead of adding near-duplicate literals or fractional spacing multipliers in components.
 - Prefer nested SCSS selectors (use `&` for BEM blocks/elements/modifiers) instead of flat, repeated selectors.
 - For UI work in the existing app, preserve the established visual language: reuse existing components (`btn`, `icon-btn`, `control`) and current tokens before introducing new variants.
 - Do not restyle global/base components or shared color tokens for a local screen unless the user explicitly asks for a broader visual refresh.

@@ -8,15 +8,15 @@
 
 ### Кнопка
 
-Основа — `.btn`: прозрачный фон, граница `1px`, радиус `10px`,
-padding `12px 18px`, текст `0.95rem / 600`.
+Основа — `.btn`: прозрачный фон, граница `1px`, радиус `12px`,
+padding `12px 16px`, текст `1rem / 600`.
 
 | Вариант | Классы | Применение |
 | --- | --- | --- |
 | Primary | `btn btn--primary` | Создать, подписаться, сохранить, импорт/экспорт, вход в настройки |
 | Ghost | `btn btn--ghost` | Отмена, редактирование, дополнительные действия |
 | Danger | `btn btn--danger` | Удаление и сброс |
-| Compact | `btn btn--compact` | Определён в SCSS: `6px 10px`, `0.75rem`, min-height `30px`; текущая разметка его не использует |
+| Compact | `btn btn--compact` | Определён в SCSS: `6px 8px`, `0.75rem`, min-height `32px`; текущая разметка его не использует |
 
 Disabled задаётся нативным `disabled`: opacity `0.6`,
 cursor `not-allowed`, без transform и box-shadow.
@@ -33,7 +33,7 @@ disabled, доступное название и состояние `aria-presse
 
 ### Поле, textarea и форма
 
-`.control`: ширина `100%`, padding `10px 12px`, радиус `12px`,
+`.control`: ширина `100%`, padding `8px 12px`, радиус `12px`,
 фон surface. В настройках размер текста `1rem` и единая минимальная
 высота. `.form` — grid с gap `12px`; label — `.form__field`.
 
@@ -54,9 +54,9 @@ disabled, доступное название и состояние `aria-presse
 
 `.settings__option` — вся строка является label: checkbox слева,
 заголовок и необязательное пояснение справа. Строка имеет радиус
-`12px`, gap `14px`, padding `12px 14px`.
+`12px`, gap `16px`, padding `12px 16px`.
 
-Checkbox кастомный, `18px`, галочка рисуется CSS. Состояния:
+Checkbox кастомный, `20px`, галочка рисуется CSS. Состояния:
 unchecked, checked, disabled, focus-visible. В `forced-colors`
 возвращается нативный appearance.
 
