@@ -9,7 +9,7 @@
     -webkit-backdrop-filter: blur(var(--blurMd));
     backdrop-filter: blur(var(--blurMd));
     border: var(--borderWidth) solid var(--colorBorder);
-    border-radius: var(--radiusLg);
+    border-radius: var(--radius2xl);
     padding: var(--space4);
     display: flex;
     align-items: center;
@@ -154,7 +154,7 @@
         max-height: 100%;
         background: var(--colorSurface);
         border: var(--borderWidth) solid var(--colorBorder);
-        border-radius: var(--radiusXl);
+        border-radius: var(--radius3xl);
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -366,7 +366,7 @@
 
     &__card {
         border: var(--borderWidth) solid var(--colorBorder);
-        border-radius: var(--radiusLg);
+        border-radius: var(--radius2xl);
         padding: var(--space6);
         background:
             linear-gradient(180deg, var(--colorFill), var(--colorFillSubtle)),
@@ -509,7 +509,7 @@
         gap: var(--settingsOptionSpacing);
         padding: var(--space5) var(--settingsOptionSpacing);
         border: var(--borderWidth) solid var(--colorBorder);
-        border-radius: var(--radiusMd);
+        border-radius: var(--radiusLg);
         cursor: pointer;
         line-height: var(--lineHeightNormal);
         color: var(--colorText);
@@ -596,7 +596,7 @@
     }
 
     &__folder {
-        border-radius: var(--radiusLg);
+        border-radius: var(--radius2xl);
         border: var(--borderWidth) solid var(--colorBorder);
         padding: var(--space5);
         display: grid;
@@ -697,7 +697,7 @@
         align-items: stretch;
         gap: var(--space5);
         padding: var(--space5);
-        border-radius: var(--radiusMd);
+        border-radius: var(--radiusLg);
         border: var(--borderWidth) solid var(--colorBorder);
         background: var(--colorFillSubtle);
     }
@@ -775,7 +775,7 @@
         gap: var(--space4);
         padding: var(--space4) var(--space5);
         border: var(--borderWidth) solid var(--colorBorder);
-        border-radius: var(--radiusMd);
+        border-radius: var(--radiusLg);
         background: var(--colorFillSubtle);
     }
 
@@ -785,7 +785,7 @@
         gap: var(--space5);
         padding: var(--space5);
         margin: var(--space1) 0;
-        border-radius: var(--radiusMd);
+        border-radius: var(--radiusLg);
         border: var(--borderWidth) solid var(--colorBorder);
         background: var(--colorFill);
     }
@@ -827,7 +827,7 @@
         text-align: center;
         padding: var(--space7);
         border: var(--borderWidth) dashed var(--colorBorder);
-        border-radius: var(--radiusMd);
+        border-radius: var(--radiusLg);
         background: var(--colorFillSubtle);
     }
 
@@ -838,7 +838,7 @@
         gap: var(--space5);
         padding: var(--space5) var(--space5);
         border: var(--borderWidth) solid var(--colorSignalLowBorder);
-        border-radius: var(--radiusLg);
+        border-radius: var(--radiusXl);
         background: var(--colorSignalLowBg);
     }
 
@@ -931,7 +931,7 @@ body.settings-is-open {
                     ) *
                     2
             );
-            border-radius: var(--radiusLg);
+            border-radius: var(--radiusXl);
         }
 
         &__header {
