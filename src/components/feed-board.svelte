@@ -1,10 +1,14 @@
 <script lang="ts">
-    import {onMount, tick} from 'svelte'
+    import {onMount, onDestroy, setContext, tick} from 'svelte'
+    import {createImpressionTracker} from '../app/impressions'
     import type {AppController} from '../app/controller'
     import type {AppViewState} from '../app/types'
     import FeedColumn from './feed-column.svelte'
     let {state, controller}: {state: AppViewState; controller: AppController} =
         $props()
+    const impressions=createImpressionTracker(card=>controller.impression(card))
+    setContext('impressions',impressions)
+    onDestroy(()=>impressions.dispose())
     let element: HTMLElement
     onMount(() =>
         controller.beforeUpdate(() => {

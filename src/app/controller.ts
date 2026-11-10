@@ -37,6 +37,8 @@ export function createAppController({
     host?: Window | null
 } = {}) {
     let disposed = false
+    let generation = 0
+    let requests = new AbortController()
     let refreshing = false
     let refreshError = ''
     let refreshPromise: Promise<void> | null = null
@@ -175,6 +177,13 @@ export function createAppController({
             void refresh()
         else schedule()
     }
+    function cancelRequests() {
+        requests.abort()
+        requests = new AbortController()
+        generation += 1
+        refreshPromise = null
+        refreshing = false
+    }
     function refresh(): Promise<void> {
         if (disposed) return Promise.resolve()
         if (refreshPromise) return refreshPromise
@@ -185,12 +194,14 @@ export function createAppController({
             publish()
             return Promise.resolve()
         }
+        const requestGeneration = generation
         refreshing = true
         refreshError = ''
         publish()
         refreshPromise = (async () => {
             try {
-                const result = await api.refreshAll()
+                const result = await api.refreshAll({signal: requests.signal})
+                if (disposed || requestGeneration !== generation) return
                 const count = (api.getState().folders as Folder[]).flatMap(
                     (folder: Folder) => folder.feeds,
                 ).length
@@ -198,9 +209,11 @@ export function createAppController({
                     refreshError =
                         'Не удалось обновить ленты. Проверьте подключение к интернету.'
             } catch {
+                if (disposed || requestGeneration !== generation) return
                 refreshError =
                     'Не удалось обновить ленты. Проверьте подключение к интернету.'
             } finally {
+                if (requestGeneration !== generation || disposed) return
                 refreshing = false
                 refreshPromise = null
                 publish()
@@ -259,7 +272,7 @@ export function createAppController({
         async addFeed(input: FeedInput): Promise<Result> {
             if (disposed) return {ok: false}
             try {
-                const result = await api.addFeed(input)
+                const result = await api.addFeed({...input, signal: requests.signal})
                 if (!disposed) {
                     publish()
                     if (result.ok) void refresh()
@@ -356,6 +369,7 @@ export function createAppController({
                     ok: false,
                     error: 'Выберите файл экспорта Start. с колонками и подписками.',
                 }
+            cancelRequests()
             const result = change(() => api.importState(parsed))
             if (result.ok) void refresh()
             return result.ok
@@ -363,11 +377,13 @@ export function createAppController({
                 : {ok: false, error: 'Не удалось импортировать данные.'}
         },
         reset() {
+            cancelRequests()
             change(() => api.resetState())
         },
         dispose() {
             if (disposed) return
             disposed = true
+            cancelRequests()
             clearTimeout(timer)
             clearInterval(clock)
             beforeUpdate.clear()

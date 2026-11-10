@@ -1,5 +1,6 @@
 <script lang="ts">
-    import {onMount} from 'svelte'
+    import {onMount,getContext} from 'svelte'
+    import type {ImpressionTracker} from '../app/impressions'
     import type {AppController} from '../app/controller'
     import type {Card} from '../app/types'
     import {formatRelativeTime, normalizeHttpUrl} from '../scripts/utils.js'
@@ -28,31 +29,8 @@
         else if (event.type !== 'auxclick' || event.button === 1)
             controller.open(card)
     }
-    onMount(() => {
-        if (!href || !window.IntersectionObserver) return
-        let timer: ReturnType<typeof setTimeout> | undefined
-        const observer = new IntersectionObserver(
-            (entries) => {
-                for (const entry of entries) {
-                    clearTimeout(timer)
-                    if (entry.isIntersecting && entry.intersectionRatio >= 0.6)
-                        timer = setTimeout(() => {
-                            if (
-                                !document.hidden &&
-                                !document.querySelector('.settings--open')
-                            )
-                                controller.impression(card)
-                        }, 1200)
-                }
-            },
-            {threshold: [0, 0.6, 1]},
-        )
-        observer.observe(element)
-        return () => {
-            observer.disconnect()
-            clearTimeout(timer)
-        }
-    })
+    const impressions=getContext<ImpressionTracker>('impressions')
+    onMount(()=>href ? impressions.observe(element,()=>card) : undefined)
 </script>
 
 <article

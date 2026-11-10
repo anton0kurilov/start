@@ -29,6 +29,7 @@ let dismissedItemKeysSet = new Set()
 let impressedItemKeysSet = new Set()
 const feedItems = new Map()
 const feedErrors = new Map()
+let contentGeneration = 0
 const PROXY_HEALTHCHECK_URL = 'https://example.com/'
 // Baseline-relative score: ~0.5 means normal, ~0.66 means strong lift.
 const USEFULNESS_HIGH_THRESHOLD = 0.66
@@ -105,7 +106,9 @@ export function reorderFolders(folderIds) {
     return {ok: true}
 }
 
-export async function addFeed({folderId, name, url}) {
+/** @param {{folderId:string, name:string, url:string, signal?:AbortSignal}} input */
+export async function addFeed({folderId, name, url, signal}) {
+    const generation = contentGeneration
     const nextName = String(name || '').trim()
     const rawUrl = String(url || '').trim()
     const nextUrl = normalizeHttpUrl(
@@ -122,7 +125,7 @@ export async function addFeed({folderId, name, url}) {
     }
 
     try {
-        const xmlText = await fetchFeedText(nextUrl)
+        const xmlText = await fetchFeedText(nextUrl, signal)
         parseFeed(xmlText, nextUrl)
     } catch (error) {
         const isInvalidFeed = ['INVALID_XML', 'INVALID_FEED'].includes(
@@ -136,6 +139,7 @@ export async function addFeed({folderId, name, url}) {
         }
     }
 
+    if (signal?.aborted || generation !== contentGeneration) return {ok: false, error: 'Добавление отменено.'}
     const folder = state.folders.find((item) => item.id === folderId)
     if (!folder) {
         return {ok: false, error: 'Выберите существующую колонку.'}
@@ -235,6 +239,7 @@ export function removeFeed(folderId, feedId) {
 }
 
 export function resetState() {
+    contentGeneration += 1
     clearState()
     state = loadState()
     visitedItemKeysSet = new Set(state.visitedItemKeys || [])
@@ -277,6 +282,7 @@ export function importState(rawState) {
     if (!normalized) {
         return {ok: false, error: 'invalid'}
     }
+    contentGeneration += 1
     state = normalized
     visitedItemKeysSet = new Set(state.visitedItemKeys || [])
     clickedItemKeysSet = new Set(state.clickedItemKeys || [])
@@ -524,7 +530,6 @@ export function registerFeedItemDismiss(itemMeta) {
 }
 
 export function getFeedItemUsefulness(item, {includeClickBoost = true} = {}) {
-
     if (isKnownDismissedItem(item)) {
         return createDismissedUsefulness()
     }
@@ -633,7 +638,9 @@ export function getFolderItems(folder) {
         })
 }
 
-export async function refreshAll() {
+/** @param {{signal?:AbortSignal}} [options] */
+export async function refreshAll({signal} = {}) {
+    const generation = contentGeneration
     synchronizeModelStateIfNeeded()
 
     const feeds = state.folders.flatMap((folder) => folder.feeds)
@@ -641,7 +648,8 @@ export async function refreshAll() {
         return {hasFeeds: false, errorsCount: 0, errors: []}
     }
 
-    const proxyCheck = await ensureProxyAvailable()
+    const proxyCheck = await ensureProxyAvailable(signal)
+    if (signal?.aborted || generation !== contentGeneration) return {hasFeeds: true, errorsCount: 0, errors: []}
     if (!proxyCheck.ok) {
         const errorMessage = formatFeedError(proxyCheck.error)
         const errors = feeds.map((feed) => {
@@ -659,10 +667,11 @@ export async function refreshAll() {
 
     const results = await Promise.all(
         feeds.map(async (feed) => {
-            return await loadFeed(feed)
+            return await loadFeed({...feed}, signal, generation)
         }),
     )
 
+    if (signal?.aborted || generation !== contentGeneration) return {hasFeeds: true, errorsCount: 0, errors: []}
     const errorsCount = results.filter((result) => !result.ok).length
     const errors = results
         .filter((result) => !result.ok)
@@ -677,21 +686,23 @@ export async function refreshAll() {
     return {hasFeeds: true, errorsCount, errors}
 }
 
-async function loadFeed(feed) {
+async function loadFeed(feed, signal, generation) {
+    const isCurrent = () => !signal?.aborted && generation === contentGeneration && state.folders.some(folder => folder.feeds.some(current => current.id === feed.id && current.url === feed.url))
     try {
-        const xmlText = await fetchFeedText(feed.url)
+        const xmlText = await fetchFeedText(feed.url, signal)
         const parsed = parseFeed(xmlText, feed.url)
         const items = dedupeItems(parsed.items).map((item) => ({
             ...item,
             source: feed.name || parsed.title || item.source,
             feedId: feed.id,
         }))
+        if (!isCurrent()) return {ok: true, count: 0}
         feedItems.set(feed.id, items)
         feedErrors.delete(feed.id)
         return {ok: true, count: items.length}
     } catch (error) {
         const errorMessage = formatFeedError(error)
-        feedErrors.set(feed.id, errorMessage)
+        if (isCurrent()) feedErrors.set(feed.id, errorMessage)
         return {
             ok: false,
             count: 0,
@@ -702,20 +713,20 @@ async function loadFeed(feed) {
     }
 }
 
-async function fetchFeedText(url) {
+async function fetchFeedText(url, signal) {
     const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`
     return await fetchWithTimeout(proxyUrl, async (response) => {
         if (!response.ok) {
             throw createHttpError(response.status)
         }
         return await response.text()
-    })
+    }, signal)
 }
 
-async function ensureProxyAvailable() {
+async function ensureProxyAvailable(signal) {
     const testUrl = `${CORS_PROXY}${encodeURIComponent(PROXY_HEALTHCHECK_URL)}`
     try {
-        const response = await fetchWithTimeout(testUrl)
+        const response = await fetchWithTimeout(testUrl, undefined, signal)
         if (response.status >= 500) {
             throw createHttpError(response.status)
         }
@@ -735,14 +746,18 @@ function createHttpError(status) {
     return error
 }
 
-async function fetchWithTimeout(url, consumeResponse = (response) => response) {
+async function fetchWithTimeout(url, consumeResponse = (response) => response, externalSignal) {
     const controller = new AbortController()
+    const abort = () => controller.abort()
+    externalSignal?.addEventListener('abort', abort, {once: true})
+    if (externalSignal?.aborted) controller.abort()
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT)
     try {
         const response = await fetch(url, {signal: controller.signal})
         return await consumeResponse(response)
     } finally {
         clearTimeout(timeout)
+        externalSignal?.removeEventListener('abort', abort)
     }
 }
 
