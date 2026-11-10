@@ -1,78 +1,78 @@
 .btn {
-    padding: var(--padding) calc(var(--padding) * 1.5);
+    padding: var(--padding) var(--space6);
     border-radius: var(--borderRadius);
-    border: 1px solid var(--colorBorder);
+    border: var(--borderWidth) solid var(--colorBorder);
     background: transparent;
     color: var(--colorText);
     font-family: inherit;
-    font-weight: 600;
-    font-size: 0.95rem;
+    font-weight: var(--fontWeightSemibold);
+    font-size: var(--fontSizeBase);
     cursor: pointer;
     transition:
-        border-color 0.2s ease,
-        color 0.2s ease,
-        background-color 0.2s ease;
+        border-color var(--durationFast) var(--easeStandard),
+        color var(--durationFast) var(--easeStandard),
+        background-color var(--durationFast) var(--easeStandard);
 
     &:disabled {
-        opacity: 0.6;
+        opacity: var(--opacityDisabled);
         cursor: not-allowed;
         transform: none;
         box-shadow: none;
     }
 
     &--primary {
-        background: #e5e5e5;
-        color: #05170f;
-        border-color: #e5e5e5;
+        background: var(--colorPrimary);
+        color: var(--colorOnPrimary);
+        border-color: var(--colorPrimary);
 
         &:hover {
-            background: #f2f2f2;
-            border-color: #f2f2f2;
+            background: var(--colorPrimaryHover);
+            border-color: var(--colorPrimaryHover);
         }
     }
 
     &--ghost {
         &:hover {
             color: var(--colorText);
-            border-color: rgba(233, 233, 233, 0.28);
-            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--colorBorderHover);
+            background: var(--colorFill);
         }
     }
 
     &--danger {
-        background: rgba(249, 115, 115, 0.08);
+        background: var(--colorSignalLowBg);
         color: var(--colorDanger);
-        border-color: rgba(249, 115, 115, 0.35);
+        border-color: var(--colorSignalLowBorder);
 
         &:hover {
-            background: rgba(249, 115, 115, 0.2);
+            background: var(--colorDangerHoverBg);
             color: var(--colorDanger);
-            border-color: rgba(249, 115, 115, 0.6);
+            border-color: var(--colorSignalLowBorder);
         }
     }
 
     &--compact {
-        padding: 6px 10px;
-        border-radius: 10px;
-        font-size: 0.75rem;
-        min-height: 30px;
+        padding: var(--space3) var(--space4);
+        border-radius: var(--radiusMd);
+        font-size: var(--fontSizeXs);
+        min-height: var(--sizeControlMd);
     }
 }
 
 .control {
     width: 100%;
-    padding: 10px 12px;
-    border-radius: 12px;
-    border: 1px solid var(--colorBorder);
+    padding: var(--space4) var(--space5);
+    border-radius: var(--radiusMd);
+    border: var(--borderWidth) solid var(--colorBorder);
     background: var(--colorSurface);
     color: var(--colorText);
     font-family: inherit;
-    font-size: 0.95rem;
+    font-size: var(--fontSizeBase);
     outline: none;
 }
 
 textarea.control {
-    min-height: 120px;
+    min-height: var(--heightTextarea);
     resize: vertical;
 }
 
@@ -82,13 +82,13 @@ textarea.control {
 
     &__field {
         display: grid;
-        gap: 6px;
-        font-size: 0.85rem;
+        gap: var(--space3);
+        font-size: var(--fontSizeMd);
         color: var(--colorMuted);
     }
 
     &__field--file {
-        gap: 10px;
+        gap: var(--space4);
     }
 
     &__file {
@@ -111,7 +111,7 @@ textarea.control {
     }
 
     &__file-name {
-        font-size: 0.8rem;
+        font-size: var(--fontSizeSm);
         color: var(--colorMuted);
         word-break: break-word;
     }

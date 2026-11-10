@@ -1,0 +1,158 @@
+// Primitive scales and semantic aliases. Keep literal design values here.
+:root {
+    --space1: 2px;
+    --space2: 4px;
+    --space3: 6px;
+    --space4: 8px;
+    --space5: 12px;
+    --space6: 16px;
+    --space7: 20px;
+    --space8: 24px;
+    --space9: 32px;
+    --space10: 40px;
+    --space11: 48px;
+    --space12: 64px;
+
+    --radiusXs: 4px;
+    --radiusSm: 8px;
+    --radiusMd: 12px;
+    --radiusLg: 16px;
+    --radiusXl: 20px;
+    --radiusFull: 999px;
+
+    --fontFamily:
+        system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+        Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    --fontSizeXs: 0.75rem;
+    --fontSizeSm: 0.8125rem;
+    --fontSizeMd: 0.875rem;
+    --fontSizeBase: 1rem;
+    --fontSizeLg: 1.125rem;
+    --fontSizeXl: 1.25rem;
+    --fontSize2xl: 1.5rem;
+    --fontWeightRegular: 400;
+    --fontWeightMedium: 500;
+    --fontWeightSemibold: 600;
+    --lineHeightTight: 1.25;
+    --lineHeightNormal: 1.375;
+    --lineHeightRelaxed: 1.5;
+    --trackingTight: -0.025em;
+    --trackingNormal: 0;
+    --trackingLabel: 0.025em;
+    --trackingCaps: 0.12em;
+
+    --durationFast: 160ms;
+    --durationNormal: 240ms;
+    --durationSlow: 480ms;
+    --durationSpin: 800ms;
+    --easeStandard: ease;
+    --easeLinear: linear;
+    --motionOffsetSm: var(--space4);
+    --motionOffsetMd: var(--space6);
+    --motionScaleEnter: 0.98;
+    --opacityDisabled: 0.6;
+    --opacityDragging: 0.3;
+    --opacityTintSubtle: 0.04;
+    --opacityTint: 0.08;
+    --opacityTintHover: 0.12;
+    --opacityBorderSubtle: 0.24;
+    --opacityBorder: 0.48;
+
+    --colorBlackRgb: 0, 0, 0;
+    --colorWhiteRgb: 255, 255, 255;
+    --colorTextRgb: 233, 233, 233;
+    --colorHighlightRgb: 253, 230, 138;
+    --colorSignalHighRgb: 134, 239, 172;
+    --colorSignalLowRgb: 252, 165, 165;
+    --colorBackground: rgb(var(--colorBlackRgb));
+    --colorSurface: #111;
+    --colorSurfaceRaised: #202020;
+    --colorSurfaceHover: #303030;
+    --colorBorder: #262626;
+    --colorText: rgb(var(--colorTextRgb));
+    --colorTextStrong: rgb(var(--colorWhiteRgb));
+    --colorMuted: #c8c8c8;
+    --colorAccent: #919191;
+    --colorOnPrimary: var(--colorSurface);
+    --colorPrimary: var(--colorText);
+    --colorPrimaryHover: var(--colorTextStrong);
+    --colorBorderHover: rgba(var(--colorTextRgb), var(--opacityBorderSubtle));
+    --colorFillSubtle: rgba(var(--colorWhiteRgb), 0.02);
+    --colorFill: rgba(var(--colorWhiteRgb), 0.04);
+    --colorFillHover: rgba(var(--colorWhiteRgb), 0.08);
+    --colorHighlight: rgb(var(--colorHighlightRgb));
+    --colorRecent: var(--colorHighlight);
+    --colorSignalHigh: rgb(var(--colorSignalHighRgb));
+    --colorSignalHighBorder: rgba(
+        var(--colorSignalHighRgb),
+        var(--opacityBorder)
+    );
+    --colorSignalHighBg: rgba(var(--colorSignalHighRgb), var(--opacityTint));
+    --colorSignalMedium: var(--colorHighlight);
+    --colorSignalMediumBorder: rgba(
+        var(--colorHighlightRgb),
+        var(--opacityBorder)
+    );
+    --colorSignalMediumBg: rgba(var(--colorHighlightRgb), var(--opacityTint));
+    --colorSignalLow: rgb(var(--colorSignalLowRgb));
+    --colorSignalLowBorder: rgba(
+        var(--colorSignalLowRgb),
+        var(--opacityBorder)
+    );
+    --colorSignalLowBg: rgba(var(--colorSignalLowRgb), var(--opacityTint));
+    --colorDanger: var(--colorSignalLow);
+    --colorDangerHoverBg: rgba(
+        var(--colorSignalLowRgb),
+        var(--opacityTintHover)
+    );
+    --colorSignalLearningBg: var(--colorFillHover);
+    --colorGlass: rgba(var(--colorBlackRgb), 0.24);
+    --colorBackdrop: rgba(var(--colorBlackRgb), 0.8);
+    --colorToast: #201414;
+
+    --shadowNotice: 0 4px 16px rgba(var(--colorBlackRgb), 0.32);
+    --shadowFloating: 0 12px 24px rgba(var(--colorBlackRgb), 0.32);
+    --shadowDialog: 0 32px 64px rgba(var(--colorBlackRgb), 0.56);
+    --shadowDrag: 0 8px 24px rgba(var(--colorBlackRgb), 0.24);
+    --blurSm: 8px;
+    --blurMd: 12px;
+    --borderWidth: 1px;
+    --focusWidth: 2px;
+
+    --sizeIconXs: 12px;
+    --sizeIconSm: 16px;
+    --sizeIconMd: 20px;
+    --sizeIconLg: 24px;
+    --sizeControlSm: 24px;
+    --sizeControlMd: 32px;
+    --sizeControlLg: 36px;
+    --sizeControlTouch: 44px;
+    --sizeControl: calc(
+        var(--fontSizeBase) * var(--lineHeightTight) + var(--space8)
+    );
+    --heightColumnHeader: calc(
+        var(--sizeControlLg) + var(--space6) + var(--borderWidth)
+    );
+    --widthColumn: 360px;
+    --widthColumnMin: 240px;
+    --widthSettings: 1040px;
+    --widthSettingsCompact: 720px;
+    --widthSettingsNav: 240px;
+    --heightSettingsMax: 860px;
+    --heightTextarea: 120px;
+    --heightFilter: 180px;
+    --layerHeader: 2;
+    --layerNotice: 3;
+    --layerDrag: 5;
+    --layerFloating: 30;
+    --layerDialog: 50;
+
+    // Existing public aliases remain available during the Svelte migration.
+    --padding: var(--space5);
+    --margin: var(--space7);
+    --borderRadius: var(--radiusMd);
+    --safeAreaTop: env(safe-area-inset-top);
+    --safeAreaRight: env(safe-area-inset-right);
+    --safeAreaBottom: env(safe-area-inset-bottom);
+    --safeAreaLeft: env(safe-area-inset-left);
+}
