@@ -44,6 +44,11 @@ let lastModelSyncCheckAt = 0
 refreshModelInteractionIndexes()
 synchronizeModelState(true)
 
+// Explicit application preparation keeps selectors free of writes/training.
+export function prepareView() {
+    return synchronizeModelStateIfNeeded()
+}
+
 export function getState() {
     return state
 }
@@ -519,7 +524,6 @@ export function registerFeedItemDismiss(itemMeta) {
 }
 
 export function getFeedItemUsefulness(item, {includeClickBoost = true} = {}) {
-    synchronizeModelStateIfNeeded()
 
     if (isKnownDismissedItem(item)) {
         return createDismissedUsefulness()
@@ -607,7 +611,6 @@ export function getFeedError(feedId) {
 }
 
 export function getFolderItems(folder) {
-    synchronizeModelStateIfNeeded()
     const feeds = Array.isArray(folder?.feeds) ? folder.feeds : []
     const items = feeds.flatMap((feed) => feedItems.get(feed.id) || [])
     const blockedPhrases = (state.settings?.blockedTitlePhrases || []).map(

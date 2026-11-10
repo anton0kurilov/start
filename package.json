@@ -3,14 +3,28 @@
         "@parcel/packager-raw-url": "^2.15.0",
         "@parcel/transformer-sass": "^2.15.0",
         "@parcel/transformer-webmanifest": "^2.15.0",
-        "parcel": "^2.15.0"
+        "@playwright/test": "^1.65.0",
+        "@sveltejs/vite-plugin-svelte": "^7.3.1",
+        "parcel": "^2.15.0",
+        "prettier": "^3.9.10",
+        "prettier-plugin-svelte": "^4.1.1",
+        "sass": "^1.108.1",
+        "svelte-check": "^4.7.8",
+        "typescript": "^6.0.3",
+        "vite": "^8.3.7"
     },
     "scripts": {
-        "start": "parcel public/index.html",
-        "dev": "parcel public/index.html --open",
-        "build": "rm -rf dist/* && parcel build public/index.html",
-        "test:smoke": "node --test tests/smoke/*.test.mjs"
+        "start": "vite",
+        "dev": "vite --open",
+        "build": "vite build",
+        "preview": "vite preview",
+        "check": "svelte-check --tsconfig ./tsconfig.json",
+        "test:smoke": "node --test tests/smoke/*.test.mjs",
+        "test:e2e": "playwright test"
     },
-    "source": "public/index.html",
-    "browserslist": "> 0.5%, last 2 versions, not dead"
+    "browserslist": "> 0.5%, last 2 versions, not dead",
+    "dependencies": {
+        "svelte": "^5.57.3"
+    },
+    "type": "module"
 }

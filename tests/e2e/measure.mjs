@@ -16,8 +16,11 @@ for (let i = 0; i < 7; i++) {
     const refresh = await page.evaluate(async () => {
         const start = performance.now()
         document.querySelector('[data-action="refresh"]').click()
-        await new Promise(resolve => {
-            const check = () => document.querySelector('[data-action="refresh"]').disabled ? requestAnimationFrame(check) : requestAnimationFrame(resolve)
+        await new Promise((resolve) => {
+            const check = () =>
+                document.querySelector('[data-action="refresh"]').disabled
+                    ? requestAnimationFrame(check)
+                    : requestAnimationFrame(resolve)
             requestAnimationFrame(check)
         })
         return performance.now() - start
@@ -25,14 +28,21 @@ for (let i = 0; i < 7; i++) {
     const click = await page.evaluate(async () => {
         const start = performance.now()
         document.querySelector('[data-action="mark-column-read"]').click()
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        await new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        )
         return performance.now() - start
     })
     measures.push({startup, refresh, click})
     await page.close()
 }
-const median = key => measures.map(m => m[key]).sort((a,b) => a-b)[3]
-const metrics = {runs: measures, median: Object.fromEntries(['startup','refresh','click'].map(key => [key, median(key)]))}
+const median = (key) => measures.map((m) => m[key]).sort((a, b) => a - b)[3]
+const metrics = {
+    runs: measures,
+    median: Object.fromEntries(
+        ['startup', 'refresh', 'click'].map((key) => [key, median(key)]),
+    ),
+}
 for (const width of widths) {
     const page = await browser.newPage({viewport: {width, height: 900}})
     await preparePage(page, {state: initialState(2)})
@@ -40,7 +50,8 @@ for (const width of widths) {
     await page.locator('.feed__item').first().waitFor()
     await page.screenshot({path: `${output}/feed-${width}.png`})
     await page.locator('[data-action="toggle-settings"][aria-expanded]').click()
-    if (width <= 720) await page.locator('[data-settings-section="sources"]').click()
+    if (width <= 720)
+        await page.locator('[data-settings-section="sources"]').click()
     await page.locator('.settings__folder-toggle').first().click()
     await page.screenshot({path: `${output}/settings-${width}.png`})
     await page.close()
