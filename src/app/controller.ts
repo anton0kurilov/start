@@ -109,7 +109,7 @@ export function createAppController({
                 )
             columns.unshift({
                 key: 'recommended',
-                title: '✦ Рекомендуемое',
+                title: 'Рекомендуемое',
                 recommended: true,
                 hasFeeds: folders.some((folder) => folder.feeds.length),
                 errors: [],

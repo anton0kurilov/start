@@ -4,6 +4,7 @@
     import type {AppController} from '../app/controller'
     import {createReadingPosition} from '../app/reading'
     import FeedCard from './feed-card.svelte'
+    import Icon from './ui/icon.svelte'
     import IconButton from './ui/icon-button.svelte'
     import Button from './ui/button.svelte'
     let {
@@ -76,7 +77,11 @@
                     class="columns__top-button"
                     type="button"
                     aria-label={`К началу колонки «${column.title}»`}
-                    onclick={() => reading?.toTop()}>{column.title}</button
+                    onclick={() => reading?.toTop()}
+                    >{#if column.recommended}<Icon
+                            name="recommended"
+                            class="columns__title-icon"
+                        />{/if}{column.title}</button
                 >
             </h2>
             <IconButton

@@ -107,6 +107,14 @@
         margin: 0;
     }
 
+    &__title-icon {
+        width: var(--fontSizeLg);
+        height: var(--fontSizeLg);
+        margin-right: var(--space2);
+        fill: currentColor;
+        vertical-align: text-bottom;
+    }
+
     &__mark-read {
         flex-shrink: 0;
         width: var(--sizeControlLg);
