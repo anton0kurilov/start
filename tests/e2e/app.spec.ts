@@ -311,9 +311,95 @@ test('import reports invalid JSON; export round trip and reset keep confirmation
     const path = await file.path()
     await page.locator('input[type="file"]').setInputFiles(path!)
     await expect(page.getByRole('alert').last()).not.toBeVisible()
+    await expect(page.locator('#import-status')).toContainText(
+        'Импорт завершён',
+    )
     expect((await stored(page)).folders).toHaveLength(1)
     await page.getByRole('button', {name: 'Сбросить всё'}).click()
     expect((await stored(page))?.folders ?? []).toEqual([])
+})
+
+test('import shows reading, recovers from file errors and finishes before background refresh', async ({
+    page,
+}) => {
+    await preparePage(page, {state: initialState(1)})
+    await page.addInitScript(() => {
+        const read = File.prototype.text
+        File.prototype.text = async function () {
+            await new Promise<void>((resolve, reject) => {
+                window.addEventListener(
+                    'finish-import-read',
+                    (event) => {
+                        if ((event as CustomEvent<{fail: boolean}>).detail.fail)
+                            reject(new Error('File cannot be read'))
+                        else resolve()
+                    },
+                    {once: true},
+                )
+            })
+            return read.call(this)
+        }
+    })
+    await page.goto('/')
+    await page.locator('.feed__item').first().waitFor()
+    await settings(page, 'transfer')
+    page.on('dialog', (dialog) => void dialog.accept())
+    const file = {
+        name: 'subscriptions.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify(initialState(2))),
+    }
+    const input = page.getByLabel('JSON-файл для импорта')
+    const button = page.locator('[data-action="trigger-import-file"]')
+    const status = page.locator('#import-status')
+    await input.setInputFiles(file)
+    await expect(status).toHaveText('Чтение файла и импорт данных…')
+    await expect(button).toHaveText('Импортируем…')
+    await expect(button).toBeDisabled()
+    await expect(button).toHaveAttribute('aria-busy', 'true')
+    await expect(input).toBeDisabled()
+    expect((await stored(page)).folders).toHaveLength(1)
+    await page.evaluate(() =>
+        window.dispatchEvent(
+            new CustomEvent('finish-import-read', {detail: {fail: true}}),
+        ),
+    )
+    await expect(page.locator('#import-error')).toContainText(
+        'Не удалось прочитать',
+    )
+    await expect(status).not.toBeVisible()
+    await expect(button).toBeEnabled()
+    await expect(input).toBeEnabled()
+    expect((await stored(page)).folders).toHaveLength(1)
+
+    let release = () => {}
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    await page.route('https://cors.kurilov.workers.dev/**', async (route) => {
+        await gate
+        await route.fallback()
+    })
+    try {
+        await input.setInputFiles(file)
+        await expect(status).toContainText('Чтение файла')
+        await expect(page.locator('#import-error')).not.toBeVisible()
+        await page.evaluate(() =>
+            window.dispatchEvent(
+                new CustomEvent('finish-import-read', {detail: {fail: false}}),
+            ),
+        )
+        await expect(status).toContainText('Импорт завершён')
+        await expect(status).toContainText('Настройки можно закрыть')
+        await expect(button).toBeEnabled()
+        await expect(button).toHaveAttribute('aria-busy', 'false')
+        await expect(input).toBeEnabled()
+        expect((await stored(page)).folders).toHaveLength(2)
+        await expect(page.locator('[data-action="refresh"]')).toBeDisabled()
+        await close(page)
+        await settings(page, 'transfer')
+        await expect(status).toContainText('Настройки можно закрыть')
+    } finally {
+        release()
+    }
 })
 
 test('pointer reorder cancels with Escape and commits on drop', async ({

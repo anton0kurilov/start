@@ -6,7 +6,6 @@
     import {getHostname, formatCountLabel} from '../../scripts/utils.js'
     import Button from '../ui/button.svelte'
     import IconButton from '../ui/icon-button.svelte'
-    import Icon from '../ui/icon.svelte'
     import TextField from '../ui/text-field.svelte'
     import FeedComposer from './feed-composer.svelte'
     let {folders, controller}: {folders: Folder[]; controller: AppController} =
@@ -169,8 +168,7 @@
             onclick={() => {
                 creating = !creating
                 if (creating) void focus('[name="folderName"]')
-            }}
-            ><Icon name="plus" class="settings__nav-icon" />Новая колонка</Button
+            }}>Новая колонка</Button
         >
     </div>
     {#if creating}
