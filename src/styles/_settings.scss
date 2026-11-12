@@ -76,6 +76,8 @@
     &__updated {
         font-size: var(--fontSizeMd);
         font-weight: var(--fontWeightSemibold);
+        line-height: var(--lineHeightNormal);
+        font-variant-numeric: tabular-nums;
         min-width: 0;
         white-space: nowrap;
         overflow: hidden;
@@ -215,7 +217,10 @@
 
     &__brand {
         font-size: var(--fontSize2xl);
+        font-weight: var(--fontWeightSemibold);
+        line-height: var(--lineHeightTight);
         letter-spacing: var(--trackingTight);
+        text-wrap: balance;
 
         &--section {
             display: none;
@@ -291,7 +296,7 @@
         min-height: var(--settingsControlHeight);
         padding: var(--space4) var(--space4);
         font-size: var(--fontSizeSm);
-        line-height: calc(var(--fontSizeBase) * var(--lineHeightTight));
+        line-height: var(--lineHeightNormal);
     }
 
     &__nav-item {
@@ -302,7 +307,9 @@
         border-radius: var(--radiusMd);
         padding: var(--space4) var(--space5);
         font-size: var(--fontSizeMd);
+        font-family: inherit;
         font-weight: var(--fontWeightSemibold);
+        line-height: var(--lineHeightNormal);
         cursor: pointer;
         text-align: left;
         overflow-wrap: anywhere;
@@ -345,6 +352,7 @@
         margin: 0;
         font-size: var(--fontSizeBase);
         font-weight: var(--fontWeightSemibold);
+        line-height: var(--lineHeightNormal);
         color: var(--colorText);
     }
 
@@ -488,7 +496,7 @@
         min-height: var(--settingsControlHeight);
         padding: var(--space4) var(--space6);
         font-size: var(--fontSizeBase);
-        line-height: calc(var(--fontSizeBase) * var(--lineHeightTight));
+        line-height: var(--lineHeightNormal);
     }
 
     &__transfer-grid {
@@ -516,7 +524,7 @@
         border: var(--borderWidth) solid var(--colorBorder);
         border-radius: var(--radiusLg);
         cursor: pointer;
-        line-height: var(--lineHeightNormal);
+        line-height: var(--lineHeightRelaxed);
         color: var(--colorText);
         font-size: var(--fontSizeMd);
         font-weight: var(--fontWeightMedium);
@@ -597,6 +605,7 @@
     &__option-note {
         font-size: var(--fontSizeSm);
         line-height: var(--lineHeightRelaxed);
+        font-weight: var(--fontWeightRegular);
         color: var(--colorMuted);
     }
 
@@ -726,7 +735,9 @@
     }
 
     &__folder-meta {
-        font-size: var(--fontSizeXs);
+        font-size: var(--fontSizeSm);
+        line-height: var(--lineHeightNormal);
+        font-variant-numeric: tabular-nums;
         color: var(--colorMuted);
     }
 
@@ -821,7 +832,8 @@
     }
 
     &__feed-url {
-        font-size: var(--fontSizeXs);
+        font-size: var(--fontSizeSm);
+        line-height: var(--lineHeightNormal);
         color: var(--colorMuted);
         overflow-wrap: anywhere;
     }
@@ -951,6 +963,8 @@ body.settings-is-open {
 
         &__brand {
             font-size: var(--fontSizeXl);
+            line-height: var(--lineHeightNormal);
+            letter-spacing: var(--trackingNormal);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -958,7 +972,7 @@ body.settings-is-open {
             &--section {
                 white-space: normal;
                 font-size: var(--fontSizeBase);
-                line-height: var(--lineHeightTight);
+                line-height: var(--lineHeightNormal);
             }
         }
 

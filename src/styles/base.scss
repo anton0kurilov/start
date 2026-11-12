@@ -1,4 +1,5 @@
 @use '_tokens';
+@use '_fonts';
 @use '_components';
 @use '_settings';
 @use '_columns';
@@ -18,10 +19,15 @@ body {
     margin: 0;
     background-color: var(--colorBackground);
     font-family: var(--fontFamily);
+    font-size: var(--fontSizeBase);
+    font-weight: var(--fontWeightRegular);
+    line-height: var(--lineHeightRelaxed);
+    letter-spacing: var(--trackingNormal);
     color: var(--colorText);
     overscroll-behavior: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 a {

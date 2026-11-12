@@ -7,6 +7,7 @@
     font-family: inherit;
     font-weight: var(--fontWeightSemibold);
     font-size: var(--fontSizeBase);
+    line-height: var(--lineHeightNormal);
     cursor: pointer;
     transition:
         border-color var(--durationFast) var(--easeStandard),
@@ -68,6 +69,7 @@
     color: var(--colorText);
     font-family: inherit;
     font-size: var(--fontSizeBase);
+    line-height: var(--lineHeightNormal);
     outline: none;
 }
 

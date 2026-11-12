@@ -102,8 +102,11 @@
 
     &__title {
         font-size: var(--fontSizeLg);
-        line-height: var(--lineHeightTight);
-        letter-spacing: var(--trackingTight);
+        font-weight: var(--fontWeightSemibold);
+        line-height: var(--lineHeightNormal);
+        letter-spacing: var(--trackingNormal);
+        text-wrap: balance;
+        overflow-wrap: anywhere;
         margin: 0;
     }
 
@@ -208,7 +211,7 @@
         align-items: center;
         gap: var(--space4);
         font-size: var(--fontSizeSm);
-        line-height: var(--lineHeightNormal);
+        line-height: var(--lineHeightRelaxed);
 
         &-text {
             min-width: 0;
@@ -264,16 +267,19 @@
         margin: 0 0 var(--space4);
         font-size: var(--fontSizeBase);
         font-weight: var(--fontWeightSemibold);
-        line-height: var(--lineHeightNormal);
+        line-height: var(--lineHeightRelaxed);
         color: var(--colorText);
         display: block;
         width: 100%;
-        word-break: break-word;
+        overflow-wrap: anywhere;
+        text-wrap: pretty;
     }
 
     &-time {
         color: var(--colorAccent);
-        font-size: var(--fontSizeXs);
+        font-size: var(--fontSizeSm);
+        line-height: var(--lineHeightNormal);
+        font-variant-numeric: tabular-nums;
     }
 
     &-time--fresh {
@@ -305,6 +311,8 @@
         padding: 0 var(--space4);
         height: var(--sizeControlSm);
         font-size: var(--fontSizeXs);
+        line-height: var(--lineHeightNormal);
+        font-variant-numeric: tabular-nums;
         letter-spacing: var(--trackingLabel);
         color: var(--colorMuted);
         white-space: nowrap;
@@ -350,9 +358,12 @@
 
     &-source {
         display: block;
-        font-size: var(--fontSizeXs);
+        font-size: var(--fontSizeSm);
+        font-weight: var(--fontWeightMedium);
+        line-height: var(--lineHeightNormal);
         text-transform: uppercase;
         letter-spacing: var(--trackingCaps);
+        overflow-wrap: anywhere;
         color: var(--colorAccent);
     }
 
