@@ -380,12 +380,21 @@ export function createAppController({
                     ok: false,
                     error: 'Выберите файл экспорта Start. с колонками и подписками.',
                 }
-            cancelRequests()
-            const result = change(() => api.importState(parsed))
+            const result = change(() => {
+                const imported = api.importState(parsed)
+                if (!imported.ok)
+                    return {
+                        ok: false,
+                        error:
+                            imported.error === 'storage'
+                                ? 'Не удалось сохранить данные на устройстве. Возможно, хранилище заполнено или недоступно. Текущие данные сохранены. Освободите место и повторите импорт.'
+                                : 'Не удалось импортировать данные.',
+                    }
+                cancelRequests()
+                return imported
+            })
             if (result.ok) void refresh()
-            return result.ok
-                ? result
-                : {ok: false, error: 'Не удалось импортировать данные.'}
+            return result
         },
         reset() {
             cancelRequests()

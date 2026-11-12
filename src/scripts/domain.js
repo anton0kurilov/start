@@ -283,6 +283,10 @@ export function importState(rawState) {
     if (!normalized) {
         return {ok: false, error: 'invalid'}
     }
+    rebuildModelState(normalized.modelState, Date.now())
+    if (!saveState(normalized)) {
+        return {ok: false, error: 'storage'}
+    }
     contentGeneration += 1
     state = normalized
     visitedItemKeysSet = new Set(state.visitedItemKeys || [])
@@ -290,8 +294,7 @@ export function importState(rawState) {
     feedItems.clear()
     feedErrors.clear()
     refreshModelInteractionIndexes()
-    synchronizeModelState(true)
-    saveState(state)
+    lastModelSyncCheckAt = Date.now()
     return {ok: true, foldersCount: state.folders.length}
 }
 

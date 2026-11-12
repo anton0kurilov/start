@@ -80,6 +80,40 @@ test('controller reports import errors without replacing state', () => {
     assert.equal(get(controller.state).folders.length, 0)
     controller.dispose()
 })
+test('storage failure reports an actionable import error and keeps refresh running', async () => {
+    let resolve
+    let signal
+    let calls = 0
+    const {controller, data} = setup({
+        importState: () => ({ok: false, error: 'storage'}),
+        refreshAll: (options) => {
+            calls++
+            signal = options.signal
+            return new Promise((r) => (resolve = r))
+        },
+    })
+    data.folders = [
+        {
+            id: 'existing',
+            name: 'Existing',
+            feeds: [{id: 'rss', name: 'RSS', url: 'https://test.example/rss'}],
+        },
+    ]
+    controller.createFolder('Other')
+    const pending = controller.refresh()
+    const before = get(controller.state)
+    const result = controller.importJson(JSON.stringify({folders: []}))
+    assert.equal(result.ok, false)
+    assert.match(result.error, /Не удалось сохранить данные на устройстве/)
+    assert.deepEqual(get(controller.state).folders, before.folders)
+    assert.equal(get(controller.state).refreshing, true)
+    assert.equal(signal.aborted, false)
+    assert.equal(calls, 1)
+    resolve({errorsCount: 0})
+    await pending
+    assert.equal(get(controller.state).refreshing, false)
+    controller.dispose()
+})
 test('selectors do not prepare or persist the model during snapshots', () => {
     let prepared = 0
     const {controller} = setup({

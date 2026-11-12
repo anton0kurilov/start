@@ -1402,7 +1402,7 @@ test('exportState includes model data and synchronizes artifacts before export',
 })
 
 test('importState and exportState preserve folder and settings contract', async () => {
-    const {domain} = await loadFreshDomainModule()
+    const {domain, localStorage} = await loadFreshDomainModule()
 
     const importResult = domain.importState({
         version: 1,
@@ -1439,6 +1439,48 @@ test('importState and exportState preserve folder and settings contract', async 
     assert.equal(exported.settings.autoRefreshFeeds, true)
     assert.equal(exported.settings.showRecommendedColumn, true)
     assert.deepEqual(exported.settings.blockedTitlePhrases, ['Реклама', 'C++'])
+
+    const {domain: reloaded} = await loadFreshDomainModule(
+        getStoredState(localStorage),
+    )
+    assert.deepEqual(reloaded.getState().folders, exported.folders)
+    assert.deepEqual(reloaded.getState().settings, exported.settings)
+})
+
+test('failed import keeps live state, history and saved data', async (t) => {
+    mockFeedResponse(t)
+    const {domain, localStorage} = await loadFreshDomainModule()
+    domain.createFolder('Existing')
+    const folderId = domain.getState().folders[0].id
+    await domain.addFeed({
+        folderId,
+        name: 'RSS',
+        url: 'https://example.com/rss',
+    })
+    domain.markItemsVisited(['https://example.com/read'])
+    const state = domain.getState()
+    const before = structuredClone(state)
+    const stored = localStorage.getItem(STORAGE_KEY)
+    const originalSetItem = localStorage.setItem
+    localStorage.setItem = () => {
+        throw new DOMException('Storage full', 'QuotaExceededError')
+    }
+
+    assert.deepEqual(
+        domain.importState({
+            folders: [{id: 'new', name: 'Imported', feeds: []}],
+        }),
+        {ok: false, error: 'storage'},
+    )
+    assert.equal(domain.getState(), state)
+    assert.deepEqual(state, before)
+    assert.equal(domain.isItemVisited('https://example.com/read'), true)
+    assert.equal(localStorage.getItem(STORAGE_KEY), stored)
+
+    // The same file can be retried once storage becomes writable.
+    localStorage.setItem = originalSetItem
+    assert.equal(domain.importState({folders: []}).ok, true)
+    assert.deepEqual(domain.getState().folders, [])
 })
 
 test('publication filter matches literal title substrings without case and restores cached items when cleared', async (t) => {
