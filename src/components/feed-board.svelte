@@ -14,8 +14,9 @@
         controller: AppController
         oncreatecolumn: () => void
     } = $props()
-    const impressions = createImpressionTracker((card) =>
-        controller.impression(card),
+    const impressions = createImpressionTracker(
+        (card) => controller.impression(card),
+        (card, context) => controller.exposure(card, context),
     )
     setContext('impressions', impressions)
     onDestroy(() => impressions.dispose())

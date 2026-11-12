@@ -23,6 +23,7 @@ test('createDefaultState returns complete base shape', () => {
     assert.deepEqual(state.folders, [])
     assert.equal(state.lastUpdated, null)
     assert.deepEqual(state.settings, {
+        semanticEnabled: false,
         autoMarkReadOnScroll: false,
         autoRefreshFeeds: false,
         showRecommendedColumn: false,
@@ -125,18 +126,26 @@ test('normalizeModelState sanitizes interaction log and ignores invalid schema',
     assert.deepEqual(invalidSchema.interactionLog, [])
 
     const now = Date.now()
-    const interactionLog = Array.from({length: MAX_MODEL_EVENTS + 5}, (_, index) => ({
-        type: index % 3 === 0 ? 'impression' : index % 3 === 1 ? 'click' : 'dismiss',
-        itemKey: `item-${index}`,
-        recordedAt: now + index,
-        snapshot: {
-            source: 'Tech',
-            feedId: 'feed-1',
-            title: 'AI release notes',
-            link: `https://example.com/${index}`,
-            publishedAt: new Date(now).toISOString(),
-        },
-    }))
+    const interactionLog = Array.from(
+        {length: MAX_MODEL_EVENTS + 5},
+        (_, index) => ({
+            type:
+                index % 3 === 0
+                    ? 'impression'
+                    : index % 3 === 1
+                      ? 'click'
+                      : 'dismiss',
+            itemKey: `item-${index}`,
+            recordedAt: now + index,
+            snapshot: {
+                source: 'Tech',
+                feedId: 'feed-1',
+                title: 'AI release notes',
+                link: `https://example.com/${index}`,
+                publishedAt: new Date(now).toISOString(),
+            },
+        }),
+    )
 
     const normalized = normalizeModelState({
         schemaVersion: MODEL_STATE_SCHEMA_VERSION,
@@ -232,10 +241,14 @@ test('normalizeStatePayload sanitizes malformed payload and drops legacy scorer 
     assert.ok(normalized)
     assert.equal(normalized.folders.length, 1)
     assert.equal(normalized.folders[0].feeds.length, 1)
-    assert.equal(normalized.folders[0].feeds[0].url, 'https://news.ycombinator.com/rss')
+    assert.equal(
+        normalized.folders[0].feeds[0].url,
+        'https://news.ycombinator.com/rss',
+    )
     assert.equal(normalized.folders[0].feeds[0].isFavorite, true)
     assert.equal(normalized.lastUpdated, null)
     assert.deepEqual(normalized.settings, {
+        semanticEnabled: false,
         autoMarkReadOnScroll: true,
         autoRefreshFeeds: true,
         showRecommendedColumn: true,

@@ -32,6 +32,7 @@ export const MODEL_MAX_ACCEPTABLE_ECE = 0.08
 export const MODEL_MAX_APPROXIMATE_ECE = 0.2
 export const MODEL_SYNC_INTERVAL_MS = 60000
 export const DEFAULT_SETTINGS = {
+    semanticEnabled: false,
     autoMarkReadOnScroll: false,
     autoRefreshFeeds: false,
     showRecommendedColumn: false,

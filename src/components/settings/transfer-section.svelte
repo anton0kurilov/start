@@ -10,19 +10,29 @@
     let error = $state('')
     let pending = $state(false)
     let status = $state('')
-    function download() {
-        const blob = new Blob(
-            [JSON.stringify(controller.exportJson(), null, 2)],
-            {type: 'application/json'},
-        )
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        const date = new Date()
-        const pad = (n: number) => String(n).padStart(2, '0')
-        link.download = `start-feeds-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}-${pad(date.getHours())}-${pad(date.getMinutes())}.json`
-        link.click()
-        URL.revokeObjectURL(url)
+    async function download() {
+        if (pending) return
+        pending = true
+        error = ''
+        try {
+            const blob = new Blob(
+                [JSON.stringify(await controller.exportBackup(), null, 2)],
+                {type: 'application/json'},
+            )
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            const date = new Date()
+            const pad = (n: number) => String(n).padStart(2, '0')
+            link.download = `start-feeds-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}-${pad(date.getHours())}-${pad(date.getMinutes())}.json`
+            link.click()
+            URL.revokeObjectURL(url)
+        } catch {
+            error =
+                'Не удалось экспортировать сохранённую историю. Повторите попытку.'
+        } finally {
+            pending = false
+        }
     }
     async function upload() {
         const file = fileInput.files?.[0]
@@ -36,7 +46,7 @@
         status = 'Чтение файла и импорт данных…'
         try {
             await tick()
-            const result = controller.importJson(await file.text())
+            const result = await controller.importBackup(await file.text())
             if (result.ok) {
                 onimport()
                 status =
@@ -69,6 +79,7 @@
                 variant="primary"
                 class="settings__submit"
                 data-action="export-json"
+                disabled={pending}
                 onclick={download}>Экспортировать в JSON</Button
             >
         </div>

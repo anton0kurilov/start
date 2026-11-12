@@ -37,6 +37,10 @@ export function normalizeStatePayload(rawState) {
         visitedItemKeys: normalizeVisitedItemKeys(rawState.visitedItemKeys),
         clickedItemKeys: normalizeClickedItemKeys(rawState.clickedItemKeys),
         modelState: normalizeModelState(rawState.modelState),
+        ...(typeof rawState.predictionGeneration === 'string' &&
+        /^[a-zA-Z0-9-]{1,100}$/.test(rawState.predictionGeneration)
+            ? {predictionGeneration: rawState.predictionGeneration}
+            : {}),
     }
 }
 
@@ -50,6 +54,7 @@ export function normalizeSettings(rawSettings) {
     return {
         ...DEFAULT_SETTINGS,
         autoMarkReadOnScroll: Boolean(rawSettings.autoMarkReadOnScroll),
+        semanticEnabled: Boolean(rawSettings.semanticEnabled),
         autoRefreshFeeds: Boolean(rawSettings.autoRefreshFeeds),
         showRecommendedColumn: Boolean(
             rawSettings.showRecommendedColumn ??
@@ -90,7 +95,10 @@ export function normalizeIsoDate(value) {
     return date.toISOString()
 }
 
-export function normalizeVisitedItemKeys(rawKeys, maxItems = MAX_VISITED_ITEMS) {
+export function normalizeVisitedItemKeys(
+    rawKeys,
+    maxItems = MAX_VISITED_ITEMS,
+) {
     if (!Array.isArray(rawKeys)) {
         return []
     }
@@ -283,14 +291,21 @@ function normalizeModelArtifacts(rawArtifacts) {
         ),
         trainingSize: normalizeNonNegativeInteger(rawArtifacts.trainingSize),
         holdoutSize: normalizeNonNegativeInteger(rawArtifacts.holdoutSize),
-        positiveSamples: normalizeNonNegativeInteger(rawArtifacts.positiveSamples),
+        positiveSamples: normalizeNonNegativeInteger(
+            rawArtifacts.positiveSamples,
+        ),
         explicitNegativeSamples: normalizeNonNegativeInteger(
             rawArtifacts.explicitNegativeSamples,
         ),
         weakNegativeSamples: normalizeNonNegativeInteger(
             rawArtifacts.weakNegativeSamples,
         ),
-        baselineCtr: normalizeBoundedFloat(rawArtifacts.baselineCtr, 0, 1, null),
+        baselineCtr: normalizeBoundedFloat(
+            rawArtifacts.baselineCtr,
+            0,
+            1,
+            null,
+        ),
         bias: normalizeBoundedFloat(rawArtifacts.bias, -6, 6, 0),
         weights: normalizeWeightMap(rawArtifacts.weights),
         topFeatures: normalizeTopFeatures(rawArtifacts.topFeatures),

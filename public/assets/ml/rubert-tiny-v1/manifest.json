@@ -1,0 +1,72 @@
+{
+  "version": "rubert-tiny-v1",
+  "base": "/assets/ml/rubert-tiny-v1/",
+  "transformers": "4.3.2",
+  "sourceRevision": "9a8d2ed31c37246d2a8d4d9f500dc1ca66563114",
+  "assets": [
+    {
+      "path": "runtime.js",
+      "bytes": 580056,
+      "compressedBytes": 163340,
+      "sha256": "d9be6f008fba3fc7871c23b5501a8de466f2b24f248974cda27e9871e9e7bf77",
+      "compressedSha256": "1d9d25c03a23db397a279b25a320e38c02332ab9195fa6c28c11a63ad9abe114",
+      "type": "text/javascript"
+    },
+    {
+      "path": "model/config.json",
+      "bytes": 731,
+      "compressedBytes": 399,
+      "sha256": "beb0015cc379fc7f3a9c88462ec686228065cfe4abbc245ff002084d4358c868",
+      "compressedSha256": "ef5352a5e9ff5fc33b9d712709b02315e926a521cce73faf575aa45c8dd61e95",
+      "type": "application/json"
+    },
+    {
+      "path": "model/tokenizer.json",
+      "bytes": 705882,
+      "compressedBytes": 209397,
+      "sha256": "ab50fe01eb78a45f917be4c1ead1e08d87738b074900f447f7c3d74e9b7d6017",
+      "compressedSha256": "491fc5a69711c348e8017c02fa3ba163e53009940eac30fe7b4a0870773474b0",
+      "type": "application/json"
+    },
+    {
+      "path": "model/tokenizer_config.json",
+      "bytes": 1457,
+      "compressedBytes": 404,
+      "sha256": "7ed0850cf676ad85e173f5e30189a9ada71344da0607ee39cf6d8d99b0fcc133",
+      "compressedSha256": "01b162f102904467058e18765483056123af0644dec52d0487715a642735d93f",
+      "type": "application/json"
+    },
+    {
+      "path": "model/special_tokens_map.json",
+      "bytes": 695,
+      "compressedBytes": 155,
+      "sha256": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a",
+      "compressedSha256": "957e8d114f77f5b301d3c4f236e8cdb5b7c669cedc9721cc748ad2716be7d241",
+      "type": "application/json"
+    },
+    {
+      "path": "model/onnx/model_quantized.onnx",
+      "bytes": 11861949,
+      "compressedBytes": 8337271,
+      "sha256": "1d6a20cc6c15e206e91417b998bd333a06cab08116410c37e208670ca5159a7a",
+      "compressedSha256": "da198dc59fdb9746f01389d1d4600351d4121336dfb796f1731e83af4aa10763",
+      "type": "application/octet-stream"
+    },
+    {
+      "path": "ort/ort-wasm-simd-threaded.asyncify.mjs",
+      "bytes": 53057,
+      "compressedBytes": 19285,
+      "sha256": "0966b6105cd936744498aa60df7a22cbd47af3374dbc64a9ab561c08a71e3611",
+      "compressedSha256": "a968dbc4741a4f7c072b2acd12202bf6de053d282197d3af55d2ecc2e740d124",
+      "type": "text/javascript"
+    },
+    {
+      "path": "ort/ort-wasm-simd-threaded.asyncify.wasm",
+      "bytes": 26861777,
+      "compressedBytes": 6596786,
+      "sha256": "49871f5a4409519797e127440868a6d1923339d9185907f301a5b2a1d90af082",
+      "compressedSha256": "352fabc39cfe7f7e028007d32f93287766f2846a708439c70ddc76370d4dc272",
+      "type": "application/wasm"
+    }
+  ]
+}

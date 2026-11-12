@@ -54,6 +54,16 @@ export function getState() {
     return state
 }
 
+export function ensurePredictionGeneration() {
+    if (state.predictionGeneration) return state.predictionGeneration
+    const predictionGeneration = createId()
+    const next = {...state, predictionGeneration}
+    if (!saveState(next))
+        throw new Error('Prediction profile could not be saved')
+    state = next
+    return predictionGeneration
+}
+
 export function createFolder(name) {
     state.folders.push({
         id: createId(),
@@ -275,6 +285,9 @@ export function exportState() {
         visitedItemKeys: [...visitedItemKeysSet],
         dismissedItemKeys: [...dismissedItemKeysSet],
         modelState: state.modelState,
+        ...(state.predictionGeneration
+            ? {predictionGeneration: state.predictionGeneration}
+            : {}),
     }
 }
 
@@ -817,6 +830,7 @@ function parseFeed(xmlText, feedUrl) {
         return {
             id,
             title,
+            description: getDescription(entry),
             link,
             date,
             source: feedTitle,
@@ -873,6 +887,37 @@ function formatFeedError(error) {
         return 'ошибка сети/CORS'
     }
     return 'не удалось обновить фид'
+}
+
+function getDescription(entry) {
+    const raw =
+        getText(entry, 'description') ||
+        getText(entry, 'summary') ||
+        getText(entry, 'content') ||
+        Array.from(entry.children || []).find(
+            (node) => node.localName === 'encoded',
+        )?.textContent ||
+        ''
+    if (!raw) return ''
+    const parsed = new DOMParser().parseFromString(
+        raw.slice(0, 20000),
+        'text/html',
+    )
+    parsed
+        .querySelectorAll('script,style,noscript')
+        .forEach((node) => node.remove())
+    return String(parsed.body?.textContent || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 2000)
+}
+
+export function setSemanticEnabled(enabled) {
+    const settings = {...state.settings, semanticEnabled: Boolean(enabled)}
+    const next = {...state, settings}
+    if (!saveState(next)) return false
+    state = next
+    return true
 }
 
 function getText(parent, selector) {

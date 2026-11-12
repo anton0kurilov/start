@@ -5,6 +5,9 @@ import {
     MAX_ITEMS_PER_FOLDER,
 } from '../scripts/constants.js'
 import {normalizeHttpUrl, normalizeUrl} from '../scripts/utils.js'
+import {createPredictions, type PredictionHistoryStatus} from './predictions.ts'
+import {createSemantics, SEMANTIC_DOWNLOAD_BYTES} from './semantics.ts'
+import type {createShadowPredictions} from './shadow-predictions.ts'
 import type {
     AppViewState,
     Card,
@@ -45,6 +48,17 @@ export function createAppController({
     let timer: ReturnType<typeof setTimeout> | undefined
     let clock: ReturnType<typeof setInterval> | undefined
     const beforeUpdate = new Set<() => void>()
+    let predictionHistory: PredictionHistoryStatus = 'loading'
+    let predictions: ReturnType<typeof createPredictions> | undefined
+    let semantics: ReturnType<typeof createSemantics> | undefined
+    let shadow: ReturnType<typeof createShadowPredictions> | undefined
+    let semanticState = {
+        status: 'off',
+        loaded: 0,
+        total: SEMANTIC_DOWNLOAD_BYTES,
+    }
+    let shadowPreparing = false
+    let lastSemanticProgress = 0
     let view = snapshot()
     const store = writable(view)
 
@@ -119,6 +133,8 @@ export function createAppController({
             })
         }
         return {
+            predictionHistory,
+            semantics: {...semanticState},
             folders,
             settings: {
                 ...state.settings,
@@ -218,6 +234,7 @@ export function createAppController({
                 if (requestGeneration !== generation || disposed) return
                 refreshing = false
                 refreshPromise = null
+                void prepareShadowItems()
                 publish()
                 schedule()
             }
@@ -229,13 +246,134 @@ export function createAppController({
         publish()
         wakeup()
     }
+    function pageHidden() {
+        return host?.document.visibilityState === 'hidden'
+    }
+    async function prepareShadowItems() {
+        const current = generation
+        const target = shadow
+        if (!target || pageHidden()) return
+        try {
+            for (const folder of view.folders) {
+                for (const item of api.getFolderItems(folder) as Item[]) {
+                    if (
+                        disposed ||
+                        current !== generation ||
+                        target !== shadow ||
+                        pageHidden()
+                    )
+                        return
+                    await target.prepareItem({
+                        ...item,
+                        publishedAt: item.date?.toISOString() || null,
+                    })
+                }
+            }
+        } catch {
+            /* Optional shadow features never interrupt reading. */
+        }
+    }
+    async function refreshShadow() {
+        if (!shadow || !predictions || shadowPreparing || pageHidden()) return
+        shadowPreparing = true
+        const target = shadow
+        try {
+            const data = await predictions.exportData()
+            if (target !== shadow || disposed) return
+            await target.prepare(data.observations, now())
+            if (target === shadow) void prepareShadowItems()
+        } catch {
+            /* Persistence has its own visible error status. */
+        } finally {
+            shadowPreparing = false
+        }
+    }
+    async function enableSemantics() {
+        if (!semantics || disposed) return
+        const current = generation
+        try {
+            await semantics.start()
+            if (
+                disposed ||
+                current !== generation ||
+                semantics.status !== 'ready'
+            )
+                return
+            api.setSemanticEnabled(true)
+            const {createShadowPredictions} =
+                await import('./shadow-predictions.ts')
+            if (
+                disposed ||
+                current !== generation ||
+                semantics.status !== 'ready'
+            )
+                return
+            shadow?.dispose()
+            shadow = createShadowPredictions({
+                embed: (text) => semantics!.embed(text),
+            })
+            await refreshShadow()
+            publish()
+        } catch {
+            /* The download service exposes its error status. */
+        }
+    }
+    function restartPredictions() {
+        shadow?.dispose()
+        shadow = undefined
+        semantics?.stop()
+        try {
+            if (predictions) predictions.start(api.ensurePredictionGeneration())
+        } catch {
+            predictionHistory = 'error'
+            publish()
+        }
+    }
     function start() {
         if (!host || disposed || clock) return
+        semantics = createSemantics({
+            onStatus(status) {
+                semanticState = {...semanticState, status}
+                publish()
+            },
+            onProgress(progress) {
+                semanticState = {...semanticState, ...progress}
+                if (
+                    now() - lastSemanticProgress >= 200 ||
+                    progress.loaded >= progress.total
+                ) {
+                    lastSemanticProgress = now()
+                    publish()
+                }
+            },
+        })
+        predictions = createPredictions({
+            now,
+            forecast: (snapshot, context) =>
+                shadow?.predict(snapshot, context) || {
+                    predictions: {a1: null, b: null},
+                    versions: {},
+                },
+            onStatus(status) {
+                predictionHistory = status
+                publish()
+            },
+        })
+        restartPredictions()
+        if (api.getState().settings.semanticEnabled)
+            void semantics
+                .isCached()
+                .then((cached) => {
+                    if (cached && !disposed) void enableSemantics()
+                })
+                .catch(() => {})
         for (const name of ['focus', 'pageshow'] as const)
             host.addEventListener(name, wakeup)
         host.addEventListener('online', online)
         host.document.addEventListener('visibilitychange', wakeup)
         clock = setInterval(() => {
+            predictions?.tick()
+            void refreshShadow()
             if (api.prepareView()) publish()
             else if (!disposed) {
                 view = {...view, now: now()}
@@ -317,7 +455,10 @@ export function createAppController({
             change(() => api.setFeedFavorite({folderId, feedId, isFavorite}))
         },
         setting(
-            key: keyof Omit<Settings, 'blockedTitlePhrases'>,
+            key: keyof Omit<
+                Settings,
+                'blockedTitlePhrases' | 'semanticEnabled'
+            >,
             enabled: boolean,
         ) {
             change(() => {
@@ -340,18 +481,109 @@ export function createAppController({
                     : api.unmarkItemsVisited(keys),
             )
         },
-        open(card: Card) {
+        open(card: Card, context: Record<string, unknown> = {}) {
             if (!normalizeHttpUrl(card.link)) return
+            if (
+                !(api.getState().clickedItemKeys as string[]).includes(
+                    card.itemKey,
+                )
+            )
+                predictions?.record('click', card, context)
             change(() => {
                 api.markItemsVisited([card.itemKey])
                 api.registerFeedItemClick(card)
             })
         },
         dismiss(card: Card) {
+            predictions?.record('dismiss', card)
             change(() => api.registerFeedItemDismiss(card))
         },
         impression(card: Card) {
             if (!disposed) api.registerFeedItemImpressions(card)
+        },
+        exposure(card: Card, context: Record<string, unknown> = {}) {
+            if (
+                !disposed &&
+                !(api.getState().clickedItemKeys as string[]).includes(
+                    card.itemKey,
+                ) &&
+                !api.isItemDismissed(card.itemKey)
+            )
+                predictions?.record('exposure', card, context)
+        },
+        enableSemantics,
+        disableSemantics() {
+            shadow?.dispose()
+            shadow = undefined
+            semantics?.stop()
+            api.setSemanticEnabled(false)
+            publish()
+        },
+        async clearSemanticFiles() {
+            shadow?.dispose()
+            shadow = undefined
+            api.setSemanticEnabled(false)
+            await semantics?.clearCache()
+            semanticState = {
+                ...semanticState,
+                status: 'off',
+                loaded: 0,
+                total: SEMANTIC_DOWNLOAD_BYTES,
+            }
+            publish()
+        },
+        async exportBackup() {
+            const data = api.exportState()
+            if (!predictions) return data
+            const predictionData = await predictions.exportData()
+            return {
+                ...data,
+                predictionData: {
+                    ...predictionData,
+                    evaluation:
+                        shadow?.report(predictionData.observations, now()) ||
+                        null,
+                },
+            }
+        },
+        async importBackup(text: string): Promise<Result> {
+            const requestGeneration = generation
+            if (disposed) return {ok: false, error: 'Приложение закрыто.'}
+            let parsed
+            try {
+                parsed = JSON.parse(text)
+            } catch {
+                return {ok: false, error: 'Файл не содержит корректный JSON.'}
+            }
+            try {
+                if (parsed?.predictionData) {
+                    if (!predictions) throw new Error('Storage unavailable')
+                    parsed.predictionGeneration = await predictions.stageImport(
+                        parsed.predictionData,
+                    )
+                } else if (parsed && typeof parsed === 'object') {
+                    delete parsed.predictionGeneration
+                }
+            } catch {
+                return {
+                    ok: false,
+                    error: 'Не удалось проверить или сохранить историю прогнозов. Текущие данные сохранены.',
+                }
+            }
+            if (disposed || requestGeneration !== generation) {
+                if (parsed?.predictionGeneration)
+                    await predictions?.discardImport(
+                        parsed.predictionGeneration,
+                    )
+                return {
+                    ok: false,
+                    error: 'Данные изменились во время импорта. Повторите импорт.',
+                }
+            }
+            const result = this.importJson(JSON.stringify(parsed))
+            if (!result.ok && parsed?.predictionGeneration)
+                await predictions?.discardImport(parsed.predictionGeneration)
+            return result
         },
         hideRefreshError() {
             refreshError = ''
@@ -391,6 +623,7 @@ export function createAppController({
                                 : 'Не удалось импортировать данные.',
                     }
                 cancelRequests()
+                restartPredictions()
                 return imported
             })
             if (result.ok) void refresh()
@@ -399,10 +632,14 @@ export function createAppController({
         reset() {
             cancelRequests()
             change(() => api.resetState())
+            restartPredictions()
         },
         dispose() {
             if (disposed) return
             disposed = true
+            predictions?.dispose()
+            shadow?.dispose()
+            semantics?.dispose()
             cancelRequests()
             clearTimeout(timer)
             clearInterval(clock)

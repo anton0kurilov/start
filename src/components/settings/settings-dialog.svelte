@@ -296,6 +296,67 @@
                                     )}
                             />
                         </div>
+                        {#if view.predictionHistory === 'error'}
+                            <p class="settings__form-error" role="status">
+                                История прогнозов не сохраняется. Проверьте
+                                доступное место на устройстве и перезапустите
+                                приложение.
+                            </p>
+                        {/if}
+                    </div>
+                    <div class="settings__card settings__block">
+                        <div class="settings__card-head">
+                            <h4 class="settings__subtitle">
+                                Смысловой прогноз
+                            </h4>
+                            <p class="settings__note">
+                                Публикации обрабатываются на устройстве. Новый
+                                прогноз собирает данные для проверки точности.
+                            </p>
+                        </div>
+                        {#if ['checking', 'downloading', 'preparing'].includes(view.semantics?.status || '')}
+                            <p class="settings__note" role="status">
+                                {view.semantics?.status === 'preparing'
+                                    ? 'Подготовка прогноза…'
+                                    : `Загрузка: ${Math.round(((view.semantics?.loaded || 0) / Math.max(1, view.semantics?.total || 1)) * 100)}%`}
+                            </p>
+                            <Button
+                                onclick={() => controller.disableSemantics()}
+                                >Отменить</Button
+                            >
+                        {:else if view.semantics?.status === 'ready'}
+                            <p class="settings__note" role="status">
+                                Локальная обработка включена. Оценки проверяются
+                                на последующих показах публикаций.
+                            </p>
+                            <Button
+                                onclick={() => controller.disableSemantics()}
+                                >Выключить обработку</Button
+                            >
+                            <Button
+                                onclick={() => controller.clearSemanticFiles()}
+                                >Удалить загруженные данные</Button
+                            >
+                        {:else}
+                            {#if view.semantics?.status === 'error'}
+                                <p class="settings__form-error" role="status">
+                                    Не удалось подготовить прогноз. Можно
+                                    повторить загрузку.
+                                </p>
+                                <Button
+                                    onclick={() =>
+                                        controller.clearSemanticFiles()}
+                                    >Удалить загруженные данные</Button
+                                >
+                            {/if}
+                            <Button
+                                onclick={() => controller.enableSemantics()}
+                            >
+                                Загрузить данные для прогноза · {Math.ceil(
+                                    (view.semantics?.total || 0) / 1000000,
+                                )} МБ
+                            </Button>
+                        {/if}
                     </div>
                 </section>
                 <section

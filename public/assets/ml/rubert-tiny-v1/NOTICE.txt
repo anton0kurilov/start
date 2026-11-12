@@ -1,0 +1,4 @@
+RuBERT-tiny: https://huggingface.co/cointegrated/rubert-tiny (MIT)
+Encoder-only extraction: scripts/ml-extract-encoder.py
+Transformers.js 4.3.2: https://github.com/huggingface/transformers.js (Apache-2.0)
+ONNX Runtime: https://github.com/microsoft/onnxruntime (MIT)

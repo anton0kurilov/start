@@ -10,6 +10,7 @@ export interface Folder {
     feeds: Feed[]
 }
 export interface Settings {
+    semanticEnabled?: boolean
     autoMarkReadOnScroll: boolean
     autoRefreshFeeds: boolean
     showRecommendedColumn: boolean
@@ -23,6 +24,7 @@ export interface Usefulness {
     percentage?: number | null
 }
 export interface Item {
+    description?: string
     id: string
     feedId: string
     title: string
@@ -47,6 +49,8 @@ export interface Column {
     errors: {id: string; name: string; message: string}[]
 }
 export interface AppViewState {
+    predictionHistory?: 'loading' | 'ready' | 'error'
+    semantics?: {status: string; loaded: number; total: number}
     folders: Folder[]
     settings: Settings
     columns: Column[]
