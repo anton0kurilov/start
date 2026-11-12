@@ -1,0 +1,94 @@
+.onboarding {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 100%;
+    padding: var(--space9) calc(var(--space8) + var(--safeAreaRight))
+        var(--space9) calc(var(--space8) + var(--safeAreaLeft));
+    font-size: var(--fontSizeMd);
+
+    &__content {
+        width: 100%;
+        max-width: var(--widthOnboarding);
+    }
+
+    &__title {
+        margin: 0;
+        font-size: var(--fontSize2xl);
+        font-weight: var(--fontWeightSemibold);
+        line-height: var(--lineHeightTight);
+        letter-spacing: var(--trackingTight);
+    }
+
+    &__lead {
+        margin: var(--space5) 0 0;
+        color: var(--colorMuted);
+    }
+
+    &__basics {
+        display: grid;
+        gap: var(--space7);
+        margin: var(--space8) 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    &__basic {
+        display: grid;
+        grid-template-columns: var(--sizeIconMd) minmax(0, 1fr);
+        align-items: start;
+        gap: var(--space5);
+    }
+
+    &__icon {
+        width: var(--sizeIconMd);
+        height: var(--sizeIconMd);
+        margin-top: var(--space1);
+        fill: currentColor;
+        color: var(--colorAccent);
+    }
+
+    &__subtitle {
+        margin: 0;
+        font-size: inherit;
+        font-weight: var(--fontWeightMedium);
+        line-height: inherit;
+    }
+
+    &__description {
+        margin: 0;
+        color: var(--colorMuted);
+    }
+
+    &__start {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space4);
+        padding: var(--space4) var(--space5);
+        border-radius: var(--radiusSm);
+        font-size: inherit;
+        font-weight: var(--fontWeightMedium);
+    }
+
+    &__start-icon {
+        flex-shrink: 0;
+        width: var(--sizeIconSm);
+        height: var(--sizeIconSm);
+        fill: currentColor;
+    }
+
+    &__privacy {
+        margin: var(--space5) 0 0;
+        font-size: var(--fontSizeXs);
+        color: var(--colorAccent);
+    }
+
+    @media (pointer: coarse) {
+        &__start {
+            min-height: var(--sizeControlTouch);
+        }
+    }
+}

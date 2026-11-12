@@ -171,6 +171,7 @@ hover — белый, вместо самостоятельных #e5e5e5/#f2f2f
 материалов связаны через --heightColumnHeader.
 
 Layout: --widthColumn = 360px, --widthColumnMin = 240px,
+--widthOnboarding = 440px,
 --widthSettings = 1040px, --widthSettingsCompact = 720px,
 --widthSettingsNav = 240px, --heightSettingsMax = 860px.
 Textarea/filter: --heightTextarea = 120px, --heightFilter = 180px.

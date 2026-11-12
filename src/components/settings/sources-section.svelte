@@ -68,6 +68,10 @@
         expanded = []
         order = []
     }
+    export async function beginCreate() {
+        creating = true
+        await focus('[name="folderName"]')
+    }
     async function focus(selector: string) {
         await tick()
         const input = root.querySelector<HTMLInputElement>(selector)

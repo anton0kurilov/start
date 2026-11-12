@@ -1,4 +1,16 @@
 export const icons = {
+    columns: {
+        viewBox: '0 0 24 24',
+        path: 'M3 3h18v18H3V3Zm2 2v14h3V5H5Zm5 0v14h4V5h-4Zm6 0v14h3V5h-3Z',
+    },
+    rss: {
+        viewBox: '0 0 24 24',
+        path: 'M6.18 15.64a2.18 2.18 0 1 0 0 4.36 2.18 2.18 0 0 0 0-4.36ZM4 4v2.83c7.26 0 13.17 5.91 13.17 13.17H20C20 11.16 12.84 4 4 4Zm0 5.66v2.83A7.51 7.51 0 0 1 11.51 20h2.83C14.34 14.29 9.71 9.66 4 9.66Z',
+    },
+    forward: {
+        viewBox: '0 0 24 24',
+        path: 'm14 5-1.4 1.4 4.6 4.6H3v2h14.2l-4.6 4.6L14 19l7-7-7-7Z',
+    },
     // Material Symbols Outlined: auto_fix_high (Google, Apache-2.0).
     // SVG supplied by the user; color and size follow the surrounding UI.
     recommended: {

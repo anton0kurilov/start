@@ -14,10 +14,14 @@
 
     &--empty {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
-        min-height: 100%;
-        overflow: hidden;
+        height: calc(
+            100% - var(--space12) - var(--space6) - var(--safeAreaBottom)
+        );
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
     }
 
     &__item {
@@ -283,7 +287,6 @@
         color: var(--colorAccent);
         font-size: var(--fontSizeSm);
         line-height: var(--lineHeightNormal);
-        font-variant-numeric: tabular-nums;
     }
 
     &-time--fresh {
@@ -506,7 +509,10 @@
 
     .columns--empty {
         display: flex;
-        min-height: 100vh;
+        height: calc(
+            100% - var(--space12) - var(--space6) - var(--safeAreaBottom)
+        );
+        min-height: 0;
     }
     .feed__item {
         margin-inline: calc(var(--padding) + var(--safeAreaLeft))

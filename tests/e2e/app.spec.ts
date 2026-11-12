@@ -14,6 +14,92 @@ async function stored(page: Page) {
     )
 }
 
+for (const viewport of [
+    {width: 1440, height: 900},
+    {width: 320, height: 568},
+]) {
+    test(`onboarding opens column creation and reaches the first feed at ${viewport.width}px`, async ({
+        page,
+    }) => {
+        await page.setViewportSize(viewport)
+        await preparePage(page, {state: initialState(0)})
+        await page.goto('/')
+        await expect(
+            page.getByRole('heading', {name: 'Ваша лента. Ваши источники.'}),
+        ).toBeVisible()
+        await page.screenshot({
+            path: `output/playwright/onboarding-${viewport.width}.png`,
+            animations: 'disabled',
+        })
+        expect(
+            await page.evaluate(
+                () => document.documentElement.scrollWidth <= window.innerWidth,
+            ),
+        ).toBe(true)
+
+        // The entry point must work after another settings section was used.
+        await settings(page, 'interface')
+        await close(page)
+        const start = page.getByRole('button', {
+            name: 'Создать первую колонку',
+        })
+        await start.scrollIntoViewIfNeeded()
+        const startBounds = await start.boundingBox()
+        const controlsBounds = await page.locator('.fab').boundingBox()
+        expect(startBounds!.y + startBounds!.height).toBeLessThanOrEqual(
+            controlsBounds!.y,
+        )
+        await start.click()
+        const name = page.getByRole('textbox', {
+            name: 'Название колонки',
+            exact: true,
+        })
+        await expect(name).toBeFocused()
+        await page.keyboard.press('Escape')
+        await expect(start).toBeFocused()
+        expect((await stored(page)).folders).toHaveLength(0)
+
+        await start.click()
+        await name.fill('Мои интересы')
+        await page
+            .getByRole('button', {name: 'Создать колонку', exact: true})
+            .click()
+        expect((await stored(page)).folders).toMatchObject([
+            {name: 'Мои интересы', feeds: []},
+        ])
+        await close(page)
+        await expect(start).toHaveCount(0)
+        await expect(
+            page.getByRole('heading', {name: /Мои интересы/}),
+        ).toBeVisible()
+        await expect(
+            page.getByRole('button', {name: 'Настройки', exact: true}),
+        ).toBeFocused()
+
+        await settings(page)
+        await expect(name).toBeHidden()
+        await page.locator('.settings__folder-toggle').click()
+        await page
+            .getByRole('button', {name: 'Добавить первую подписку'})
+            .click()
+        await page
+            .getByRole('textbox', {name: 'Название подписки', exact: true})
+            .fill('Любимый сайт')
+        await page
+            .getByRole('textbox', {name: 'Прямая ссылка на RSS-поток'})
+            .fill('https://feeds.example/first')
+        await page
+            .getByRole('button', {name: 'Подписаться', exact: true})
+            .click()
+        await expect(page.locator('#settings-feed-form')).toHaveCount(0)
+        expect((await stored(page)).folders[0].feeds).toMatchObject([
+            {name: 'Любимый сайт', url: 'https://feeds.example/first'},
+        ])
+        await close(page)
+        await expect(page.locator('.feed__item')).toHaveCount(40)
+    })
+}
+
 test('first local render does not wait for network and offline settings work', async ({
     page,
 }) => {

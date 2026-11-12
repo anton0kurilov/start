@@ -4,8 +4,16 @@
     import type {AppController} from '../app/controller'
     import type {AppViewState} from '../app/types'
     import FeedColumn from './feed-column.svelte'
-    let {state, controller}: {state: AppViewState; controller: AppController} =
-        $props()
+    import Onboarding from './onboarding.svelte'
+    let {
+        state,
+        controller,
+        oncreatecolumn,
+    }: {
+        state: AppViewState
+        controller: AppController
+        oncreatecolumn: () => void
+    } = $props()
     const impressions = createImpressionTracker((card) =>
         controller.impression(card),
     )
@@ -44,9 +52,7 @@
     data-columns
     bind:this={element}
 >
-    {#if !state.folders.length}<div class="columns__empty">
-            Создайте первую колонку и подпишитесь на поток в настройках
-        </div>
+    {#if !state.folders.length}<Onboarding {oncreatecolumn} />
     {:else}{#each state.columns as column (column.key)}<FeedColumn
                 {column}
                 {controller}

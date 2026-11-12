@@ -14,12 +14,14 @@
         controller,
         open,
         onclose,
+        createColumnOnOpen = false,
         returnFocus = null,
     }: {
         state: AppViewState
         controller: AppController
         open: boolean
         onclose: () => void
+        createColumnOnOpen?: boolean
         returnFocus?: HTMLElement | null
     } = $props()
     const sections = [
@@ -57,17 +59,29 @@
             wasOpen = true
             origin = returnFocus || (document.activeElement as HTMLElement)
             document.body.classList.add('settings-is-open')
-            if (mobile) sectionOpen = false
+            if (createColumnOnOpen) {
+                active = 'sources'
+                sectionOpen = true
+            } else if (mobile) sectionOpen = false
             void tick().then(() => {
-                root.querySelector<HTMLButtonElement>(
-                    mobile ? '[data-settings-section]' : '.settings__close',
-                )?.focus()
+                if (createColumnOnOpen) {
+                    content.scrollTop = 0
+                    void sources?.beginCreate()
+                } else
+                    root.querySelector<HTMLButtonElement>(
+                        mobile ? '[data-settings-section]' : '.settings__close',
+                    )?.focus()
             })
         } else if (!open && wasOpen) {
             wasOpen = false
             document.body.classList.remove('settings-is-open')
             sources?.cancelEditing()
-            origin?.focus()
+            const target = origin?.isConnected
+                ? origin
+                : document.querySelector<HTMLElement>(
+                      '[data-action="toggle-settings"]',
+                  )
+            target?.focus()
         }
     })
     function remember() {

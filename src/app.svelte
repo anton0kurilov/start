@@ -8,7 +8,14 @@
     const appState = controller.state
     let settingsOpen = $state(false)
     let settingsMounted = $state(false)
+    let createColumnOnOpen = $state(false)
     let settingsTrigger = $state<HTMLElement | null>(null)
+    function openSettings(createColumn = false) {
+        settingsTrigger = document.activeElement as HTMLElement
+        createColumnOnOpen = createColumn
+        settingsMounted = true
+        settingsOpen = true
+    }
     onMount(() => {
         let frame = 0
         const applySafeArea = () => {
@@ -57,21 +64,22 @@
 <svelte:window onkeydown={key} />
 <main class="app">
     <div class="app__content" inert={settingsOpen}>
-        <FeedBoard state={$appState} {controller} /><FloatingControls
+        <FeedBoard
+            state={$appState}
+            {controller}
+            oncreatecolumn={() => openSettings(true)}
+        /><FloatingControls
             state={$appState}
             {controller}
             {settingsOpen}
-            openSettings={() => {
-                settingsTrigger = document.activeElement as HTMLElement
-                settingsMounted = true
-                settingsOpen = true
-            }}
+            openSettings={() => openSettings()}
         />
     </div>
     {#if settingsMounted}
         <SettingsDialog
             state={$appState}
             {controller}
+            {createColumnOnOpen}
             returnFocus={settingsTrigger}
             open={settingsOpen}
             onclose={() => (settingsOpen = false)}

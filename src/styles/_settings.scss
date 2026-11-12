@@ -77,7 +77,6 @@
         font-size: var(--fontSizeMd);
         font-weight: var(--fontWeightSemibold);
         line-height: var(--lineHeightNormal);
-        font-variant-numeric: tabular-nums;
         min-width: 0;
         white-space: nowrap;
         overflow: hidden;
@@ -737,7 +736,6 @@
     &__folder-meta {
         font-size: var(--fontSizeSm);
         line-height: var(--lineHeightNormal);
-        font-variant-numeric: tabular-nums;
         color: var(--colorMuted);
     }
 
