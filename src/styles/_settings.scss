@@ -420,6 +420,55 @@
         gap: var(--space3);
     }
 
+    &__prediction-heading {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+        gap: var(--space4);
+    }
+
+    &__prediction-status {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space3);
+        padding: var(--space2) var(--space4);
+        border: var(--borderWidth) solid var(--colorBorder);
+        border-radius: var(--radiusFull);
+        background: var(--colorFillSubtle);
+        color: var(--colorMuted);
+        font-size: var(--fontSizeXs);
+        font-weight: var(--fontWeightMedium);
+        line-height: var(--lineHeightTight);
+        white-space: nowrap;
+
+        &::before {
+            content: '';
+            width: var(--space3);
+            height: var(--space3);
+            flex-shrink: 0;
+            border-radius: var(--radiusFull);
+            background: currentColor;
+        }
+
+        &--on {
+            border-color: var(--colorSignalHighBorder);
+            background: var(--colorSignalHighBg);
+            color: var(--colorSignalHigh);
+        }
+
+        &--busy {
+            border-color: var(--colorSignalMediumBorder);
+            background: var(--colorSignalMediumBg);
+            color: var(--colorSignalMedium);
+        }
+
+        &--error {
+            border-color: var(--colorSignalLowBorder);
+            background: var(--colorSignalLowBg);
+            color: var(--colorSignalLow);
+        }
+    }
+
     &__list {
         display: grid;
         gap: var(--space5);

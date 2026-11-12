@@ -31,6 +31,22 @@
         {id: 'transfer', label: 'Импорт и экспорт'},
     ] as const
     type Section = (typeof sections)[number]['id']
+    const semanticStatus = $derived.by(() => {
+        switch (view.semantics?.status) {
+            case 'ready':
+                return {label: 'Включён', tone: 'on'}
+            case 'checking':
+                return {label: 'Проверка', tone: 'busy'}
+            case 'downloading':
+                return {label: 'Загружается', tone: 'busy'}
+            case 'preparing':
+                return {label: 'Подготовка', tone: 'busy'}
+            case 'error':
+                return {label: 'Ошибка', tone: 'error'}
+            default:
+                return {label: 'Выключен', tone: 'off'}
+        }
+    })
     let active = $state<Section>('sources'),
         sectionOpen = $state(false),
         mobile = $state(false)
@@ -306,9 +322,20 @@
                     </div>
                     <div class="settings__card settings__block">
                         <div class="settings__card-head">
-                            <h4 class="settings__subtitle">
-                                Смысловой прогноз
-                            </h4>
+                            <div class="settings__prediction-heading">
+                                <h4 class="settings__subtitle">
+                                    Смысловой прогноз
+                                </h4>
+                                <span
+                                    class={`settings__prediction-status settings__prediction-status--${semanticStatus.tone}`}
+                                    role="status"
+                                    aria-label={`Смысловой прогноз: ${semanticStatus.label}`}
+                                    aria-atomic="true"
+                                    data-semantic-status={view.semantics
+                                        ?.status || 'off'}
+                                    >{semanticStatus.label}</span
+                                >
+                            </div>
                             <p class="settings__note">
                                 Публикации обрабатываются на устройстве. Новый
                                 прогноз собирает данные для проверки точности.

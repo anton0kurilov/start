@@ -33,6 +33,12 @@ test('semantic model downloads only on request, runs in worker and reuses verifi
     expect(assets).toEqual([])
     await page.getByRole('button', {name: 'Настройки', exact: true}).click()
     await page.locator('[data-settings-section="interface"]').click()
+    await expect(
+        page.getByRole('status', {
+            name: 'Смысловой прогноз: Выключен',
+            exact: true,
+        }),
+    ).toBeVisible()
     await page
         .getByRole('button', {name: /Загрузить данные для прогноза/})
         .click()
@@ -51,7 +57,40 @@ test('semantic model downloads only on request, runs in worker and reuses verifi
     expect(vector.length).toBe(312)
     expect(vector.norm).toBeCloseTo(1, 5)
     expect(errors).toEqual([])
+    const badge = page.getByRole('status', {
+        name: 'Смысловой прогноз: Включён',
+        exact: true,
+    })
+    await expect(badge).toBeVisible()
+    await page.screenshot({
+        path: 'output/playwright/semantic-status-desktop.png',
+    })
+    await page.setViewportSize({width: 320, height: 568})
+    await expect(badge).toBeVisible()
+    expect(
+        await badge.evaluate((element) => {
+            const badge = element.getBoundingClientRect()
+            const heading = element.parentElement!.getBoundingClientRect()
+            const title = element
+                .parentElement!.querySelector('h4')!
+                .getBoundingClientRect()
+            return (
+                badge.left >= title.right &&
+                badge.right <= heading.right + 1 &&
+                badge.left >= heading.left
+            )
+        }),
+    ).toBe(true)
+    await page.screenshot({
+        path: 'output/playwright/semantic-status-mobile.png',
+    })
     await page.getByRole('button', {name: 'Выключить обработку'}).click()
+    await expect(
+        page.getByRole('status', {
+            name: 'Смысловой прогноз: Выключен',
+            exact: true,
+        }),
+    ).toBeVisible()
     assets.length = 0
     await page
         .getByRole('button', {name: /Загрузить данные для прогноза/})
@@ -76,6 +115,12 @@ test('corrupt semantic payload produces a recoverable error without blocking rea
     await page
         .getByRole('button', {name: /Загрузить данные для прогноза/})
         .click()
+    await expect(
+        page.getByRole('status', {
+            name: 'Смысловой прогноз: Ошибка',
+            exact: true,
+        }),
+    ).toBeVisible()
     await expect(
         page.getByText('Не удалось подготовить прогноз.', {exact: false}),
     ).toBeVisible()
