@@ -477,6 +477,23 @@
     &__options {
         display: grid;
         gap: var(--space5);
+
+        &--plain {
+            gap: var(--space2);
+
+            .settings__option {
+                min-height: var(--sizeControlTouch);
+                align-items: center;
+                gap: var(--space5);
+                padding: var(--space3) 0;
+                border: 0;
+                background: transparent;
+
+                &:hover {
+                    background: var(--colorFillSubtle);
+                }
+            }
+        }
     }
 
     &__form {

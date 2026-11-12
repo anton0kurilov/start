@@ -280,7 +280,7 @@
                                 Чтение и обновление
                             </h4>
                         </div>
-                        <div class="settings__options">
+                        <div class="settings__options settings__options--plain">
                             <CheckboxOption
                                 name="autoMarkReadOnScroll"
                                 label="Отмечать публикации как прочитанные при прокрутке"
