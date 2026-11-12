@@ -90,6 +90,9 @@ a {
 }
 
 .columns__top-button {
+    display: flex;
+    align-items: center;
+    gap: var(--space4);
     padding: 0;
     border: 0;
     background: transparent;

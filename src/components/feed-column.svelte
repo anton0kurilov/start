@@ -81,7 +81,9 @@
                     >{#if column.recommended}<Icon
                             name="recommended"
                             class="columns__title-icon"
-                        />{/if}{column.title}</button
+                        />{/if}<span class="columns__title-label"
+                        >{column.title}</span
+                    ></button
                 >
             </h2>
             <IconButton
