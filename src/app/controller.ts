@@ -1,4 +1,10 @@
 import {readonly, writable} from 'svelte/store'
+import {command} from './commands.ts'
+import type {Repository} from './repository.ts'
+import type {CloudService} from './cloud.ts'
+import {repositoryPredictionStorage} from './repository-predictions.ts'
+import {itemKey} from './item-identity.ts'
+export {itemKey} from './item-identity.ts'
 import * as domain from '../scripts/domain.js'
 import {
     AUTO_REFRESH_INTERVAL_MS,
@@ -19,22 +25,18 @@ import type {
     Settings,
 } from './types'
 
-export function itemKey(item: Item) {
-    return String(
-        item.link ||
-            item.id ||
-            `${item.source}|${item.title}|${item.date?.toISOString() || ''}`,
-    ).trim()
-}
-
 export function createAppController({
     api = domain,
+    repository,
+    cloud,
     now = Date.now,
     isOnline = () =>
         typeof navigator === 'undefined' || navigator.onLine !== false,
     host = typeof window === 'undefined' ? null : window,
 }: {
     api?: typeof domain
+    repository?: Repository
+    cloud?: CloudService
     now?: () => number
     isOnline?: () => boolean
     host?: Window | null
@@ -43,6 +45,8 @@ export function createAppController({
     let generation = 0
     let requests = new AbortController()
     let refreshing = false
+    let syncState = cloud?.snapshot
+    let persistenceError = ''
     let refreshError = ''
     let refreshPromise: Promise<void> | null = null
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -133,6 +137,8 @@ export function createAppController({
             })
         }
         return {
+            persistenceError,
+            sync: syncState,
             predictionHistory,
             semantics: {...semanticState},
             folders,
@@ -153,13 +159,79 @@ export function createAppController({
         view = snapshot()
         store.set(view)
     }
-    function change<T>(fn: () => T): T {
+    function change<T>(
+        fn: () => T | Promise<T>,
+        failure = undefined as T,
+    ): Promise<T> {
         if (disposed) throw new Error('Controller disposed')
-        const result = fn()
+        return (async () => {
+            try {
+                const result = await fn()
+                persistenceError = ''
+                publish()
+                schedule()
+                return result
+            } catch {
+                persistenceError =
+                    'Не удалось сохранить изменения на устройстве. Проверьте свободное место и повторите действие.'
+                publish()
+                return failure
+            }
+        })()
+    }
+    async function persist(
+        commands: ReturnType<typeof command> | ReturnType<typeof command>[],
+        legacy: () => unknown,
+    ) {
+        if (repository) await repository.dispatch(commands)
+        else legacy()
+    }
+    function signal(
+        kind: string,
+        card: Card,
+        context: Record<string, unknown> = {},
+    ) {
+        const recordedAt = now()
+        const snapshot = {
+            title: card.title.trim().slice(0, 512),
+            description: (card.description || '').trim().slice(0, 2000),
+            source: card.source.trim().slice(0, 512),
+            feedId: card.feedId,
+            link: card.link,
+            publishedAt: card.date?.toISOString() || null,
+        }
+        const frozen = {
+            ...context,
+            referenceTime: recordedAt,
+            firstShownAt: recordedAt,
+        }
+        const forecast = shadow?.predict(snapshot, frozen) || {
+            predictions: {a1: null, b: null},
+            versions: {},
+        }
+        return command('item.signal', {
+            signal: kind,
+            itemKey: card.itemKey,
+            recordedAt,
+            snapshot,
+            context: frozen,
+            predictions: {legacy: null, ...forecast.predictions},
+            versions: {legacy: 2, ...forecast.versions},
+            profileId: repository?.profile.learnerId,
+            deviceId: repository?.profile.deviceId,
+            generation: repository?.profile.generation,
+            expected: repository?.readVersion(card.itemKey),
+        })
+    }
+    const unsubscribeCloud = cloud?.state.subscribe((next) => {
+        syncState = next
+        publish()
+    })
+    const unsubscribeRepository = repository?.subscribe(() => {
+        api.hydrateState(repository.state)
         publish()
         schedule()
-        return result
-    }
+    })
     function schedule() {
         clearTimeout(timer)
         if (
@@ -232,6 +304,16 @@ export function createAppController({
                     'Не удалось обновить ленты. Проверьте подключение к интернету.'
             } finally {
                 if (requestGeneration !== generation || disposed) return
+                if (repository) {
+                    try {
+                        await repository.updateLocal({
+                            lastUpdated: api.getState().lastUpdated,
+                        })
+                    } catch {
+                        persistenceError =
+                            'Не удалось сохранить время обновления на устройстве.'
+                    }
+                }
                 refreshing = false
                 refreshPromise = null
                 void prepareShadowItems()
@@ -299,7 +381,9 @@ export function createAppController({
                 semantics.status !== 'ready'
             )
                 return
-            api.setSemanticEnabled(true)
+            if (repository)
+                await repository.updateLocal({semanticEnabled: true})
+            else api.setSemanticEnabled(true)
             const {createShadowPredictions} =
                 await import('./shadow-predictions.ts')
             if (
@@ -349,6 +433,9 @@ export function createAppController({
         })
         predictions = createPredictions({
             now,
+            ...(repository
+                ? {storageFactory: repositoryPredictionStorage(repository, now)}
+                : {}),
             forecast: (snapshot, context) =>
                 shadow?.predict(snapshot, context) || {
                     predictions: {a1: null, b: null},
@@ -394,41 +481,126 @@ export function createAppController({
             }
         },
         createFolder(name: string) {
-            return change(() => {
-                api.createFolder(name.trim())
-                return api.getState().folders.at(-1)?.id as string
+            return change(async () => {
+                const id = crypto.randomUUID()
+                if (repository)
+                    await repository.dispatch(
+                        command('folder.create', {id, name: name.trim()}),
+                    )
+                else {
+                    api.createFolder(name.trim())
+                    return api.getState().folders.at(-1)?.id as string
+                }
+                return id
             })
         },
         updateFolder(id: string, name: string) {
-            return change(() => api.updateFolder({folderId: id, name}))
+            return change(
+                async () => {
+                    if (!repository)
+                        return api.updateFolder({folderId: id, name})
+                    await repository.dispatch(
+                        command('folder.patch', {id, name}),
+                    )
+                    return {ok: true}
+                },
+                {ok: false},
+            )
         },
         removeFolder(id: string) {
-            change(() => api.removeFolder(id))
-            void refresh()
+            return change(async () => {
+                await persist(command('folder.delete', {id}), () =>
+                    api.removeFolder(id),
+                )
+                void refresh()
+            })
         },
         reorder(ids: string[]) {
-            return change(() => api.reorderFolders(ids))
+            return change(
+                async () => {
+                    if (!repository) return api.reorderFolders(ids)
+                    const current = view.folders.map((f) => f.id)
+                    if (
+                        ids.length !== current.length ||
+                        new Set(ids).size !== ids.length ||
+                        ids.some((id) => !current.includes(id))
+                    )
+                        return {ok: false}
+                    const moves = []
+                    for (let i = ids.length - 1; i >= 0; i--) {
+                        const beforeId = ids[i + 1] || null
+                        const index = current.indexOf(ids[i])
+                        if (
+                            current[index + 1] === beforeId ||
+                            (beforeId === null && index === current.length - 1)
+                        )
+                            continue
+                        moves.push(
+                            command('folder.move', {id: ids[i], beforeId}),
+                        )
+                        current.splice(index, 1)
+                        current.splice(
+                            beforeId === null
+                                ? current.length
+                                : current.indexOf(beforeId),
+                            0,
+                            ids[i],
+                        )
+                    }
+                    await repository.dispatch(moves)
+                    return {ok: true}
+                },
+                {ok: false},
+            )
         },
         async addFeed(input: FeedInput): Promise<Result> {
-            if (disposed) return {ok: false}
-            try {
-                const result = await api.addFeed({
-                    ...input,
-                    signal: requests.signal,
-                })
-                if (!disposed) {
-                    publish()
-                    if (result.ok) void refresh()
-                }
-                return result
-            } catch {
-                return {
-                    ok: false,
-                    error: 'Не удалось добавить подписку. Попробуйте ещё раз.',
+            if (!repository) {
+                try {
+                    return await change(
+                        async () => {
+                            const result = await api.addFeed({
+                                ...input,
+                                signal: requests.signal,
+                            })
+                            if (result.ok) void refresh()
+                            return result
+                        },
+                        {ok: false},
+                    )
+                } catch {
+                    return {ok: false, error: 'Не удалось добавить подписку.'}
                 }
             }
+            const current = generation
+            const url = normalizeHttpUrl(
+                input.url.includes('://') ? input.url : normalizeUrl(input.url),
+            )
+            if (!url || !input.name.trim())
+                return {
+                    ok: false,
+                    error: 'Укажите название и корректный HTTP(S) URL.',
+                }
+            const validation = await api.validateFeedUrl(url, requests.signal)
+            if (!validation.ok) return validation
+            if (disposed || current !== generation)
+                return {ok: false, error: 'Добавление отменено.'}
+            return change<Result>(
+                async () => {
+                    await repository.dispatch(
+                        command('subscription.create', {
+                            id: crypto.randomUUID(),
+                            folderId: input.folderId,
+                            name: input.name,
+                            url,
+                        }),
+                    )
+                    void refresh()
+                    return {ok: true}
+                },
+                {ok: false, error: 'Не удалось сохранить подписку.'},
+            )
         },
-        updateFeed(input: FeedInput & {feedId: string}): Result {
+        async updateFeed(input: FeedInput & {feedId: string}): Promise<Result> {
             const raw = input.url.trim()
             const url = normalizeHttpUrl(
                 raw.includes('://') ||
@@ -441,18 +613,49 @@ export function createAppController({
                     ok: false,
                     error: 'Укажите название подписки и корректный HTTP(S) URL.',
                 }
-            const result = change(() => api.updateFeed({...input, url}))
-            if (result.ok && result.urlChanged) void refresh()
-            return result.ok
-                ? result
-                : {...result, error: 'Не удалось сохранить подписку.'}
+            return change<Result>(
+                async () => {
+                    if (!repository) return api.updateFeed({...input, url})
+                    const previous = view.folders
+                        .flatMap((f) => f.feeds)
+                        .find((f) => f.id === input.feedId)
+                    if (!previous) return {ok: false}
+                    const changes: Record<string, unknown> = {}
+                    if (previous.name !== input.name.trim())
+                        changes.name = input.name.trim()
+                    if (previous.url !== url) changes.url = url
+                    if (Object.keys(changes).length)
+                        await repository.dispatch(
+                            command('subscription.patch', {
+                                id: input.feedId,
+                                changes,
+                            }),
+                        )
+                    if (previous.url !== url) void refresh()
+                    return {ok: true, urlChanged: previous.url !== url}
+                },
+                {ok: false, error: 'Не удалось сохранить подписку.'},
+            )
         },
         removeFeed(folderId: string, feedId: string) {
-            change(() => api.removeFeed(folderId, feedId))
-            void refresh()
+            return change(async () => {
+                await persist(
+                    command('subscription.delete', {id: feedId}),
+                    () => api.removeFeed(folderId, feedId),
+                )
+                void refresh()
+            })
         },
         favorite(folderId: string, feedId: string, isFavorite: boolean) {
-            change(() => api.setFeedFavorite({folderId, feedId, isFavorite}))
+            return change(() =>
+                persist(
+                    command('subscription.patch', {
+                        id: feedId,
+                        changes: {isFavorite},
+                    }),
+                    () => api.setFeedFavorite({folderId, feedId, isFavorite}),
+                ),
+            )
         },
         setting(
             key: keyof Omit<
@@ -461,68 +664,125 @@ export function createAppController({
             >,
             enabled: boolean,
         ) {
-            change(() => {
-                if (key === 'autoMarkReadOnScroll')
-                    api.setAutoMarkReadOnScroll(enabled)
-                else if (key === 'autoRefreshFeeds')
-                    api.setAutoRefreshFeeds(enabled)
-                else api.setShowRecommendedColumn(enabled)
+            return change(async () => {
+                await persist(
+                    command('preference.set', {key, value: enabled}),
+                    () => {
+                        if (key === 'autoMarkReadOnScroll')
+                            api.setAutoMarkReadOnScroll(enabled)
+                        else if (key === 'autoRefreshFeeds')
+                            api.setAutoRefreshFeeds(enabled)
+                        else api.setShowRecommendedColumn(enabled)
+                    },
+                )
+                wakeup()
             })
-            wakeup()
         },
         filter(phrases: string[]) {
-            change(() => api.setBlockedTitlePhrases(phrases))
-            return [...api.getState().settings.blockedTitlePhrases]
+            return change(async () => {
+                const values = [
+                    ...new Map(
+                        phrases
+                            .map(
+                                (p) =>
+                                    [p.trim().toLowerCase(), p.trim()] as const,
+                            )
+                            .filter(([key]) => key),
+                    ).values(),
+                ]
+                const commands = values.map((phrase) =>
+                    command('phrase.set', {phrase, enabled: true}),
+                )
+                for (const phrase of view.settings.blockedTitlePhrases)
+                    if (
+                        !values.some(
+                            (v) => v.toLowerCase() === phrase.toLowerCase(),
+                        )
+                    )
+                        commands.push(
+                            command('phrase.set', {phrase, enabled: false}),
+                        )
+                await persist(commands, () =>
+                    api.setBlockedTitlePhrases(values),
+                )
+                return [...api.getState().settings.blockedTitlePhrases]
+            }, [...view.settings.blockedTitlePhrases])
         },
-        read(keys: string[], visited = true) {
-            change(() =>
-                visited
-                    ? api.markItemsVisited(keys)
-                    : api.unmarkItemsVisited(keys),
+        read(keys: string[], visited = true, origin = 'manual') {
+            return change(() =>
+                persist(
+                    command('read.set', {
+                        items: keys.map((key) => ({
+                            key,
+                            expected: repository?.readVersion(key),
+                        })),
+                        value: visited,
+                        origin,
+                    }),
+                    () =>
+                        visited
+                            ? api.markItemsVisited(keys)
+                            : api.unmarkItemsVisited(keys),
+                ),
             )
         },
         open(card: Card, context: Record<string, unknown> = {}) {
-            if (!normalizeHttpUrl(card.link)) return
-            if (
-                !(api.getState().clickedItemKeys as string[]).includes(
-                    card.itemKey,
-                )
+            if (!normalizeHttpUrl(card.link)) return Promise.resolve()
+            const cmd = signal('click', card, context)
+            if (!repository) predictions?.record('click', card, context)
+            return change(() =>
+                persist(cmd, () => {
+                    api.markItemsVisited([card.itemKey])
+                    api.registerFeedItemClick(card)
+                }),
             )
-                predictions?.record('click', card, context)
-            change(() => {
-                api.markItemsVisited([card.itemKey])
-                api.registerFeedItemClick(card)
-            })
         },
         dismiss(card: Card) {
-            predictions?.record('dismiss', card)
-            change(() => api.registerFeedItemDismiss(card))
+            const cmd = signal('dismiss', card)
+            if (!repository) predictions?.record('dismiss', card)
+            return change(() =>
+                persist(cmd, () => api.registerFeedItemDismiss(card)),
+            )
         },
         impression(card: Card) {
-            if (!disposed) api.registerFeedItemImpressions(card)
+            if (disposed) return
+            if (repository)
+                void change(() =>
+                    repository.dispatch(signal('impression', card)),
+                )
+            else api.registerFeedItemImpressions(card)
         },
         exposure(card: Card, context: Record<string, unknown> = {}) {
             if (
-                !disposed &&
-                !(api.getState().clickedItemKeys as string[]).includes(
+                disposed ||
+                (api.getState().clickedItemKeys as string[]).includes(
                     card.itemKey,
-                ) &&
-                !api.isItemDismissed(card.itemKey)
+                ) ||
+                api.isItemDismissed(card.itemKey)
             )
-                predictions?.record('exposure', card, context)
+                return
+            if (repository)
+                void change(() =>
+                    repository.dispatch(signal('exposure', card, context)),
+                )
+            else predictions?.record('exposure', card, context)
         },
         enableSemantics,
-        disableSemantics() {
+        async disableSemantics() {
             shadow?.dispose()
             shadow = undefined
             semantics?.stop()
-            api.setSemanticEnabled(false)
+            if (repository)
+                await repository.updateLocal({semanticEnabled: false})
+            else api.setSemanticEnabled(false)
             publish()
         },
         async clearSemanticFiles() {
             shadow?.dispose()
             shadow = undefined
-            api.setSemanticEnabled(false)
+            if (repository)
+                await repository.updateLocal({semanticEnabled: false})
+            else api.setSemanticEnabled(false)
             await semantics?.clearCache()
             semanticState = {
                 ...semanticState,
@@ -533,11 +793,15 @@ export function createAppController({
             publish()
         },
         async exportBackup() {
+            await repository?.flush()
             const data = api.exportState()
             if (!predictions) return data
             const predictionData = await predictions.exportData()
             return {
                 ...data,
+                ...(repository
+                    ? {version: 2, predictionArchive: repository.observations()}
+                    : {}),
                 predictionData: {
                     ...predictionData,
                     evaluation:
@@ -547,6 +811,35 @@ export function createAppController({
             }
         },
         async importBackup(text: string): Promise<Result> {
+            if (repository) {
+                let parsed: unknown
+                try {
+                    parsed = JSON.parse(text)
+                } catch {
+                    return {
+                        ok: false,
+                        error: 'Файл не содержит корректный JSON.',
+                    }
+                }
+                if (repository.profile.userId)
+                    return {
+                        ok: false,
+                        error: 'Для замены импортом сначала отключите синхронизацию на этом устройстве.',
+                    }
+                return change<Result>(
+                    async () => {
+                        await repository.replaceGuest(parsed)
+                        cancelRequests()
+                        restartPredictions()
+                        void refresh()
+                        return {ok: true}
+                    },
+                    {
+                        ok: false,
+                        error: 'Не удалось проверить или сохранить импортируемые данные. Текущие данные сохранены.',
+                    },
+                )
+            }
             const requestGeneration = generation
             if (disposed) return {ok: false, error: 'Приложение закрыто.'}
             let parsed
@@ -580,7 +873,7 @@ export function createAppController({
                     error: 'Данные изменились во время импорта. Повторите импорт.',
                 }
             }
-            const result = this.importJson(JSON.stringify(parsed))
+            const result = await this.importJson(JSON.stringify(parsed))
             if (!result.ok && parsed?.predictionGeneration)
                 await predictions?.discardImport(parsed.predictionGeneration)
             return result
@@ -592,7 +885,7 @@ export function createAppController({
         exportJson() {
             return api.exportState()
         },
-        importJson(text: string): Result {
+        async importJson(text: string): Promise<Result> {
             let parsed: unknown
             try {
                 parsed = JSON.parse(text)
@@ -612,7 +905,7 @@ export function createAppController({
                     ok: false,
                     error: 'Выберите файл экспорта Start. с колонками и подписками.',
                 }
-            const result = change(() => {
+            const result = await change(() => {
                 const imported = api.importState(parsed)
                 if (!imported.ok)
                     return {
@@ -629,14 +922,53 @@ export function createAppController({
             if (result.ok) void refresh()
             return result
         },
-        reset() {
+        async reset() {
             cancelRequests()
-            change(() => api.resetState())
+            await change(async () => {
+                if (repository?.profile.userId && cloud)
+                    await cloud.resetProfile()
+                else if (repository)
+                    await repository.replaceGuest({folders: []})
+                else api.resetState()
+            })
             restartPredictions()
+        },
+        createSyncProfile(phrase: string) {
+            return (
+                cloud?.createProfile(phrase) ||
+                Promise.resolve({
+                    ok: false,
+                    error: 'Синхронизация не настроена.',
+                })
+            )
+        },
+        connectSyncProfile(phrase: string) {
+            return (
+                cloud?.connectProfile(phrase) ||
+                Promise.resolve({
+                    ok: false,
+                    error: 'Синхронизация не настроена.',
+                })
+            )
+        },
+        disconnectSync() {
+            return cloud?.disconnect()
+        },
+        syncNow() {
+            return cloud?.synchronize()
+        },
+        deleteSyncProfile() {
+            return cloud?.deleteProfile()
+        },
+        hidePersistenceError() {
+            persistenceError = ''
+            publish()
         },
         dispose() {
             if (disposed) return
             disposed = true
+            unsubscribeCloud?.()
+            unsubscribeRepository?.()
             predictions?.dispose()
             shadow?.dispose()
             semantics?.dispose()

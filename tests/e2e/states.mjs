@@ -7,7 +7,7 @@ import {
     feedXml,
 } from '../fixtures/rss.mjs'
 const label = process.argv[2] || 'svelte-ready',
-    url = process.env.APP_URL || 'http://127.0.0.1:4173'
+    url = process.env.APP_URL || 'http://localhost:4173'
 const directory = `output/playwright/${label}`
 await mkdir(directory, {recursive: true})
 const browser = await chromium.launch()

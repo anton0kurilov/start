@@ -37,7 +37,7 @@
             element,
             content,
             (visible) => (newItems = visible),
-            (keys) => controller.read(keys),
+            (keys) => void controller.read(keys, true, 'auto'),
             () => autoRead,
         )
         return controller.beforeUpdate(() => {

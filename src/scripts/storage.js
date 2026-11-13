@@ -1,7 +1,13 @@
 import {STORAGE_KEY} from './constants.js'
 import {createDefaultState, normalizeStatePayload} from './state-normalizers.js'
 
+let backend
+export function setStateStorage(next) {
+    backend = next
+}
+
 export function loadState() {
+    if (backend) return backend.loadState()
     try {
         const raw = localStorage.getItem(STORAGE_KEY)
         if (!raw) {
@@ -15,6 +21,7 @@ export function loadState() {
 }
 
 export function saveState(state) {
+    if (backend) return backend.saveState(state)
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
         return true
@@ -69,7 +76,7 @@ function encodeStoredState(state) {
     }
 }
 
-function decodeStoredState(state) {
+export function decodeStoredState(state) {
     if (state?.storageEncoding !== 'compact-v1') return state
     const {strings} = state
     return {
@@ -95,6 +102,7 @@ function decodeStoredState(state) {
 }
 
 export function clearState() {
+    if (backend) return backend.clearState()
     try {
         localStorage.removeItem(STORAGE_KEY)
         return true

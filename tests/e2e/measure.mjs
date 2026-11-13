@@ -2,7 +2,7 @@ import {chromium} from '@playwright/test'
 import {mkdir, writeFile} from 'node:fs/promises'
 import {initialState, preparePage, widths} from '../fixtures/rss.mjs'
 const label = process.argv[2] || 'svelte'
-const url = process.env.APP_URL || 'http://127.0.0.1:4173'
+const url = process.env.APP_URL || 'http://localhost:4173'
 const output = `output/playwright/${label}`
 await mkdir(output, {recursive: true})
 const browser = await chromium.launch({headless: true})

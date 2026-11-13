@@ -1,31 +1,13 @@
 import {test, expect, type Page} from '@playwright/test'
-import {initialState, feedXml, fixedTime} from '../fixtures/rss.mjs'
+import {
+    initialState,
+    feedXml,
+    fixedTime,
+    storedState,
+} from '../fixtures/rss.mjs'
 
 async function history(page: Page) {
-    return page.evaluate(async () => {
-        const state = JSON.parse(localStorage.getItem('start:rss:v1')!)
-        if (!state.predictionGeneration) return []
-        return new Promise<any[]>((resolve, reject) => {
-            const request = indexedDB.open(
-                `start:predictions:${state.predictionGeneration}`,
-                1,
-            )
-            request.onerror = () => reject(request.error)
-            request.onsuccess = () => {
-                const db = request.result
-                const tx = db.transaction('observations')
-                const rows = tx.objectStore('observations').getAll()
-                tx.oncomplete = () => {
-                    db.close()
-                    resolve(rows.result)
-                }
-                tx.onabort = () => {
-                    db.close()
-                    reject(tx.error)
-                }
-            }
-        })
-    })
+    return (await storedState(page)).observations
 }
 
 test('click history survives reload and preserves click followed by dismiss', async ({

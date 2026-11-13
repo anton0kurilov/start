@@ -1,5 +1,5 @@
 import {test, expect, type Page} from '@playwright/test'
-import {initialState, preparePage} from '../fixtures/rss.mjs'
+import {initialState, preparePage, storedState} from '../fixtures/rss.mjs'
 
 async function settings(page: Page, section = 'sources') {
     await page.getByRole('button', {name: 'Настройки', exact: true}).click()
@@ -9,9 +9,7 @@ async function close(page: Page) {
     await page.getByRole('button', {name: 'Закрыть', exact: true}).click()
 }
 async function stored(page: Page) {
-    return page.evaluate(() =>
-        JSON.parse(localStorage.getItem('start:rss:v1')!),
-    )
+    return storedState(page)
 }
 
 for (const viewport of [
@@ -402,7 +400,9 @@ test('import reports invalid JSON; export round trip and reset keep confirmation
     )
     expect((await stored(page)).folders).toHaveLength(1)
     await page.getByRole('button', {name: 'Сбросить всё'}).click()
-    expect((await stored(page))?.folders ?? []).toEqual([])
+    await expect
+        .poll(async () => (await stored(page))?.folders ?? [])
+        .toEqual([])
 })
 
 test('import shows reading, recovers from file errors and finishes before background refresh', async ({
@@ -616,7 +616,7 @@ test('reorder failure rolls back the visible order and announces the error', asy
     await settings(page)
     await page.evaluate(
         () =>
-            (Storage.prototype.setItem = () => {
+            (IDBObjectStore.prototype.put = function () {
                 throw new DOMException('Quota exceeded', 'QuotaExceededError')
             }),
     )

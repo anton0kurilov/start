@@ -90,3 +90,80 @@ export function signalState(bias = 0.35) {
         },
     }
 }
+
+export async function storedState(page) {
+    return page.evaluate(async () => {
+        const db = await new Promise((resolve, reject) => {
+            const request = indexedDB.open('start:data:v2')
+            request.onsuccess = () => resolve(request.result)
+            request.onerror = () => reject(request.error)
+        })
+        const result = await new Promise((resolve, reject) => {
+            const tx = db.transaction(['profiles', 'records', 'metadata'])
+            const active = tx.objectStore('metadata').get('active-profile')
+            active.onsuccess = () => {
+                const scope = active.result?.value || 'guest'
+                const profile = tx.objectStore('profiles').get(scope)
+                const records = tx
+                    .objectStore('records')
+                    .index('scope')
+                    .getAll(scope)
+                records.onsuccess = () => {
+                    const rows = (kind) =>
+                        records.result.filter(
+                            (r) => r.kind === kind && !r.deleted,
+                        )
+                    const order = (a, b) =>
+                        (a.data.position || 0) - (b.data.position || 0) ||
+                        a.id.localeCompare(b.id)
+                    const settings = {
+                        semanticEnabled: profile.result?.semanticEnabled,
+                        blockedTitlePhrases: rows('phrase')
+                            .filter((r) => r.data.enabled)
+                            .map((r) => r.data.phrase),
+                    }
+                    for (const row of rows('preference'))
+                        settings[row.id] = row.data.value
+                    const folders = rows('folder')
+                        .sort(order)
+                        .map((r) => ({
+                            id: r.id,
+                            name: r.data.name,
+                            feeds: rows('subscription')
+                                .filter((s) => s.data.folderId === r.id)
+                                .sort(order)
+                                .map((s) => ({id: s.id, ...s.data})),
+                        }))
+                    const observations = rows('observation')
+                        .filter(
+                            (r) =>
+                                r.data.observation.profileId ===
+                                profile.result.learnerId,
+                        )
+                        .map((r) => r.data.observation)
+                    tx.oncomplete = () =>
+                        resolve({
+                            folders,
+                            settings,
+                            visitedItemKeys: rows('read')
+                                .filter((r) => r.data.value)
+                                .map((r) => r.data.itemKey),
+                            clickedItemKeys: rows('feedback')
+                                .filter((r) => r.data.clicked)
+                                .map((r) => r.data.itemKey),
+                            lastUpdated: profile.result?.lastUpdated || null,
+                            modelState: {
+                                interactionLog: rows('event').map(
+                                    (r) => r.data,
+                                ),
+                            },
+                            observations,
+                        })
+                }
+            }
+            tx.onabort = () => reject(tx.error)
+        })
+        db.close()
+        return result
+    })
+}

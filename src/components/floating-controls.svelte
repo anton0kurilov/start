@@ -34,15 +34,20 @@
         role="status"
         aria-live="polite"
         aria-atomic="true"
-        hidden={!state.refreshError}
+        hidden={!state.refreshError && !state.persistenceError}
     >
-        <div class="fab__toast-text">{state.refreshError}</div>
+        <div class="fab__toast-text">
+            {state.persistenceError || state.refreshError}
+        </div>
         <IconButton
             class="fab__toast-close"
             icon="close"
             iconClass="fab__toast-close-icon"
             label="Скрыть сообщение об обновлении"
-            onclick={() => controller.hideRefreshError()}
+            onclick={() =>
+                state.persistenceError
+                    ? controller.hidePersistenceError()
+                    : controller.hideRefreshError()}
         />
     </div>
     <div class="fab__updated">

@@ -10,6 +10,7 @@ export function createReadingPosition(
     let previousHidden = new Set<string>()
     let previousTop = 0
     let suppressedUntil = 0
+    let scrollingToTopUntil = 0
     let saved: {
         key: string
         offset: number
@@ -49,7 +50,7 @@ export function createReadingPosition(
         notice(pending.size > 0)
     }
     function capture() {
-        if (saved) return
+        if (saved || performance.now() < scrollingToTopUntil) return
         const cards = items()
         const anchor = cards.find(
             (el) => el.getBoundingClientRect().bottom > top(),
@@ -63,6 +64,12 @@ export function createReadingPosition(
         }
     }
     function restore() {
+        if (performance.now() < scrollingToTopUntil) {
+            saved = null
+            baseline()
+            updateNotice()
+            return
+        }
         if (!saved) {
             baseline()
             return
@@ -103,6 +110,8 @@ export function createReadingPosition(
     }
     function toTop() {
         suppressedUntil = performance.now() + 1500
+        scrollingToTopUntil = suppressedUntil
+        saved = null
         const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches
             ? 'instant'
             : 'smooth'

@@ -1,10 +1,14 @@
 <script lang="ts">
-    import {onMount} from 'svelte'
+    import {onMount, untrack} from 'svelte'
     import {createAppController} from './app/controller'
     import FeedBoard from './components/feed-board.svelte'
     import FloatingControls from './components/floating-controls.svelte'
     import SettingsDialog from './components/settings/settings-dialog.svelte'
-    const controller = createAppController()
+    import type {Repository} from './app/repository.ts'
+    import type {CloudService} from './app/cloud.ts'
+    let {repository, cloud}: {repository: Repository; cloud?: CloudService} =
+        $props()
+    const controller = untrack(() => createAppController({repository, cloud}))
     const appState = controller.state
     let settingsOpen = $state(false)
     let settingsMounted = $state(false)

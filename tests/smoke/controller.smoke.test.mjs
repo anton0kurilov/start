@@ -27,11 +27,11 @@ function setup(overrides = {}) {
     const controller = createAppController({api, host: null})
     return {controller, data, api}
 }
-test('controller publishes detached UI state through a read-only store', () => {
+test('controller publishes detached UI state through a read-only store', async () => {
     const {controller, data} = setup()
     const previous = get(controller.state)
     assert.equal(controller.state.set, undefined)
-    assert.equal(controller.createFolder(' Design '), 'new')
+    assert.equal(await controller.createFolder(' Design '), 'new')
     assert.equal(previous.folders.length, 0)
     assert.equal(get(controller.state).folders[0].name, 'Design')
     get(controller.state).folders[0].name = 'outside'
@@ -54,7 +54,7 @@ test('controller deduplicates refresh and restores pending state on failure', as
             feeds: [{id: 'rss', name: 'RSS', url: 'https://test.example/rss'}],
         },
     ]
-    controller.createFolder('Other')
+    await controller.createFolder('Other')
     const first = controller.refresh(),
         second = controller.refresh()
     assert.equal(first, second)
@@ -66,7 +66,7 @@ test('controller deduplicates refresh and restores pending state on failure', as
     assert.match(get(controller.state).refreshError, /Не удалось/)
     controller.dispose()
 })
-test('controller reports import errors without replacing state', () => {
+test('controller reports import errors without replacing state', async () => {
     let calls = 0
     const {controller} = setup({
         importState: () => {
@@ -74,8 +74,8 @@ test('controller reports import errors without replacing state', () => {
             return {ok: true}
         },
     })
-    assert.equal(controller.importJson('{').ok, false)
-    assert.equal(controller.importJson('{}').ok, false)
+    assert.equal((await controller.importJson('{')).ok, false)
+    assert.equal((await controller.importJson('{}')).ok, false)
     assert.equal(calls, 0)
     assert.equal(get(controller.state).folders.length, 0)
     controller.dispose()
@@ -99,10 +99,10 @@ test('storage failure reports an actionable import error and keeps refresh runni
             feeds: [{id: 'rss', name: 'RSS', url: 'https://test.example/rss'}],
         },
     ]
-    controller.createFolder('Other')
+    await controller.createFolder('Other')
     const pending = controller.refresh()
     const before = get(controller.state)
-    const result = controller.importJson(JSON.stringify({folders: []}))
+    const result = await controller.importJson(JSON.stringify({folders: []}))
     assert.equal(result.ok, false)
     assert.match(result.error, /Не удалось сохранить данные на устройстве/)
     assert.deepEqual(get(controller.state).folders, before.folders)
@@ -114,7 +114,7 @@ test('storage failure reports an actionable import error and keeps refresh runni
     assert.equal(get(controller.state).refreshing, false)
     controller.dispose()
 })
-test('selectors do not prepare or persist the model during snapshots', () => {
+test('selectors do not prepare or persist the model during snapshots', async () => {
     let prepared = 0
     const {controller} = setup({
         prepareView: () => {
@@ -122,7 +122,7 @@ test('selectors do not prepare or persist the model during snapshots', () => {
             return true
         },
     })
-    controller.createFolder('One')
+    await controller.createFolder('One')
     assert.equal(prepared, 0)
     controller.dispose()
 })
@@ -138,7 +138,7 @@ test('disposing prevents late async responses from publishing', async () => {
             feeds: [{id: 'rss', name: 'RSS', url: 'https://test.example/rss'}],
         },
     ]
-    controller.createFolder('Other')
+    await controller.createFolder('Other')
     let emissions = 0
     const off = controller.state.subscribe(() => emissions++)
     const pending = controller.refresh()

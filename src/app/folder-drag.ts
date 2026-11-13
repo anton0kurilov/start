@@ -3,7 +3,7 @@ export function folderDrag(
     options: {
         getOrder: () => string[]
         setOrder: (ids: string[]) => void
-        commit: (ids: string[]) => boolean
+        commit: (ids: string[]) => boolean | Promise<boolean>
         announce: (message: string, error?: boolean) => void
     },
 ) {
@@ -19,13 +19,15 @@ export function folderDrag(
         handle: HTMLElement
         preview?: HTMLElement
     } | null = null
+    let saving = false
+    let destroyed = false
     let frame = 0
     let focusFrame = 0
     const rows = () =>
         Array.from(
             list.querySelectorAll<HTMLElement>(':scope > [data-folder-id]'),
         )
-    function finish(cancel: boolean) {
+    async function finish(cancel: boolean) {
         if (!drag) return
         const current = drag
         drag = null
@@ -40,7 +42,15 @@ export function folderDrag(
             options.setOrder(current.original)
             options.announce('Перемещение отменено.')
         } else if (ids.join('|') !== current.original.join('|')) {
-            if (!options.commit(ids)) {
+            saving = true
+            let accepted = false
+            try {
+                accepted = await options.commit(ids)
+            } finally {
+                saving = false
+            }
+            if (destroyed) return
+            if (!accepted) {
                 options.setOrder(current.original)
                 options.announce(
                     'Не удалось сохранить порядок колонок. Попробуйте ещё раз.',
@@ -100,7 +110,9 @@ export function folderDrag(
             !row ||
             event.button !== 0 ||
             !event.isPrimary ||
-            drag
+            drag ||
+            saving ||
+            destroyed
         )
             return
         event.preventDefault()
@@ -171,6 +183,7 @@ export function folderDrag(
     return {
         cancel,
         destroy() {
+            destroyed = true
             cancel()
             cancelAnimationFrame(focusFrame)
             list.removeEventListener('pointerdown', down)

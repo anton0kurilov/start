@@ -1,7 +1,9 @@
 {
     "devDependencies": {
+        "@electric-sql/pglite": "^0.5.16",
         "@playwright/test": "^1.65.0",
         "@sveltejs/vite-plugin-svelte": "^7.3.1",
+        "fake-indexeddb": "^6.2.8",
         "prettier": "^3.9.10",
         "prettier-plugin-svelte": "^4.1.1",
         "sass": "^1.108.1",
@@ -16,11 +18,17 @@
         "preview": "vite preview",
         "check": "svelte-check --tsconfig ./tsconfig.json",
         "test:smoke": "node --experimental-strip-types --test tests/smoke/*.test.mjs",
-        "test:e2e": "playwright test"
+        "test:e2e": "playwright test",
+        "test:sync": "node --experimental-strip-types --test tests/integration/*.test.mjs"
     },
     "browserslist": "> 0.5%, last 2 versions, not dead",
     "dependencies": {
         "@huggingface/transformers": "4.3.2",
+        "@noble/curves": "^2.4.0",
+        "@noble/hashes": "^2.4.0",
+        "@scure/base": "^2.4.0",
+        "@scure/bip39": "^2.4.0",
+        "@supabase/supabase-js": "^2.119.0",
         "svelte": "^5.57.3"
     },
     "type": "module",

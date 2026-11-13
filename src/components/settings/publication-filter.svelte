@@ -23,9 +23,9 @@
         saved = false
         clearTimeout(timer)
     }
-    function save(event: SubmitEvent) {
+    async function save(event: SubmitEvent) {
         event.preventDefault()
-        draft = controller.filter(draft.split('\n')).join('\n')
+        draft = (await controller.filter(draft.split('\n'))).join('\n')
         lastSaved = draft
         saved = true
         clearTimeout(timer)

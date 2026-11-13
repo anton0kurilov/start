@@ -9,6 +9,7 @@
     import SourcesSection from './sources-section.svelte'
     import PublicationFilter from './publication-filter.svelte'
     import TransferSection from './transfer-section.svelte'
+    import SyncSection from './sync-section.svelte'
     let {
         state: view,
         controller,
@@ -29,6 +30,7 @@
         {id: 'interface', label: 'Поведение интерфейса'},
         {id: 'filter', label: 'Фильтр публикаций'},
         {id: 'transfer', label: 'Импорт и экспорт'},
+        {id: 'sync', label: 'Синхронизация'},
     ] as const
     type Section = (typeof sections)[number]['id']
     const semanticStatus = $derived.by(() => {
@@ -163,9 +165,12 @@
         sources?.resetDrafts()
         filter?.resetDraft()
     }
-    function reset() {
-        if (confirm('Удалить все колонки, подписки и настройки приложения?')) {
-            controller.reset()
+    async function reset() {
+        const message = view.sync?.userId
+            ? 'Удалить все колонки, подписки, настройки и историю Start. на всех подключённых устройствах?'
+            : 'Удалить все колонки, подписки и настройки приложения на этом устройстве?'
+        if (confirm(message)) {
+            await controller.reset()
             void tick().then(resetDrafts)
         }
     }
@@ -407,6 +412,18 @@
                     <TransferSection
                         {controller}
                         onimport={() => void tick().then(resetDrafts)}
+                    />
+                </section>
+                <section
+                    class="settings__section settings__panel-section"
+                    aria-labelledby="settings-label-sync"
+                    id="settings-panel-sync"
+                    hidden={active !== 'sync'}
+                >
+                    <SyncSection
+                        state={view.sync}
+                        {controller}
+                        open={open && active === 'sync'}
                     />
                 </section>
             </div>

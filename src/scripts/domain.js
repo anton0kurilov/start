@@ -54,6 +54,55 @@ export function getState() {
     return state
 }
 
+// The repository owns durable state. RSS content remains local and survives
+// read/settings changes; only removed or changed sources invalidate requests.
+export function hydrateState(next) {
+    const previousFeeds = new Map(
+        state.folders.flatMap((f) => f.feeds).map((f) => [f.id, f]),
+    )
+    const nextFeeds = new Map(
+        next.folders.flatMap((f) => f.feeds).map((f) => [f.id, f]),
+    )
+    let changedContent = false
+    for (const [id, feed] of previousFeeds) {
+        if (!nextFeeds.has(id) || nextFeeds.get(id).url !== feed.url) {
+            feedItems.delete(id)
+            feedErrors.delete(id)
+            changedContent = true
+        }
+    }
+    if (changedContent) contentGeneration += 1
+    const changedHistory =
+        JSON.stringify(state.modelState.interactionLog) !==
+        JSON.stringify(next.modelState.interactionLog)
+    const sameGeneration =
+        state.predictionGeneration === next.predictionGeneration
+    const modelState = sameGeneration
+        ? {...state.modelState, interactionLog: next.modelState.interactionLog}
+        : next.modelState
+    state = {
+        ...next,
+        modelState,
+        lastUpdated: sameGeneration ? state.lastUpdated : next.lastUpdated,
+    }
+    visitedItemKeysSet = new Set(state.visitedItemKeys)
+    clickedItemKeysSet = new Set(state.clickedItemKeys)
+    refreshModelInteractionIndexes()
+    if (changedHistory || !sameGeneration) synchronizeModelState(true)
+}
+
+export async function validateFeedUrl(url, signal) {
+    try {
+        parseFeed(await fetchFeedText(url, signal), url)
+        return {ok: true}
+    } catch (error) {
+        return {
+            ok: false,
+            error: `Не удалось проверить ленту: ${formatFeedError(error)}.`,
+        }
+    }
+}
+
 export function ensurePredictionGeneration() {
     if (state.predictionGeneration) return state.predictionGeneration
     const predictionGeneration = createId()

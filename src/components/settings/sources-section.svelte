@@ -47,7 +47,7 @@
         drag = folderDrag(list, {
             getOrder: () => displayed.map((f) => f.id),
             setOrder: (ids) => (order = ids),
-            commit: (ids) => controller.reorder(ids).ok,
+            commit: async (ids) => (await controller.reorder(ids)).ok,
             announce: (message, error = false) => {
                 status = message
                 statusError = error
@@ -86,7 +86,8 @@
     async function create(event: SubmitEvent) {
         event.preventDefault()
         if (!folderName.trim()) return
-        const id = controller.createFolder(folderName)
+        const id = await controller.createFolder(folderName)
+        if (!id) return
         folderName = ''
         creating = false
         await focus(`[data-folder-id="${id}"] .settings__folder-toggle`)
@@ -102,16 +103,16 @@
         editError = ''
         void focus('[data-editor-name]')
     }
-    function save() {
+    async function save() {
         if (!edit?.name.trim()) return
-        const result = edit.feedId
+        const result = await (edit.feedId
             ? controller.updateFeed({
                   folderId: edit.folderId,
                   feedId: edit.feedId,
                   name: edit.name,
                   url: edit.url,
               })
-            : controller.updateFolder(edit.folderId, edit.name)
+            : controller.updateFolder(edit.folderId, edit.name))
         if (result.ok) {
             edit = null
             editError = ''
@@ -144,7 +145,7 @@
             j = i + (event.key === 'ArrowUp' ? -1 : 1)
         if (j < 0 || j >= ids.length) return
         ;[ids[i], ids[j]] = [ids[j], ids[i]]
-        const result = controller.reorder(ids)
+        const result = await controller.reorder(ids)
         if (result.ok) {
             order = ids
             status = `Колонка: позиция ${j + 1} из ${ids.length}. Порядок сохранён.`

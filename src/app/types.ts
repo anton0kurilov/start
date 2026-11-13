@@ -49,6 +49,8 @@ export interface Column {
     errors: {id: string; name: string; message: string}[]
 }
 export interface AppViewState {
+    sync?: import('./sync-types').SyncStatus
+    persistenceError?: string
     predictionHistory?: 'loading' | 'ready' | 'error'
     semantics?: {status: string; loaded: number; total: number}
     folders: Folder[]
