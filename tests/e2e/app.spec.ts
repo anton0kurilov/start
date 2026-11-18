@@ -386,15 +386,16 @@ test('import reports invalid JSON; export round trip and reset keep confirmation
         mimeType: 'application/json',
         buffer: Buffer.from('{broken'),
     })
-    await expect(page.getByRole('alert').last()).toContainText(
-        'корректный JSON',
-    )
+    await expect(page.locator('#import-error')).toContainText('корректный JSON')
+    await expect(
+        page.locator('.settings__action-card + #import-error'),
+    ).toBeVisible()
     const download = page.waitForEvent('download')
     await page.getByRole('button', {name: 'Экспортировать в JSON'}).click()
     const file = await download
     const path = await file.path()
     await page.locator('input[type="file"]').setInputFiles(path!)
-    await expect(page.getByRole('alert').last()).not.toBeVisible()
+    await expect(page.locator('#import-error')).not.toBeVisible()
     await expect(page.locator('#import-status')).toContainText(
         'Импорт завершён',
     )
@@ -403,6 +404,49 @@ test('import reports invalid JSON; export round trip and reset keep confirmation
     await expect
         .poll(async () => (await stored(page))?.folders ?? [])
         .toEqual([])
+})
+
+test('export shows its own progress and places its error below the export card', async ({
+    page,
+}) => {
+    await page.setViewportSize({width: 320, height: 568})
+    await preparePage(page, {state: initialState(1)})
+    await page.addInitScript(() => {
+        URL.createObjectURL = () => {
+            for (const action of ['export-json', 'trigger-import-file']) {
+                const button = document.querySelector(
+                    `[data-action="${action}"]`,
+                )
+                document.body.setAttribute(
+                    `data-${action}-state`,
+                    `${button?.textContent?.trim()}|${button?.getAttribute('aria-busy')}`,
+                )
+            }
+            throw new Error('Download unavailable')
+        }
+    })
+    await page.goto('/')
+    await settings(page, 'transfer')
+    await page.getByRole('button', {name: 'Экспортировать в JSON'}).click()
+    await expect(page.locator('body')).toHaveAttribute(
+        'data-export-json-state',
+        'Экспортируем…|true',
+    )
+    await expect(page.locator('body')).toHaveAttribute(
+        'data-trigger-import-file-state',
+        'Импортировать JSON|false',
+    )
+    await expect(
+        page.locator('.settings__action-card + #export-error'),
+    ).toContainText('Не удалось экспортировать')
+    await expect(page.locator('#import-error')).not.toBeVisible()
+    await expect(
+        page.getByRole('button', {name: 'Экспортировать в JSON'}),
+    ).toBeEnabled()
+    await expect(
+        page.getByRole('button', {name: 'Импортировать JSON'}),
+    ).toBeEnabled()
+    await page.screenshot({path: 'output/playwright/export-error-mobile.png'})
 })
 
 test('import shows reading, recovers from file errors and finishes before background refresh', async ({

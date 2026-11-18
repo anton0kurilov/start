@@ -7,13 +7,14 @@
         onimport,
     }: {controller: AppController; onimport: () => void} = $props()
     let fileInput: HTMLInputElement
-    let error = $state('')
-    let pending = $state(false)
+    let exportError = $state('')
+    let importError = $state('')
+    let pending = $state<'export' | 'import' | null>(null)
     let status = $state('')
     async function download() {
         if (pending) return
-        pending = true
-        error = ''
+        pending = 'export'
+        exportError = ''
         try {
             const blob = new Blob(
                 [JSON.stringify(await controller.exportBackup(), null, 2)],
@@ -28,10 +29,10 @@
             link.click()
             URL.revokeObjectURL(url)
         } catch {
-            error =
+            exportError =
                 'Не удалось экспортировать сохранённую историю. Повторите попытку.'
         } finally {
-            pending = false
+            pending = null
         }
     }
     async function upload() {
@@ -41,8 +42,8 @@
             fileInput.value = ''
             return
         }
-        error = ''
-        pending = true
+        importError = ''
+        pending = 'import'
         status = 'Чтение файла и импорт данных…'
         try {
             await tick()
@@ -53,14 +54,14 @@
                     'Импорт завершён. Настройки можно закрыть — ленты обновляются в фоне.'
             } else {
                 status = ''
-                error = result.error || 'Не удалось импортировать данные.'
+                importError = result.error || 'Не удалось импортировать данные.'
             }
         } catch {
             status = ''
-            error =
+            importError =
                 'Не удалось прочитать или импортировать файл. Попробуйте ещё раз.'
         } finally {
-            pending = false
+            pending = null
             fileInput.value = ''
         }
     }
@@ -79,11 +80,24 @@
                 variant="primary"
                 class="settings__submit"
                 data-action="export-json"
-                disabled={pending}
-                onclick={download}>Экспортировать в JSON</Button
+                disabled={pending !== null}
+                aria-busy={pending === 'export'}
+                aria-describedby="export-error"
+                onclick={download}
+                >{pending === 'export'
+                    ? 'Экспортируем…'
+                    : 'Экспортировать в JSON'}</Button
             >
         </div>
     </div>
+    <p
+        id="export-error"
+        class="settings__form-error"
+        role="alert"
+        hidden={!exportError}
+    >
+        {exportError}
+    </p>
     <div class="settings__card settings__block settings__action-card">
         <div class="settings__card-head">
             <h4 class="settings__subtitle">Импорт</h4>
@@ -96,7 +110,7 @@
             type="file"
             bind:this={fileInput}
             onchange={upload}
-            disabled={pending}
+            disabled={pending !== null}
             accept="application/json,.json,text/json,text/plain"
             aria-label="JSON-файл для импорта"
             aria-describedby="import-status import-error"
@@ -106,11 +120,13 @@
                 variant="primary"
                 class="settings__submit"
                 data-action="trigger-import-file"
-                disabled={pending}
-                aria-busy={pending}
+                disabled={pending !== null}
+                aria-busy={pending === 'import'}
                 aria-describedby="import-status import-error"
                 onclick={() => fileInput.click()}
-                >{pending ? 'Импортируем…' : 'Импортировать JSON'}</Button
+                >{pending === 'import'
+                    ? 'Импортируем…'
+                    : 'Импортировать JSON'}</Button
             >
         </div>
         <p
@@ -121,13 +137,13 @@
         >
             {status}
         </p>
-        <p
-            id="import-error"
-            class="settings__form-error"
-            role="alert"
-            hidden={!error}
-        >
-            {error}
-        </p>
     </div>
+    <p
+        id="import-error"
+        class="settings__form-error"
+        role="alert"
+        hidden={!importError}
+    >
+        {importError}
+    </p>
 </div>
