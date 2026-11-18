@@ -795,18 +795,37 @@ export function createAppController({
         async exportBackup() {
             await repository?.flush()
             const data = api.exportState()
-            if (!predictions) return data
-            const predictionData = await predictions.exportData()
+            // The durable repository is authoritative, even when background
+            // prediction maintenance failed or has not started yet.
+            const archive = repository?.observations()
+            const profileId = repository?.profile.learnerId
+            const predictionData = repository
+                ? {
+                      schemaVersion: 1,
+                      profileId: profileId!,
+                      observations: archive!.filter(
+                          (row) => row.profileId === profileId,
+                      ),
+                  }
+                : await predictions?.exportData()
+            if (!predictionData) return data
+            let evaluation = null
+            let evaluationError: string | undefined
+            try {
+                evaluation =
+                    shadow?.report(predictionData.observations, now()) || null
+            } catch {
+                // Derived diagnostics must never prevent a lossless backup.
+                evaluationError =
+                    'Не удалось подготовить отчёт. Сохранённые наблюдения включены в экспорт.'
+            }
             return {
                 ...data,
-                ...(repository
-                    ? {version: 2, predictionArchive: repository.observations()}
-                    : {}),
+                ...(repository ? {version: 2, predictionArchive: archive} : {}),
                 predictionData: {
                     ...predictionData,
-                    evaluation:
-                        shadow?.report(predictionData.observations, now()) ||
-                        null,
+                    evaluation,
+                    ...(evaluationError ? {evaluationError} : {}),
                 },
             }
         },

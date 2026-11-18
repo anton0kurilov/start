@@ -209,3 +209,84 @@ test('dispose aborts requests and removes lifecycle listeners', async () => {
     assert.equal(signal.aborted, true)
     assert.equal(prepared, 0)
 })
+
+test('backup exports the durable prediction archive before the background service starts', async () => {
+    const rows = [
+        {itemKey: 'mine', profileId: 'learner-current'},
+        {itemKey: 'other-device', profileId: 'learner-other'},
+    ]
+    let flushed = false
+    const repository = {
+        profile: {learnerId: 'learner-current'},
+        subscribe: () => () => {},
+        flush: async () => {
+            flushed = true
+        },
+        observations: () => {
+            assert.equal(flushed, true)
+            return structuredClone(rows)
+        },
+    }
+    const api = {...domain, exportState: () => ({version: 1, folders: []})}
+    const controller = createAppController({api, repository, host: null})
+    const backup = await controller.exportBackup()
+    assert.equal(backup.version, 2)
+    assert.deepEqual(backup.predictionArchive, rows)
+    assert.deepEqual(backup.predictionData.observations, [rows[0]])
+    assert.equal(backup.predictionData.profileId, 'learner-current')
+    assert.equal(backup.predictionData.evaluation, null)
+    controller.dispose()
+})
+
+test('failed background maturation does not block export of saved history', async () => {
+    const {createClickObservation, CLICK_WINDOW_MS} =
+        await import('../../src/scripts/click-observations.js')
+    const row = createClickObservation({
+        observationId: 'saved',
+        profileId: 'learner',
+        itemKey: 'post',
+        firstShownAt: 1000,
+        snapshot: {title: 'Saved article'},
+    })
+    const host = new EventTarget()
+    host.document = Object.assign(new EventTarget(), {
+        visibilityState: 'visible',
+    })
+    let attempts = 0
+    const repository = {
+        profile: {learnerId: 'learner'},
+        subscribe: () => () => {},
+        flush: async () => {},
+        observations: () => [structuredClone(row)],
+        dispatch: async () => {
+            attempts++
+            throw new Error('Background write failed')
+        },
+    }
+    const {api} = setup({
+        ensurePredictionGeneration: () => 'generation',
+        exportState: () => ({version: 1, folders: []}),
+    })
+    const controller = createAppController({
+        api,
+        repository,
+        host,
+        now: () => 1000 + CLICK_WINDOW_MS,
+    })
+    try {
+        controller.start()
+        for (
+            let i = 0;
+            i < 20 && get(controller.state).predictionHistory !== 'error';
+            i++
+        )
+            await new Promise((resolve) => setImmediate(resolve))
+        assert.ok(attempts > 0)
+        assert.equal(get(controller.state).predictionHistory, 'error')
+        const backup = await controller.exportBackup()
+        assert.deepEqual(backup.predictionArchive, [row])
+        assert.deepEqual(backup.predictionData.observations, [row])
+    } finally {
+        controller.dispose()
+    }
+})
