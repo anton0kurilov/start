@@ -35,6 +35,20 @@ export class CommandError extends Error {
 function requireValue(valid: unknown, code = 'INVALID_COMMAND'): asserts valid {
     if (!valid) throw new CommandError(code)
 }
+
+// JSONB may reorder object keys on sync. Array order still carries meaning.
+function orderedJson(value: unknown) {
+    return JSON.stringify(value, (_key, item) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item))
+            return item
+        return Object.fromEntries(
+            Object.keys(item)
+                .sort()
+                .map((key) => [key, item[key]]),
+        )
+    })
+}
+
 function text(value: unknown, limit = 512) {
     requireValue(
         typeof value === 'string' &&
@@ -272,8 +286,8 @@ export function applyCommand(
                 'versions',
             ])
                 requireValue(
-                    JSON.stringify(before[field]) ===
-                        JSON.stringify(normalized[field]),
+                    orderedJson(before[field]) ===
+                        orderedJson(normalized[field]),
                     'IMMUTABLE_OBSERVATION',
                 )
             if (before.completedAt !== null)
